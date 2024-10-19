@@ -69,7 +69,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
   // New method to send the image to the API
 Future<void> _sendImageToAPI() async {
   if (imagePath != null) {
-    var url = Uri.parse('http://192.168.31.227:8000/cv/form-detection-with-box/');
+    var url = Uri.parse('http://192.168.227.227:8000/cv/form-detection-with-box/');
 
     // Prepare the image file and lookup MIME type
     var mimeType = lookupMimeType(imagePath!);

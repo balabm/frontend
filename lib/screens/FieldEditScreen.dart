@@ -193,7 +193,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   }
 
   Future<void> _sendToLLMApi(String query, {bool isAudioQuery = false}) async {
-    final uri = Uri.parse('http://192.168.31.227:8021/get_llm_response');
+    final uri = Uri.parse('http://192.168.227.227:8021/get_llm_response');
     try {
       final response = await http.post(
         uri,
@@ -256,7 +256,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   }
 
   Future<void> _sendDataToApi(Map<String, dynamic> box) async {
-    final uri = Uri.parse('http://192.168.31.227:8080/cv/ocr');
+    final uri = Uri.parse('http://192.168.227.227:8080/cv/ocr');
     var request = http.MultipartRequest('POST', uri);
 
     // Crop the image
