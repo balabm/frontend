@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class CameraScreen extends StatefulWidget {
   @override
@@ -14,6 +17,7 @@ class _CameraScreenState extends State<CameraScreen> {
   List<CameraDescription> cameras = [];
   int selectedCameraIndex = 0;
   bool isFlashOn = false;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -44,13 +48,36 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _saveImage(String path) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final imagePath =
-        '${directory.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final imageFile = File(path);
-    await imageFile.copy(imagePath);
-    await ImageGallerySaver.saveFile(imagePath);
+  // Get the application's document directory
+  final directory = await getApplicationDocumentsDirectory();
+  
+  // Define a unique path for the image file based on the current timestamp
+final imagePath = '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.jpg'; // Convert int to String
+  
+  // Copy the image file to the new location
+  final imageFile = File(path);
+  await imageFile.copy(imagePath);
+  
+  // Save the image to the gallery
+  await ImageGallerySaver.saveFile(imagePath);
+
+  // Save the image path to SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
+  List<String> capturedImages = prefs.getStringList('capturedImages') ?? [];
+  capturedImages.add(imagePath);  // Add the new image path
+  await prefs.setStringList('capturedImages', capturedImages);  // Save the updated list
+}
+
+
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      Navigator.pushNamed(context, '/image_processing',
+          arguments: pickedFile.path);
+    }
   }
+
+  
 
   @override
   void dispose() {
@@ -65,15 +92,21 @@ class _CameraScreenState extends State<CameraScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
+
+    final cameraPreviewSize = _controller!.value.previewSize;
+    final screenSize = MediaQuery.of(context).size;
+    final aspectRatio = cameraPreviewSize!.height / cameraPreviewSize.width;
+    final previewHeight = screenSize.width * aspectRatio;
+
     return Scaffold(
       body: Stack(
         children: [
           SizedBox.expand(
             child: FittedBox(
-              fit: BoxFit.cover,
+              fit: BoxFit.fill,
               child: SizedBox(
-                width: _controller!.value.previewSize!.width,
-                height: _controller!.value.previewSize!.height,
+                width: screenSize.width,
+                height: previewHeight,
                 child: CameraPreview(_controller!),
               ),
             ),
@@ -102,9 +135,7 @@ class _CameraScreenState extends State<CameraScreen> {
             right: 16,
             child: IconButton(
               icon: Icon(Icons.photo_library, color: Colors.white),
-              onPressed: () {
-                // Handle gallery button press
-              },
+              onPressed: _pickImage, // Handle gallery button press
             ),
           ),
           Positioned(

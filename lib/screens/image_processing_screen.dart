@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
-import 'package:path_provider/path_provider.dart';
 import 'package:image_cropper/image_cropper.dart';
+import 'FieldEditScreen.dart'; // Import the FieldEditScreen class
+import 'dart:convert'; // For base64 encoding
+import 'package:http/http.dart' as http;
 
 class ImageProcessingScreen extends StatefulWidget {
   @override
@@ -30,19 +32,6 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
     });
   }
 
-  Future<void> _applyFilter(img.Image Function(img.Image) filter) async {
-    if (image != null) {
-      final filteredImage = filter(image!);
-      final tempDir = await getTemporaryDirectory();
-      final tempPath = '${tempDir.path}/filtered_image.jpg';
-      File(tempPath).writeAsBytesSync(img.encodeJpg(filteredImage));
-      setState(() {
-        imagePath = tempPath;
-        image = filteredImage;
-      });
-    }
-  }
-
   Future<void> _cropImage() async {
     if (imagePath != null) {
       CroppedFile? croppedFile = await ImageCropper().cropImage(
@@ -51,7 +40,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Crop Image',
-            toolbarColor: Colors.blue,
+            toolbarColor: Color(0xFF0b3c66),
             toolbarWidgetColor: Colors.white,
             initAspectRatio: CropAspectRatioPreset.original,
             lockAspectRatio: false,
@@ -71,45 +60,113 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
     }
   }
 
+  // New method to send the image to the API
+  Future<void> _sendImageToAPI() async {
+    if (imagePath != null) {
+      var url = Uri.parse('http://0.0.0.0:8000/cv/form-detection-with-box/');
+
+      // Prepare the image file
+      var request = http.MultipartRequest('POST', url);
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file', // Key expected by the FastAPI endpoint
+          imagePath!,
+        ),
+      );
+
+      try {
+        var response = await request.send();
+
+        if (response.statusCode == 200) {
+          // Parse the response
+          var responseData = await response.stream.bytesToString();
+          var decodedResponse = jsonDecode(responseData);
+
+          print('Response from API:');
+          print(decodedResponse);
+
+          // Handle the response, e.g., navigate to the FieldEditScreen
+          Navigator.pushNamed(
+            context,
+            '/field_edit_screen',
+            arguments: {
+              'imagePath': imagePath!,
+              'bounding_boxes': decodedResponse['bounding_boxes'], // Add this if needed for field editing
+            },
+          );
+        } else {
+          print('Error: ${response.statusCode}');
+        }
+      } catch (e) {
+        print('Error sending image to API: $e');
+      }
+    } else {
+      print('No image available to send.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Process Image')),
-      body: Column(
-        children: [
-          Expanded(
-            child: imagePath != null
-                ? Image.file(File(imagePath!))
-                : Center(child: Text('No image selected')),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              ElevatedButton(
-                child: Text('Enhance'),
-                onPressed: () => _applyFilter(
-                    (img.Image image) => img.adjustColor(image, contrast: 1.2)),
-              ),
-              ElevatedButton(
-                child: Text('B&W'),
-                onPressed: () => _applyFilter(img.grayscale),
-              ),
-              ElevatedButton(
-                child: Text('Crop'),
-                onPressed: _cropImage,
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          ElevatedButton(
-            child: Text('Next'),
-            onPressed: () {
-              Navigator.pushNamed(context, '/audio_recording',
-                  arguments: imagePath);
-            },
-          ),
-          SizedBox(height: 20),
-        ],
+      appBar: AppBar(
+        title: Text('Image Processing', style: TextStyle(color: Colors.white)),
+        backgroundColor: Color(0xFF0b3c66),
+        iconTheme: IconThemeData(color: Colors.white), // Change arrow color to white
+      ),
+      body: Container(
+        color: Colors.white, // Background color
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Expanded(
+              child: imagePath != null
+                  ? Image.file(File(imagePath!))
+                  : Center(child: Text('No image selected')),
+            ),
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 150,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF0b3c66), // Button background color
+                      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8), // Rounded corners
+                      ),
+                      elevation: 5, // Shadow effect
+                    ),
+                    icon: Icon(Icons.crop, color: Colors.white),
+                    label: Text('Crop', style: TextStyle(color: Colors.white)),
+                    onPressed: _cropImage,
+                  ),
+                ),
+                SizedBox(width: 20),
+                Container(
+                  width: 150,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF0b3c66), // Button background color
+                      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8), // Rounded corners
+                      ),
+                      elevation: 5, // Shadow effect
+                    ),
+                    icon: Icon(Icons.navigate_next, color: Colors.white),
+                    label: Text('Next', style: TextStyle(color: Colors.white)),
+                    onPressed: _sendImageToAPI, // Call the API when "Next" is pressed
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

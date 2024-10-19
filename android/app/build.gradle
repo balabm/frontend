@@ -1,3 +1,15 @@
+buildscript {
+    ext.kotlin_version = '1.8.22' // Update this to the latest Kotlin version
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+
 plugins {
     id "com.android.application"
     id "kotlin-android"
@@ -35,7 +47,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.ass"
+        applicationId = "com.example.flutter_UI"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
         minSdk = flutter.minSdkVersion

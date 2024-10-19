@@ -38,12 +38,15 @@ dependencies:
   camera: ^0.11.0+2
   image: ^4.2.0
   path_provider: ^2.1.4
-  flutter_sound: ^9.11.2
-  permission_handler: ^11.3.1
+  flutter_sound: ^9.2.13  # or the latest version
+  permission_handler: ^10.2.0  # For managing microphone permissions
   http: ^1.2.2
   image_cropper: ^8.0.1
   shared_preferences: ^2.2.3
   image_gallery_saver: ^2.0.3
+  image_picker: ^0.8.6
+  
+
 
 dev_dependencies:
   flutter_test:
