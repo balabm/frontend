@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 class AnswerDisplayScreen extends StatelessWidget {
+  final String query;
   final String answer;
 
-  AnswerDisplayScreen({required this.answer});
+  AnswerDisplayScreen({required this.query, required this.answer});
 
   void _submit() {
     print("Back button pressed");
@@ -39,14 +40,13 @@ class AnswerDisplayScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold, // Bold text for emphasis
                     letterSpacing: 1.5, // Slight letter spacing
                     color: Colors.white, // Placeholder, overridden by shader
-                    
                   ),
                   textAlign: TextAlign.left, // Align text to the left
                 ),
               ),
             ),
 
-            // Main card displaying the question and answer
+            // Main card displaying the query and answer
             Container(
               decoration: BoxDecoration(
                 color: Color(0xFFE8F0FE), // Subtle blue background for card
@@ -76,7 +76,7 @@ class AnswerDisplayScreen extends StatelessWidget {
                         SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            "Aadhar Number",
+                            query, // Dynamically display the query
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -91,7 +91,7 @@ class AnswerDisplayScreen extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
-                      "Please enter your Aadhar Number",
+                      answer, // Dynamically display the answer
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.black54,

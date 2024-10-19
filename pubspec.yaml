@@ -41,10 +41,17 @@ dependencies:
   flutter_sound: ^9.2.13  # or the latest version
   permission_handler: ^10.2.0  # For managing microphone permissions
   http: ^1.2.2
+  http_parser: ^4.0.1  # Add this line
   image_cropper: ^8.0.1
   shared_preferences: ^2.2.3
   image_gallery_saver: ^2.0.3
   image_picker: ^0.8.6
+  mime: ^1.0.0
+  path: ^1.8.0
+  archive: ^3.1.2
+  provider: ^6.0.0
+  record: ^4.4.4
+  just_audio: ^0.9.34
   
 
 
@@ -69,6 +76,11 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/bot_avatar.png
+    - assets/user_avatar.png
+    
 
   # To add assets to your application, add an assets section, like this:
   # assets:

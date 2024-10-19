@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Import this to use MultiProvider
 import 'screens/user_input_screen.dart'; // Ensure this import is correct
 import 'screens/home_screen.dart';
 import 'screens/camera_screen.dart';
@@ -7,9 +8,17 @@ import 'screens/audio_recording_screen.dart';
 import 'screens/review_submit_screen.dart';
 import 'screens/extracted_fields.dart';
 import 'screens/FieldEditScreen.dart';
+import 'screens/api_response_provider.dart'; // Import the provider class
 
 void main() {
-  runApp(MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ApiResponseProvider()),
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

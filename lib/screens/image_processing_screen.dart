@@ -5,6 +5,12 @@ import 'package:image_cropper/image_cropper.dart';
 import 'FieldEditScreen.dart'; // Import the FieldEditScreen class
 import 'dart:convert'; // For base64 encoding
 import 'package:http/http.dart' as http;
+import 'package:mime/mime.dart'; // For MIME type lookup
+//import 'package:path/path.dart'; // For file paths
+import 'package:http_parser/http_parser.dart'; // For MediaType
+import 'package:path/path.dart' as p;
+
+
 
 class ImageProcessingScreen extends StatefulWidget {
   @override
@@ -61,50 +67,88 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
   }
 
   // New method to send the image to the API
-  Future<void> _sendImageToAPI() async {
-    if (imagePath != null) {
-      var url = Uri.parse('http://0.0.0.0:8000/cv/form-detection-with-box/');
+Future<void> _sendImageToAPI() async {
+  if (imagePath != null) {
+    var url = Uri.parse('http://192.168.31.227:8000/cv/form-detection-with-box/');
 
-      // Prepare the image file
-      var request = http.MultipartRequest('POST', url);
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'file', // Key expected by the FastAPI endpoint
-          imagePath!,
+    // Prepare the image file and lookup MIME type
+    var mimeType = lookupMimeType(imagePath!);
+    var request = http.MultipartRequest('POST', url);
+
+    // Add the file to the request
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'file', // The key expected by the FastAPI endpoint
+        imagePath!,
+        contentType: MediaType.parse(mimeType ?? 'application/octet-stream'), // Handle unknown MIME types
+      ),
+    );
+
+    try {
+      var response = await request.send();
+
+      // Check for 400 status code (client errors from FastAPI)
+      if (response.statusCode == 400) {
+        var responseData = await response.stream.bytesToString();
+        var decodedResponse = jsonDecode(responseData);
+
+        // Print the error response for debugging
+        print('Error response: $decodedResponse');
+
+        // Display error message from the server (specific to 400 errors)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(decodedResponse['message'] ?? 'Error processing image'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else if (response.statusCode == 200) {
+        // Parse the response for successful processing
+        var responseData = await response.stream.bytesToString();
+        var decodedResponse = jsonDecode(responseData);
+
+        // Print the successful response for debugging
+        print('Success response: $decodedResponse');
+
+        // Proceed with navigation if the image is valid
+        Navigator.pushNamed(
+          context,
+          '/field_edit_screen',
+          arguments: {
+            'imagePath': imagePath!,
+            'bounding_boxes': decodedResponse['bounding_boxes'], // Pass bounding boxes
+          },
+        );
+      } else {
+        // Handle other non-200 or non-400 errors (network errors, etc.)
+        print('Error: ${response.statusCode}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Network error or server error. Please try again later.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Handle exceptions during sending
+      print('Error sending image to API: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error sending image. Please try again.'),
+          backgroundColor: Colors.red,
         ),
       );
-
-      try {
-        var response = await request.send();
-
-        if (response.statusCode == 200) {
-          // Parse the response
-          var responseData = await response.stream.bytesToString();
-          var decodedResponse = jsonDecode(responseData);
-
-          print('Response from API:');
-          print(decodedResponse);
-
-          // Handle the response, e.g., navigate to the FieldEditScreen
-          Navigator.pushNamed(
-            context,
-            '/field_edit_screen',
-            arguments: {
-              'imagePath': imagePath!,
-              'bounding_boxes': decodedResponse['bounding_boxes'], // Add this if needed for field editing
-            },
-          );
-        } else {
-          print('Error: ${response.statusCode}');
-        }
-      } catch (e) {
-        print('Error sending image to API: $e');
-      }
-    } else {
-      print('No image available to send.');
     }
+  } else {
+    print('No image available to send.');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('No image selected.'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
-
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
