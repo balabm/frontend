@@ -47,17 +47,17 @@ class ReviewSubmitScreen extends StatelessWidget {
     final String? audioPath = args['audioPath'];
 
     return Scaffold(
-      appBar: AppBar(title: Text('Review and Submit')),
+      appBar: AppBar(title: const Text('Review and Submit')),
       body: SingleChildScrollView(
         child: Column(
           children: [
             if (imagePath != null) Image.file(File(imagePath)),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             if (audioPath != null)
               Text('Audio recorded: ${audioPath.split('/').last}'),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
-              child: Text('Submit'),
+              child: const Text('Submit'),
               onPressed: () async {
                 await _submitData(imagePath!, audioPath!);
                 Navigator.pushNamedAndRemoveUntil(

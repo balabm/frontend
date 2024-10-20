@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:ass/helpers/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
@@ -14,11 +15,7 @@ import 'package:path/path.dart' as path;
 import 'dart:math';
 import 'package:flutter/scheduler.dart';
 import 'package:image/image.dart' as img;
-import 'dart:async'; 
-
-
-
-
+import 'dart:async';
 
 class FieldEditScreen extends StatefulWidget {
   @override
@@ -31,7 +28,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   List<Map<String, dynamic>> chatMessages = [];
   TextEditingController _messageController = TextEditingController();
   ScrollController _scrollController = ScrollController();
-  DraggableScrollableController _dragController = DraggableScrollableController();
+  DraggableScrollableController _dragController =
+      DraggableScrollableController();
   FlutterSoundRecorder? _audioRecorder;
   FlutterSoundPlayer? _audioPlayer;
   bool _isRecording = false;
@@ -45,8 +43,9 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   DateTime? _recordingStartTime;
   Timer? _recordingTimer;
   Duration _recordingDuration = Duration.zero;
-  
-    @override
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+
+  @override
   void initState() {
     super.initState();
     Permission.microphone.request();
@@ -61,13 +60,15 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     await _audioRecorder!.setSubscriptionDuration(Duration(milliseconds: 10));
     print("Recorder initialized");
   }
-String _formatDuration(Duration duration) {
-  String twoDigits(int n) => n.toString().padLeft(2, "0");
-  final hours = twoDigits(duration.inHours);
-  final minutes = twoDigits(duration.inMinutes % 60);
-  final seconds = twoDigits(duration.inSeconds % 60);
-  return "${hours != '00' ? '$hours:' : ''}$minutes:$seconds";
-}
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes % 60);
+    final seconds = twoDigits(duration.inSeconds % 60);
+    return "${hours != '00' ? '$hours:' : ''}$minutes:$seconds";
+  }
+
   Future<void> _initializePlayer() async {
     await _audioPlayer!.openPlayer();
     print("Player initialized");
@@ -86,12 +87,11 @@ String _formatDuration(Duration duration) {
     super.dispose();
   }
 
-  
-void _startRecording() async {
+  void _startRecording() async {
     try {
       Directory tempDir = await getTemporaryDirectory();
       _recordedFilePath = path.join(tempDir.path, 'recorded_audio.wav');
-      
+
       await _audioRecorder!.startRecorder(
         toFile: _recordedFilePath,
         codec: Codec.pcm16WAV,
@@ -107,11 +107,12 @@ void _startRecording() async {
       _recordingTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
         if (_recordingStartTime != null) {
           setState(() {
-            _recordingDuration = DateTime.now().difference(_recordingStartTime!);
+            _recordingDuration =
+                DateTime.now().difference(_recordingStartTime!);
           });
         }
       });
-      
+
       print("Recording started");
     } catch (e) {
       print("Error starting recording: $e");
@@ -180,6 +181,7 @@ void _startRecording() async {
       print("Error playing audio: $e");
     }
   }
+
   Widget _buildMicrophoneButton() {
     return GestureDetector(
       onLongPressStart: (_) {
@@ -203,7 +205,7 @@ void _startRecording() async {
       child: Container(
         margin: EdgeInsets.only(left: 8),
         decoration: BoxDecoration(
-          color: _isLongPressing 
+          color: _isLongPressing
               ? Color(0xFF0b3c66).withOpacity(0.7)
               : Color(0xFF0b3c66),
           shape: BoxShape.circle,
@@ -227,9 +229,7 @@ void _startRecording() async {
     );
   }
 
-  
-
-    Widget _buildRecordingIndicator() {
+  Widget _buildRecordingIndicator() {
     if (!_isRecording) return SizedBox.shrink();
 
     return Expanded(
@@ -265,24 +265,22 @@ void _startRecording() async {
     );
   }
 
-    Future<String> _zipRecordedAudio() async {
+  Future<String> _zipRecordedAudio() async {
     Directory tempDir = await getTemporaryDirectory();
     String zipFilePath = path.join(tempDir.path, 'audio_zip.zip');
-    
+
     final zipEncoder = ZipFileEncoder();
     zipEncoder.create(zipFilePath);
     zipEncoder.addFile(File(_recordedFilePath!));
     zipEncoder.close();
-    
+
     return zipFilePath;
   }
 
   Future<String?> _sendAudioToApi(File zipFile) async {
     try {
       var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('http://192.168.1.7:8001/upload-audio-zip/')
-      );
+          'POST', Uri.parse('http://192.168.1.7:8001/upload-audio-zip/'));
 
       request.files.add(await http.MultipartFile.fromPath(
         'file',
@@ -294,6 +292,7 @@ void _startRecording() async {
 
       if (response.statusCode == 200) {
         String responseBody = await response.stream.bytesToString();
+        _dbHelper.saveAsrResponse(responseBody);
         Provider.of<ApiResponseProvider>(context, listen: false)
             .setAudioZipResponse(responseBody);
         print('Audio ZIP sent successfully!');
@@ -311,7 +310,7 @@ void _startRecording() async {
   Future<void> _processAudioAndSendToLLM() async {
     String zipFilePath = await _zipRecordedAudio();
     File zipFile = File(zipFilePath);
-    
+
     if (await zipFile.exists()) {
       String? asrResponse = await _sendAudioToApi(zipFile);
       if (asrResponse != null) {
@@ -346,6 +345,7 @@ void _startRecording() async {
 
       if (response.statusCode == 200) {
         final llmResponse = jsonDecode(response.body);
+        _dbHelper.saveLlmResponse(llmResponse);
         setState(() {
           chatMessages.add({
             'sender': 'assistant',
@@ -364,7 +364,8 @@ void _startRecording() async {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final arguments =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     imagePath = arguments['imagePath'] as String?;
     boundingBoxes = arguments['bounding_boxes'] as List<dynamic>?;
 
@@ -401,19 +402,20 @@ void _startRecording() async {
 
     // Crop the image
     String croppedImagePath = await _cropImage(
-      imagePath!,
-      box['x_center'].toInt(),
-      box['y_center'].toInt(),
-      box['width'].toInt(),
-      box['height'].toInt()
-    );
+        imagePath!,
+        box['x_center'].toInt(),
+        box['y_center'].toInt(),
+        box['width'].toInt(),
+        box['height'].toInt());
 
     var file = File(croppedImagePath);
     if (await file.exists()) {
       List<int> imageBytes = await file.readAsBytes();
-      request.files.add(http.MultipartFile.fromBytes('form_image', imageBytes, filename: 'cropped_image.png'));
+      request.files.add(http.MultipartFile.fromBytes('form_image', imageBytes,
+          filename: 'cropped_image.png'));
     } else {
-      print('Cropped image file does not exist at the given path: $croppedImagePath');
+      print(
+          'Cropped image file does not exist at the given path: $croppedImagePath');
       return;
     }
 
@@ -440,7 +442,8 @@ void _startRecording() async {
         setState(() {
           chatMessages.add({
             'sender': 'assistant',
-            'message': 'Field ${box['class']} selected. The detected text is: $_ocrText',
+            'message':
+                'Field ${box['class']} selected. The detected text is: $_ocrText',
           });
         });
         _scrollToBottom();
@@ -454,13 +457,15 @@ void _startRecording() async {
     }
   }
 
-  Future<String> _cropImage(String imagePath, int xCenter, int yCenter, int width, int height) async {
+  Future<String> _cropImage(
+      String imagePath, int xCenter, int yCenter, int width, int height) async {
     final imageFile = img.decodeImage(File(imagePath).readAsBytesSync())!;
     int x = (xCenter - (width ~/ 2)).toInt();
     int y = (yCenter - (height ~/ 2)).toInt();
     int cropWidth = width.toInt();
     int cropHeight = height.toInt();
-    img.Image croppedImage = img.copyCrop(imageFile, x: x, y: y, width: cropWidth, height: cropHeight);
+    img.Image croppedImage = img.copyCrop(imageFile,
+        x: x, y: y, width: cropWidth, height: cropHeight);
 
     final croppedImagePath = '${Directory.systemTemp.path}/cropped_image.png';
     File(croppedImagePath).writeAsBytesSync(img.encodePng(croppedImage));
@@ -496,8 +501,10 @@ void _startRecording() async {
                     ),
                   if (boundingBoxes != null)
                     ...boundingBoxes!.map((box) {
-                      final int x = box['x_center'].toInt() - (box['width'].toInt() ~/ 2);
-                      final int y = box['y_center'].toInt() - (box['height'].toInt() ~/ 2);
+                      final int x =
+                          box['x_center'].toInt() - (box['width'].toInt() ~/ 2);
+                      final int y = box['y_center'].toInt() -
+                          (box['height'].toInt() ~/ 2);
                       final int width = box['width'].toInt();
                       final int height = box['height'].toInt();
                       final String fieldType = box['class'];
@@ -511,11 +518,15 @@ void _startRecording() async {
                           onTap: () => _onBoundingBoxTap(box),
                           child: Container(
                             decoration: BoxDecoration(
-                              border: Border.all(color: const Color.fromRGBO(245, 10, 10, 1), width: 2),
-                              color: const Color.fromARGB(255, 243, 33, 33).withOpacity(0.1),
+                              border: Border.all(
+                                  color: const Color.fromRGBO(245, 10, 10, 1),
+                                  width: 2),
+                              color: const Color.fromARGB(255, 243, 33, 33)
+                                  .withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             child: Center(
                               child: Text(
                                 fieldType,
@@ -534,121 +545,127 @@ void _startRecording() async {
             ),
           ),
           DraggableScrollableSheet(
-          initialChildSize: 0.3,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          snap: true,
-          snapSizes: [0.3, 0.6, 0.9],
-          builder: (BuildContext context, ScrollController scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.5),
-                    spreadRadius: 5,
-                    blurRadius: 7,
-                    offset: Offset(0, 3),
+            initialChildSize: 0.3,
+            minChildSize: 0.3,
+            maxChildSize: 0.9,
+            snap: true,
+            snapSizes: [0.3, 0.6, 0.9],
+            builder: (BuildContext context, ScrollController scrollController) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    child: Container(
-                      width: 40,
-                      height: 5,
-                      margin: EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 5,
+                      blurRadius: 7,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      child: Container(
+                        width: 40,
+                        height: 5,
+                        margin: EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2.5),
+                        ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      itemCount: chatMessages.length,
-                      itemBuilder: (context, index) {
-                        final message = chatMessages[index];
-                        return ChatBubble(
-                          sender: message['sender'],
-                          message: message['message'],
-                          audioPath: message['audioPath'],
-                          onPlayAudio: _playAudio,
-                          avatar: message['sender'] == 'user'
-                              ? 'assets/user_avatar.png'
-                              : 'assets/bot_avatar.png',
-                        );
-                      },
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: chatMessages.length,
+                        itemBuilder: (context, index) {
+                          final message = chatMessages[index];
+                          return ChatBubble(
+                            sender: message['sender'],
+                            message: message['message'],
+                            audioPath: message['audioPath'],
+                            onPlayAudio: _playAudio,
+                            avatar: message['sender'] == 'user'
+                                ? 'assets/user_avatar.png'
+                                : 'assets/bot_avatar.png',
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  // Chat Input Area
-                  Container(
-                    margin: EdgeInsets.all(8),
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(25),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        _isRecording
-                            ? _buildRecordingIndicator()
-                            : Expanded(
-                                child: TextField(
-                                  controller: _messageController,
-                                  decoration: InputDecoration(
-                                    hintText: 'Type a message',
-                                    border: InputBorder.none,
-                                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    // Chat Input Area
+                    Container(
+                      margin: EdgeInsets.all(8),
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(25),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          _isRecording
+                              ? _buildRecordingIndicator()
+                              : Expanded(
+                                  child: TextField(
+                                    controller: _messageController,
+                                    decoration: InputDecoration(
+                                      hintText: 'Type a message',
+                                      border: InputBorder.none,
+                                      hintStyle:
+                                          TextStyle(color: Colors.grey[400]),
+                                    ),
+                                    enabled: _inputEnabled,
+                                    onChanged: (text) {
+                                      setState(() {});
+                                    },
                                   ),
-                                  enabled: _inputEnabled,
-                                  onChanged: (text) {
-                                    setState(() {});
-                                  },
                                 ),
-                              ),
-                        AnimatedContainer(
-                          duration: Duration(milliseconds: 200),
-                          transform: Matrix4.translationValues(_slidingOffset, 0, 0),
-                          child: _messageController.text.isEmpty
-                              ? _buildMicrophoneButton()
-                              : IconButton(
-                                  icon: Icon(Icons.send, color: Color(0xFF0b3c66)),
-                                  onPressed: _inputEnabled
-                                      ? () {
-                                          if (_messageController.text.isNotEmpty) {
-                                            setState(() {
-                                              chatMessages.add({
-                                                'sender': 'user',
-                                                'message': _messageController.text,
+                          AnimatedContainer(
+                            duration: Duration(milliseconds: 200),
+                            transform:
+                                Matrix4.translationValues(_slidingOffset, 0, 0),
+                            child: _messageController.text.isEmpty
+                                ? _buildMicrophoneButton()
+                                : IconButton(
+                                    icon: Icon(Icons.send,
+                                        color: Color(0xFF0b3c66)),
+                                    onPressed: _inputEnabled
+                                        ? () {
+                                            if (_messageController
+                                                .text.isNotEmpty) {
+                                              setState(() {
+                                                chatMessages.add({
+                                                  'sender': 'user',
+                                                  'message':
+                                                      _messageController.text,
+                                                });
                                               });
-                                            });
-                                            _sendToLLMApi(_messageController.text);
-                                            _messageController.clear();
-                                            _scrollToBottom();
+                                              _sendToLLMApi(
+                                                  _messageController.text);
+                                              _messageController.clear();
+                                              _scrollToBottom();
+                                            }
                                           }
-                                        }
-                                      : null,
-        ),
-                        ), 
-    ],
-  ),
-),
-  ],
+                                        : null,
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -658,7 +675,6 @@ void _startRecording() async {
     );
   }
 }
-
 
 class ChatBubble extends StatelessWidget {
   final String sender;
@@ -701,8 +717,7 @@ class ChatBubble extends StatelessWidget {
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
-                  bottomLeft:
-                      isUser ? Radius.circular(16) : Radius.circular(0),
+                  bottomLeft: isUser ? Radius.circular(16) : Radius.circular(0),
                   bottomRight:
                       isUser ? Radius.circular(0) : Radius.circular(16),
                 ),
@@ -798,8 +813,6 @@ class _FadeInWidgetState extends State<FadeInWidget>
   }
 }
 
-
-
 class AudioPlayerWidget extends StatefulWidget {
   final String audioPath;
   final Function(String)? onPlayAudio;
@@ -853,7 +866,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
       );
 
       await Future.delayed(Duration(milliseconds: 100));
-      Duration? duration = await _audioPlayer!.getProgress().then((value) => value['duration']);
+      Duration? duration =
+          await _audioPlayer!.getProgress().then((value) => value['duration']);
 
       await _audioPlayer!.stopPlayer();
 
@@ -950,7 +964,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
                   onChanged: (newValue) {
                     setState(() {
                       _playbackProgress = newValue;
-                      _audioPlayer!.seekToPlayer(Duration(seconds: (_playbackProgress * _audioDuration.inSeconds).toInt()));
+                      _audioPlayer!.seekToPlayer(Duration(
+                          seconds:
+                              (_playbackProgress * _audioDuration.inSeconds)
+                                  .toInt()));
                     });
                   },
                   activeColor: Color(0xFF00A884),
@@ -965,11 +982,17 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
                   children: [
                     Text(
                       _formatDuration(_currentPosition),
-                      style: TextStyle(color: Colors.grey[700], fontSize: 12, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
                     ),
                     Text(
                       _formatDuration(_audioDuration),
-                      style: TextStyle(color: Colors.grey[700], fontSize: 12, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),

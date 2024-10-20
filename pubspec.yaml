@@ -52,6 +52,7 @@ dependencies:
   provider: ^6.0.0
   record: ^4.4.4
   just_audio: ^0.9.34
+  sqflite: ^2.0.0+4
   
 
 

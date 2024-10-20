@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:ass/helpers/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_cropper/image_cropper.dart';
@@ -10,8 +11,6 @@ import 'package:mime/mime.dart'; // For MIME type lookup
 import 'package:http_parser/http_parser.dart'; // For MediaType
 import 'package:path/path.dart' as p;
 
-
-
 class ImageProcessingScreen extends StatefulWidget {
   @override
   _ImageProcessingScreenState createState() => _ImageProcessingScreenState();
@@ -20,6 +19,7 @@ class ImageProcessingScreen extends StatefulWidget {
 class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
   String? imagePath;
   img.Image? image;
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   @override
   void didChangeDependencies() {
@@ -67,95 +67,102 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
   }
 
   // New method to send the image to the API
-Future<void> _sendImageToAPI() async {
-  if (imagePath != null) {
-    var url = Uri.parse('http://192.168.1.7:8000/cv/form-detection-with-box/');
+  Future<void> _sendImageToAPI() async {
+    if (imagePath != null) {
+      var url =
+          Uri.parse('http://192.168.1.7:8000/cv/form-detection-with-box/');
+      _dbHelper.saveUploadedImage(imagePath!);
+      // Prepare the image file and lookup MIME type
+      var mimeType = lookupMimeType(imagePath!);
+      var request = http.MultipartRequest('POST', url);
 
-    // Prepare the image file and lookup MIME type
-    var mimeType = lookupMimeType(imagePath!);
-    var request = http.MultipartRequest('POST', url);
+      // Add the file to the request
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file', // The key expected by the FastAPI endpoint
+          imagePath!,
+          contentType: MediaType.parse(mimeType ??
+              'application/octet-stream'), // Handle unknown MIME types
+        ),
+      );
 
-    // Add the file to the request
-    request.files.add(
-      await http.MultipartFile.fromPath(
-        'file', // The key expected by the FastAPI endpoint
-        imagePath!,
-        contentType: MediaType.parse(mimeType ?? 'application/octet-stream'), // Handle unknown MIME types
-      ),
-    );
+      try {
+        var response = await request.send();
 
-    try {
-      var response = await request.send();
+        // Check for 400 status code (client errors from FastAPI)
+        if (response.statusCode == 400) {
+          var responseData = await response.stream.bytesToString();
+          var decodedResponse = jsonDecode(responseData);
 
-      // Check for 400 status code (client errors from FastAPI)
-      if (response.statusCode == 400) {
-        var responseData = await response.stream.bytesToString();
-        var decodedResponse = jsonDecode(responseData);
+          // Print the error response for debugging
+          print('Error response: $decodedResponse');
 
-        // Print the error response for debugging
-        print('Error response: $decodedResponse');
+          // Display error message from the server (specific to 400 errors)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text(decodedResponse['message'] ?? 'Error processing image'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } else if (response.statusCode == 200) {
+          // Parse the response for successful processing
+          var responseData = await response.stream.bytesToString();
+          var decodedResponse = jsonDecode(responseData);
 
-        // Display error message from the server (specific to 400 errors)
+          // Print the successful response for debugging
+          print('Success response: $decodedResponse');
+
+          // Proceed with navigation if the image is valid
+          Navigator.pushNamed(
+            context,
+            '/field_edit_screen',
+            arguments: {
+              'imagePath': imagePath!,
+              'bounding_boxes':
+                  decodedResponse['bounding_boxes'], // Pass bounding boxes
+            },
+          );
+        } else {
+          // Handle other non-200 or non-400 errors (network errors, etc.)
+          print('Error: ${response.statusCode}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Network error or server error. Please try again later.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        // Handle exceptions during sending
+        print('Error sending image to API: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(decodedResponse['message'] ?? 'Error processing image'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      } else if (response.statusCode == 200) {
-        // Parse the response for successful processing
-        var responseData = await response.stream.bytesToString();
-        var decodedResponse = jsonDecode(responseData);
-
-        // Print the successful response for debugging
-        print('Success response: $decodedResponse');
-
-        // Proceed with navigation if the image is valid
-        Navigator.pushNamed(
-          context,
-          '/field_edit_screen',
-          arguments: {
-            'imagePath': imagePath!,
-            'bounding_boxes': decodedResponse['bounding_boxes'], // Pass bounding boxes
-          },
-        );
-      } else {
-        // Handle other non-200 or non-400 errors (network errors, etc.)
-        print('Error: ${response.statusCode}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Network error or server error. Please try again later.'),
+            content: Text('Error sending image. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      // Handle exceptions during sending
-      print('Error sending image to API: $e');
+    } else {
+      print('No image available to send.');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error sending image. Please try again.'),
+          content: Text('No image selected.'),
           backgroundColor: Colors.red,
         ),
       );
     }
-  } else {
-    print('No image available to send.');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('No image selected.'),
-        backgroundColor: Colors.red,
-      ),
-    );
   }
-}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Image Processing', style: TextStyle(color: Colors.white)),
         backgroundColor: Color(0xFF0b3c66),
-        iconTheme: IconThemeData(color: Colors.white), // Change arrow color to white
+        iconTheme:
+            IconThemeData(color: Colors.white), // Change arrow color to white
       ),
       body: Container(
         color: Colors.white, // Background color
@@ -175,11 +182,15 @@ Future<void> _sendImageToAPI() async {
                   width: 150,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF0b3c66), // Button background color
-                      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      backgroundColor:
+                          Color(0xFF0b3c66), // Button background color
+                      padding:
+                          EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      textStyle:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8), // Rounded corners
+                        borderRadius:
+                            BorderRadius.circular(8), // Rounded corners
                       ),
                       elevation: 5, // Shadow effect
                     ),
@@ -193,17 +204,22 @@ Future<void> _sendImageToAPI() async {
                   width: 150,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF0b3c66), // Button background color
-                      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      backgroundColor:
+                          Color(0xFF0b3c66), // Button background color
+                      padding:
+                          EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      textStyle:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8), // Rounded corners
+                        borderRadius:
+                            BorderRadius.circular(8), // Rounded corners
                       ),
                       elevation: 5, // Shadow effect
                     ),
                     icon: Icon(Icons.navigate_next, color: Colors.white),
                     label: Text('Next', style: TextStyle(color: Colors.white)),
-                    onPressed: _sendImageToAPI, // Call the API when "Next" is pressed
+                    onPressed:
+                        _sendImageToAPI, // Call the API when "Next" is pressed
                   ),
                 ),
               ],

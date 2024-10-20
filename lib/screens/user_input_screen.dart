@@ -1,3 +1,5 @@
+import 'package:ass/helpers/database_helper.dart';
+import 'package:ass/models/models.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,12 +12,14 @@ class _UserInputScreenState extends State<UserInputScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  late String _userName = '';
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Future<void> _submit() async {
     if (_formKey.currentState?.validate() ?? false) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userName', _nameController.text);
-
+      _dbHelper.saveUserInfo(_nameController.text);
       Navigator.pushReplacementNamed(context, '/home');
     }
   }
@@ -23,10 +27,8 @@ class _UserInputScreenState extends State<UserInputScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       appBar: AppBar(
         backgroundColor: Color(0xFF0b3c66),
-        
         title: Text('  '),
       ),
       backgroundColor: Colors.white,
@@ -70,7 +72,8 @@ class _UserInputScreenState extends State<UserInputScreen> {
                       style: ElevatedButton.styleFrom(
                         foregroundColor: Colors.white,
                         backgroundColor: Color(0xFF0b3c66),
-                        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
@@ -90,7 +93,8 @@ class _UserInputScreenState extends State<UserInputScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, bool isEmail) {
+  Widget _buildTextField(
+      TextEditingController controller, String label, bool isEmail) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
@@ -124,7 +128,9 @@ class _UserInputScreenState extends State<UserInputScreen> {
           if (value == null || value.isEmpty) {
             return 'Please enter $label';
           }
-          if (isEmail && !RegExp(r"^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+").hasMatch(value)) {
+          if (isEmail &&
+              !RegExp(r"^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
+                  .hasMatch(value)) {
             return 'Please enter a valid email address';
           }
           return null;
