@@ -14,6 +14,7 @@ import 'package:path/path.dart' as path;
 import 'dart:math';
 import 'package:flutter/scheduler.dart';
 import 'package:image/image.dart' as img;
+import 'dart:async'; 
 
 
 
@@ -42,6 +43,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   bool _isLongPressing = false;
   double _slidingOffset = 0;
   DateTime? _recordingStartTime;
+  Timer? _recordingTimer;
+  Duration _recordingDuration = Duration.zero;
   
     @override
   void initState() {
@@ -72,6 +75,7 @@ String _formatDuration(Duration duration) {
 
   @override
   void dispose() {
+    _recordingTimer?.cancel();
     _audioRecorder!.closeRecorder();
     _audioPlayer!.closePlayer();
     _audioRecorder = null;
@@ -82,7 +86,8 @@ String _formatDuration(Duration duration) {
     super.dispose();
   }
 
-  void _startRecording() async {
+  
+void _startRecording() async {
     try {
       Directory tempDir = await getTemporaryDirectory();
       _recordedFilePath = path.join(tempDir.path, 'recorded_audio.wav');
@@ -95,7 +100,18 @@ String _formatDuration(Duration duration) {
       setState(() {
         _isRecording = true;
         _recordingStartTime = DateTime.now();
+        _recordingDuration = Duration.zero;
       });
+
+      // Start the timer to update duration every 100ms
+      _recordingTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+        if (_recordingStartTime != null) {
+          setState(() {
+            _recordingDuration = DateTime.now().difference(_recordingStartTime!);
+          });
+        }
+      });
+      
       print("Recording started");
     } catch (e) {
       print("Error starting recording: $e");
@@ -104,6 +120,7 @@ String _formatDuration(Duration duration) {
 
   void _cancelRecording() async {
     try {
+      _recordingTimer?.cancel();
       await _audioRecorder!.stopRecorder();
       if (_recordedFilePath != null && File(_recordedFilePath!).existsSync()) {
         await File(_recordedFilePath!).delete();
@@ -113,6 +130,7 @@ String _formatDuration(Duration duration) {
         _isLongPressing = false;
         _slidingOffset = 0;
         _recordingStartTime = null;
+        _recordingDuration = Duration.zero;
       });
       print("Recording cancelled");
     } catch (e) {
@@ -122,12 +140,14 @@ String _formatDuration(Duration duration) {
 
   void _stopAndSendRecording() async {
     try {
+      _recordingTimer?.cancel();
       await _audioRecorder!.stopRecorder();
       setState(() {
         _isRecording = false;
         _isLongPressing = false;
         _slidingOffset = 0;
         _recordingStartTime = null;
+        _recordingDuration = Duration.zero;
       });
       print("Recording stopped");
       await _processAudioAndSendToLLM();
@@ -160,8 +180,7 @@ String _formatDuration(Duration duration) {
       print("Error playing audio: $e");
     }
   }
-
-    Widget _buildMicrophoneButton() {
+  Widget _buildMicrophoneButton() {
     return GestureDetector(
       onLongPressStart: (_) {
         setState(() {
@@ -208,12 +227,10 @@ String _formatDuration(Duration duration) {
     );
   }
 
-  Widget _buildRecordingIndicator() {
-    if (!_isRecording) return SizedBox.shrink();
+  
 
-    Duration duration = _recordingStartTime != null
-        ? DateTime.now().difference(_recordingStartTime!)
-        : Duration.zero;
+    Widget _buildRecordingIndicator() {
+    if (!_isRecording) return SizedBox.shrink();
 
     return Expanded(
       child: Container(
@@ -227,7 +244,7 @@ String _formatDuration(Duration duration) {
             ),
             SizedBox(width: 8),
             Text(
-              _formatDuration(duration),
+              _formatDuration(_recordingDuration),
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 16,
@@ -247,7 +264,7 @@ String _formatDuration(Duration duration) {
       ),
     );
   }
-  
+
     Future<String> _zipRecordedAudio() async {
     Directory tempDir = await getTemporaryDirectory();
     String zipFilePath = path.join(tempDir.path, 'audio_zip.zip');
