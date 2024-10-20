@@ -12,6 +12,11 @@ import 'dart:convert';
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
 import 'dart:math';
+import 'package:flutter/scheduler.dart';
+import 'package:image/image.dart' as img;
+
+
+
 
 
 class FieldEditScreen extends StatefulWidget {
@@ -34,8 +39,11 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   bool _inputEnabled = false;
   String? _selectedFieldName;
   String? _ocrText;
-
-  @override
+  bool _isLongPressing = false;
+  double _slidingOffset = 0;
+  DateTime? _recordingStartTime;
+  
+    @override
   void initState() {
     super.initState();
     Permission.microphone.request();
@@ -50,7 +58,13 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     await _audioRecorder!.setSubscriptionDuration(Duration(milliseconds: 10));
     print("Recorder initialized");
   }
-
+String _formatDuration(Duration duration) {
+  String twoDigits(int n) => n.toString().padLeft(2, "0");
+  final hours = twoDigits(duration.inHours);
+  final minutes = twoDigits(duration.inMinutes % 60);
+  final seconds = twoDigits(duration.inSeconds % 60);
+  return "${hours != '00' ? '$hours:' : ''}$minutes:$seconds";
+}
   Future<void> _initializePlayer() async {
     await _audioPlayer!.openPlayer();
     print("Player initialized");
@@ -68,7 +82,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     super.dispose();
   }
 
-  Future<void> _startRecording() async {
+  void _startRecording() async {
     try {
       Directory tempDir = await getTemporaryDirectory();
       _recordedFilePath = path.join(tempDir.path, 'recorded_audio.wav');
@@ -80,6 +94,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
 
       setState(() {
         _isRecording = true;
+        _recordingStartTime = DateTime.now();
       });
       print("Recording started");
     } catch (e) {
@@ -87,11 +102,32 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     }
   }
 
-  Future<void> _stopRecording() async {
+  void _cancelRecording() async {
+    try {
+      await _audioRecorder!.stopRecorder();
+      if (_recordedFilePath != null && File(_recordedFilePath!).existsSync()) {
+        await File(_recordedFilePath!).delete();
+      }
+      setState(() {
+        _isRecording = false;
+        _isLongPressing = false;
+        _slidingOffset = 0;
+        _recordingStartTime = null;
+      });
+      print("Recording cancelled");
+    } catch (e) {
+      print("Error cancelling recording: $e");
+    }
+  }
+
+  void _stopAndSendRecording() async {
     try {
       await _audioRecorder!.stopRecorder();
       setState(() {
         _isRecording = false;
+        _isLongPressing = false;
+        _slidingOffset = 0;
+        _recordingStartTime = null;
       });
       print("Recording stopped");
       await _processAudioAndSendToLLM();
@@ -124,6 +160,93 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
       print("Error playing audio: $e");
     }
   }
+
+    Widget _buildMicrophoneButton() {
+    return GestureDetector(
+      onLongPressStart: (_) {
+        setState(() {
+          _isLongPressing = true;
+        });
+        _startRecording();
+      },
+      onLongPressMoveUpdate: (details) {
+        setState(() {
+          _slidingOffset = details.offsetFromOrigin.dx;
+        });
+      },
+      onLongPressEnd: (_) {
+        if (_slidingOffset < -50) {
+          _cancelRecording();
+        } else {
+          _stopAndSendRecording();
+        }
+      },
+      child: Container(
+        margin: EdgeInsets.only(left: 8),
+        decoration: BoxDecoration(
+          color: _isLongPressing 
+              ? Color(0xFF0b3c66).withOpacity(0.7)
+              : Color(0xFF0b3c66),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.3),
+              spreadRadius: 1,
+              blurRadius: 3,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: IconButton(
+          icon: Icon(
+            Icons.mic,
+            color: Colors.white,
+          ),
+          onPressed: null, // Disable tap, we're using long press
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecordingIndicator() {
+    if (!_isRecording) return SizedBox.shrink();
+
+    Duration duration = _recordingStartTime != null
+        ? DateTime.now().difference(_recordingStartTime!)
+        : Duration.zero;
+
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Icon(
+              Icons.mic,
+              color: Colors.red,
+              size: 20,
+            ),
+            SizedBox(width: 8),
+            Text(
+              _formatDuration(duration),
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+              ),
+            ),
+            SizedBox(width: 16),
+            if (_slidingOffset < 0)
+              Text(
+                "< Slide to cancel",
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
   
     Future<String> _zipRecordedAudio() async {
     Directory tempDir = await getTemporaryDirectory();
@@ -141,7 +264,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.31.227:8001/upload-audio-zip/')
+        Uri.parse('http://192.168.1.7:8001/upload-audio-zip/')
       );
 
       request.files.add(await http.MultipartFile.fromPath(
@@ -193,7 +316,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   }
 
   Future<void> _sendToLLMApi(String query, {bool isAudioQuery = false}) async {
-    final uri = Uri.parse('http://192.168.227.227:8021/get_llm_response');
+    final uri = Uri.parse('http://192.168.1.7:8021/get_llm_response');
     try {
       final response = await http.post(
         uri,
@@ -256,7 +379,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   }
 
   Future<void> _sendDataToApi(Map<String, dynamic> box) async {
-    final uri = Uri.parse('http://192.168.227.227:8080/cv/ocr');
+    final uri = Uri.parse('http://192.168.1.7:8080/cv/ocr');
     var request = http.MultipartRequest('POST', uri);
 
     // Crop the image
@@ -394,123 +517,121 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
             ),
           ),
           DraggableScrollableSheet(
-            initialChildSize: 0.3,
-            minChildSize: 0.3,
-            maxChildSize: 0.9,
-            snap: true,
-            snapSizes: [0.3, 0.6, 0.9],
-            builder: (BuildContext context, ScrollController scrollController) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
+          initialChildSize: 0.3,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          snap: true,
+          snapSizes: [0.3, 0.6, 0.9],
+          builder: (BuildContext context, ScrollController scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.5),
+                    spreadRadius: 5,
+                    blurRadius: 7,
+                    offset: Offset(0, 3),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.5),
-                      spreadRadius: 5,
-                      blurRadius: 7,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),                 child: Column(
-                  children: [
-                    GestureDetector(
-                      child: Container(
-                        width: 40,
-                        height: 5,
-                        margin: EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2.5),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        controller: scrollController,
-                          itemCount: chatMessages.length,
-                          itemBuilder: (context, index) {
-                            final message = chatMessages[index];
-                            return ChatBubble(
-  sender: message['sender'],
-  message: message['message'],
-  audioPath: message['audioPath'],
-  onPlayAudio: _playAudio,
-  avatar: message['sender'] == 'user' 
-          ? 'assets/user_avatar.png' // User's avatar image path
-          : 'assets/bot_avatar.png',  // Bot's avatar image path
-);
-                        },
-                      ),
-                    ),
-                    Container(
-                      margin: EdgeInsets.all(8),
-                      padding: EdgeInsets.symmetric(horizontal: 8),
+                ],
+              ),
+              child: Column(
+                children: [
+                  GestureDetector(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      margin: EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.2),
-                            spreadRadius: 1,
-                            blurRadius: 3,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              _isRecording ? Icons.stop : Icons.mic,
-                              color: _inputEnabled ? Color(0xFF0b3c66) : Colors.grey,
-                            ),
-                            onPressed: _inputEnabled
-                                ? () {
-                                    if (_isRecording) {
-                                      _stopRecording();
-                                    } else {
-                                      _startRecording();
-                                    }
-                                  }
-                                : null,
-                          ),
-                          Expanded(
-                            child: TextField(
-                              controller: _messageController,
-                              decoration: InputDecoration(
-                                hintText: 'Type a message',
-                                border: InputBorder.none,
-                                hintStyle: TextStyle(color: Colors.grey[400]),
-                              ),
-                              enabled: _inputEnabled,
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.send, color: _inputEnabled ? Color(0xFF0b3c66) : Colors.grey),
-                            onPressed: _inputEnabled
-                                ? () {
-                                    if (_messageController.text.isNotEmpty) {
-                                      setState(() {
-                                        chatMessages.add({
-                                          'sender': 'user',
-                                          'message': _messageController.text,
-                                        });
-                                      });
-                                      _sendToLLMApi(_messageController.text);
-                                      _messageController.clear();
-                                      _scrollToBottom();
-                                    }
-                                  }
-                                : null,
-                          ),
-                        ],
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2.5),
                       ),
                     ),
-                  ],
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      itemCount: chatMessages.length,
+                      itemBuilder: (context, index) {
+                        final message = chatMessages[index];
+                        return ChatBubble(
+                          sender: message['sender'],
+                          message: message['message'],
+                          audioPath: message['audioPath'],
+                          onPlayAudio: _playAudio,
+                          avatar: message['sender'] == 'user'
+                              ? 'assets/user_avatar.png'
+                              : 'assets/bot_avatar.png',
+                        );
+                      },
+                    ),
+                  ),
+                  // Chat Input Area
+                  Container(
+                    margin: EdgeInsets.all(8),
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        _isRecording
+                            ? _buildRecordingIndicator()
+                            : Expanded(
+                                child: TextField(
+                                  controller: _messageController,
+                                  decoration: InputDecoration(
+                                    hintText: 'Type a message',
+                                    border: InputBorder.none,
+                                    hintStyle: TextStyle(color: Colors.grey[400]),
+                                  ),
+                                  enabled: _inputEnabled,
+                                  onChanged: (text) {
+                                    setState(() {});
+                                  },
+                                ),
+                              ),
+                        AnimatedContainer(
+                          duration: Duration(milliseconds: 200),
+                          transform: Matrix4.translationValues(_slidingOffset, 0, 0),
+                          child: _messageController.text.isEmpty
+                              ? _buildMicrophoneButton()
+                              : IconButton(
+                                  icon: Icon(Icons.send, color: Color(0xFF0b3c66)),
+                                  onPressed: _inputEnabled
+                                      ? () {
+                                          if (_messageController.text.isNotEmpty) {
+                                            setState(() {
+                                              chatMessages.add({
+                                                'sender': 'user',
+                                                'message': _messageController.text,
+                                              });
+                                            });
+                                            _sendToLLMApi(_messageController.text);
+                                            _messageController.clear();
+                                            _scrollToBottom();
+                                          }
+                                        }
+                                      : null,
+        ),
+                        ), 
+    ],
+  ),
+),
+  ],
                 ),
               );
             },
@@ -520,6 +641,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     );
   }
 }
+
+
 class ChatBubble extends StatelessWidget {
   final String sender;
   final String message;
@@ -553,7 +676,9 @@ class ChatBubble extends StatelessWidget {
             SizedBox(width: 12),
           ],
           Flexible(
-            child: Container(
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
               decoration: BoxDecoration(
                 color: isUser ? Color(0xFFDCF8C6) : Color(0xFFE0E0E0),
                 borderRadius: BorderRadius.only(
@@ -566,10 +691,10 @@ class ChatBubble extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 6,
-                    offset: Offset(0, 3), // changes position of shadow
+                    color: Colors.grey.withOpacity(0.2),
+                    spreadRadius: 2,
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
@@ -581,20 +706,21 @@ class ChatBubble extends StatelessWidget {
                     AudioPlayerWidget(
                         audioPath: audioPath!, onPlayAudio: onPlayAudio),
                   if (message.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6.0),
-                      child: Text(
-                        message,
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w400,
-                          height: 1.4,
+                    FadeInWidget(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 6.0),
+                        child: Text(
+                          message,
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400,
+                            height: 1.4,
+                          ),
                         ),
                       ),
                     ),
                   SizedBox(height: 6),
-                  
                 ],
               ),
             ),
@@ -611,6 +737,52 @@ class ChatBubble extends StatelessWidget {
     );
   }
 }
+
+class FadeInWidget extends StatefulWidget {
+  final Widget child;
+
+  const FadeInWidget({Key? key, required this.child}) : super(key: key);
+
+  @override
+  _FadeInWidgetState createState() => _FadeInWidgetState();
+}
+
+class _FadeInWidgetState extends State<FadeInWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+
+    SchedulerBinding.instance?.addPostFrameCallback((_) {
+      _controller.forward();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _animation,
+      child: widget.child,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+}
+
+
+
 class AudioPlayerWidget extends StatefulWidget {
   final String audioPath;
   final Function(String)? onPlayAudio;
@@ -621,9 +793,65 @@ class AudioPlayerWidget extends StatefulWidget {
   _AudioPlayerWidgetState createState() => _AudioPlayerWidgetState();
 }
 
-class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
+class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
+    with SingleTickerProviderStateMixin {
   bool _isPlaying = false;
   double _playbackProgress = 0.0;
+  late AnimationController _progressController;
+  Duration _audioDuration = Duration.zero;
+  FlutterSoundPlayer? _audioPlayer;
+  Duration _currentPosition = Duration.zero; // Track current audio position
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePlayer();
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1), // Initial duration, will be updated
+    );
+    _progressController.addListener(() {
+      setState(() {
+        _playbackProgress = _progressController.value;
+      });
+    });
+  }
+
+  Future<void> _initializePlayer() async {
+    _audioPlayer = FlutterSoundPlayer();
+    await _audioPlayer!.openPlayer();
+    await _loadAudioDuration();
+  }
+
+  Future<void> _loadAudioDuration() async {
+    try {
+      await _audioPlayer!.startPlayer(
+        fromURI: widget.audioPath,
+        whenFinished: () {
+          setState(() {
+            _isPlaying = false;
+          });
+          _audioPlayer!.stopPlayer();
+        },
+      );
+
+      await Future.delayed(Duration(milliseconds: 100));
+      Duration? duration = await _audioPlayer!.getProgress().then((value) => value['duration']);
+
+      await _audioPlayer!.stopPlayer();
+
+      setState(() {
+        _audioDuration = duration ?? Duration.zero;
+        _progressController.duration = _audioDuration;
+      });
+    } catch (e) {
+      print('Error loading audio duration: $e');
+      setState(() {
+        _audioDuration = Duration(seconds: 30);
+        _progressController.duration = _audioDuration;
+      });
+    }
+  }
 
   void _togglePlayback() {
     setState(() {
@@ -631,131 +859,120 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     });
     widget.onPlayAudio?.call(widget.audioPath);
 
-    // Simulating playback progress
     if (_isPlaying) {
-      Future.delayed(Duration(milliseconds: 100), () {
-        if (mounted && _isPlaying) {
+      _audioPlayer!.startPlayer(
+        fromURI: widget.audioPath,
+        whenFinished: () {
           setState(() {
-            _playbackProgress += 0.01;
-            if (_playbackProgress >= 1.0) {
-              _playbackProgress = 0.0;
-              _isPlaying = false;
-            }
+            _isPlaying = false;
+            _playbackProgress = 0;
           });
-        }
-      });
+          _audioPlayer!.stopPlayer();
+        },
+      );
+
+      _progressController.forward(from: _playbackProgress);
+    } else {
+      _audioPlayer!.pausePlayer();
+      _progressController.stop();
     }
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String minutes = twoDigits(duration.inMinutes.remainder(60));
+    String seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$minutes:$seconds";
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.all(16),
+      margin: EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Color(0xFFFFFFFF), // White background for contrast
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.3),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Play/Pause Button
           GestureDetector(
             onTap: _togglePlayback,
             child: CircleAvatar(
-              radius: 24,
+              radius: 28,
               backgroundColor: Color(0xFF00A884),
               child: Icon(
                 _isPlaying ? Icons.pause : Icons.play_arrow,
                 color: Colors.white,
-                size: 24,
+                size: 28,
               ),
             ),
           ),
           SizedBox(width: 16),
+
+          // Progress bar and audio details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CustomPaint(
-                  size: Size(double.infinity, 30),
-                  painter: WaveformPainter(progress: _playbackProgress),
+                // Progress bar using Slider
+                Slider(
+                  value: _playbackProgress,
+                  min: 0,
+                  max: 1,
+                  onChanged: (newValue) {
+                    setState(() {
+                      _playbackProgress = newValue;
+                      _audioPlayer!.seekToPlayer(Duration(seconds: (_playbackProgress * _audioDuration.inSeconds).toInt()));
+                    });
+                  },
+                  activeColor: Color(0xFF00A884),
+                  inactiveColor: Colors.grey.shade300,
+                  thumbColor: Color(0xFF00A884), // Thumb color for the slider
                 ),
-                SizedBox(height: 6),
+                SizedBox(height: 4),
+
+                // Current and total duration
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "0:${(_playbackProgress * 60).toInt().toString().padLeft(2, '0')}",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      _formatDuration(_currentPosition),
+                      style: TextStyle(color: Colors.grey[700], fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                     Text(
-                      "1:00",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      _formatDuration(_audioDuration),
+                      style: TextStyle(color: Colors.grey[700], fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
               ],
             ),
           ),
+
           SizedBox(width: 8),
-          Icon(Icons.mic, color: Color(0xFF00A884), size: 24),
+
+          // Microphone Icon
+          Icon(Icons.mic, color: Color(0xFF00A884), size: 28),
         ],
       ),
     );
   }
-}
-
-class WaveformPainter extends CustomPainter {
-  final double progress;
-
-  WaveformPainter({required this.progress});
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = Color(0xFF00A884);
-
-    final int barCount = 40;
-    final double barWidth = size.width / (barCount * 2 - 1);
-    final double maxBarHeight = size.height;
-
-    for (int i = 0; i < barCount; i++) {
-      final double normalizedHeight = _getNormalizedHeight(i, barCount);
-      final double barHeight = normalizedHeight * maxBarHeight;
-      final double left = 2 * i * barWidth;
-      final double top = (size.height - barHeight) / 2;
-
-      // Draw the bar
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(left, top, barWidth, barHeight),
-          Radius.circular(barWidth / 2),
-        ),
-        paint,
-      );
-    }
-
-    // Draw the progress overlay
-    final Paint progressPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = Colors.white.withOpacity(0.5);
-
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width * progress, size.height),
-      progressPaint,
-    );
-  }
-
-  double _getNormalizedHeight(int index, int total) {
-    // This function returns a height value between 0 and 1 based on the index
-    // You can adjust this to match the exact pattern in the image
-    final List<double> heights = [
-      0.2, 0.5, 0.7, 0.9, 1.0, 0.8, 0.6, 0.4, 0.3, 0.5,
-      0.7, 0.9, 1.0, 0.8, 0.6, 0.4, 0.2, 0.5, 0.7, 0.9,
-      1.0, 0.8, 0.6, 0.4, 0.3, 0.5, 0.7, 0.9, 1.0, 0.8,
-      0.6, 0.4, 0.2, 0.5, 0.7, 0.9, 1.0, 0.8, 0.6, 0.4
-    ];
-    return heights[index % heights.length];
-  }
-
-  @override
-  bool shouldRepaint(WaveformPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+  void dispose() {
+    _progressController.dispose();
+    _audioPlayer?.closePlayer();
+    super.dispose();
   }
 }
