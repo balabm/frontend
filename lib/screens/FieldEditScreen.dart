@@ -280,7 +280,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   Future<String?> _sendAudioToApi(File zipFile) async {
     try {
       var request = http.MultipartRequest(
-          'POST', Uri.parse('http://192.168.1.7:8001/upload-audio-zip/'));
+          'POST', Uri.parse('http://192.168.227.227:8001/upload-audio-zip/'));
 
       request.files.add(await http.MultipartFile.fromPath(
         'file',
@@ -332,7 +332,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   }
 
   Future<void> _sendToLLMApi(String query, {bool isAudioQuery = false}) async {
-    final uri = Uri.parse('http://192.168.1.7:8021/get_llm_response');
+    final uri = Uri.parse('http://192.168.227.227:8021/get_llm_response');
     try {
       final response = await http.post(
         uri,
@@ -344,21 +344,29 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
       );
 
       if (response.statusCode == 200) {
-        final llmResponse = jsonDecode(response.body);
-        _dbHelper.saveLlmResponse(llmResponse);
-        setState(() {
-          chatMessages.add({
-            'sender': 'assistant',
-            'message': llmResponse['response'],
-          });
-        });
-        _scrollToBottom();
-      } else {
-        print('Failed to get LLM response: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error occurred while sending data to LLM API: $e');
-    }
+    print('my LLM Response: ${response.body}');
+
+    // Decode the response body (which is a JSON string) into a map
+    final Map<String, dynamic> llmResponse = jsonDecode(response.body);
+
+    // Save the response using your DB helper function (assuming it's expecting a Map)
+ _dbHelper.saveLlmResponse(jsonEncode(llmResponse));
+    // Update the chat messages state
+    setState(() {
+      chatMessages.add({
+        'sender': 'assistant',
+        'message': llmResponse['response'] ?? 'No response available', // Check if 'response' exists
+      });
+    });
+
+    // Scroll to bottom of the chat
+    _scrollToBottom();
+  } else {
+    print('Failed to get LLM response: ${response.statusCode}');
+  }
+} catch (e) {
+  print('Error occurred while sending data to LLM API: $e');
+}
   }
 
   @override
@@ -397,7 +405,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   }
 
   Future<void> _sendDataToApi(Map<String, dynamic> box) async {
-    final uri = Uri.parse('http://192.168.1.7:8080/cv/ocr');
+    final uri = Uri.parse('http://192.168.227.227:8080/cv/ocr');
     var request = http.MultipartRequest('POST', uri);
 
     // Crop the image

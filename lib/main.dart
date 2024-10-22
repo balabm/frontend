@@ -1,3 +1,4 @@
+import 'package:ass/DBInterface.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // Import this to use MultiProvider
 import 'screens/user_input_screen.dart'; // Ensure this import is correct
@@ -22,6 +23,8 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -31,7 +34,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      initialRoute: '/userInput', // Set UserInputScreen as the initial route
+      initialRoute: '/db', // Set UserInputScreen as the initial route
       routes: {
         '/userInput': (context) => UserInputScreen(),
         '/home': (context) => HomeScreen(),
@@ -41,6 +44,7 @@ class MyApp extends StatelessWidget {
         '/extracted_fields': (context) => ExtractedFieldsScreen(),
         '/audio_recording': (context) => AudioRecordingScreen(),
         '/review_submit': (context) => ReviewSubmitScreen(),
+        '/db': (context) => UserInterface(),
       },
     );
   }
