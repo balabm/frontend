@@ -206,8 +206,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
         margin: EdgeInsets.only(left: 8),
         decoration: BoxDecoration(
           color: _isLongPressing
-              ? Color(0xFF0b3c66).withOpacity(0.7)
-              : Color(0xFF0b3c66),
+              ? Color.fromRGBO(16, 121, 63,1 ).withOpacity(0.7)
+              : Color.fromRGBO(16, 121, 63,1 ),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -486,7 +486,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Form Field Extraction'),
-        backgroundColor: Color(0xFF0b3c66),
+        backgroundColor: Color.fromRGBO(16, 121, 63,1 ),
         elevation: 0,
       ),
       body: Stack(
@@ -649,7 +649,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
                                 ? _buildMicrophoneButton()
                                 : IconButton(
                                     icon: Icon(Icons.send,
-                                        color: Color(0xFF0b3c66)),
+                                        color: Color.fromRGBO(16, 121, 63,1 )),
                                     onPressed: _inputEnabled
                                         ? () {
                                             if (_messageController

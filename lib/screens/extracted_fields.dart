@@ -106,7 +106,7 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(''),
-        backgroundColor: Color(0xFF0b3c66),
+        backgroundColor: Color.fromRGBO(16, 121, 63,1 ),
         iconTheme: IconThemeData(color: Colors.white), // Set arrow color to white
       ),
       body: Container(
@@ -133,7 +133,7 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
                         ? Colors.red
                         : isPlaying
                             ? Colors.green
-                            : Color(0xFF0b3c66), // Dynamic color change
+                            : Color.fromRGBO(16, 121, 63,1 ), // Dynamic color change
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -169,7 +169,7 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
                         filled: true,
                         fillColor: Colors.grey[200],
                         suffixIcon: IconButton(
-                          icon: Icon(Icons.send, color: Color(0xFF0b3c66)),
+                          icon: Icon(Icons.send, color: Color.fromRGBO(16, 121, 63,1 )),
                           onPressed: () {
                             // Handle submit action
                             print('User input: ${_queryController.text}');

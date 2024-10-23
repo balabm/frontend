@@ -46,7 +46,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Crop Image',
-            toolbarColor: Color(0xFF0b3c66),
+            toolbarColor: Color.fromRGBO(16, 121, 63,1 ),
             toolbarWidgetColor: Colors.white,
             initAspectRatio: CropAspectRatioPreset.original,
             lockAspectRatio: false,
@@ -160,7 +160,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Image Processing', style: TextStyle(color: Colors.white)),
-        backgroundColor: Color(0xFF0b3c66),
+        backgroundColor: Color.fromRGBO(16, 121, 63,1 ),
         iconTheme:
             IconThemeData(color: Colors.white), // Change arrow color to white
       ),
@@ -183,7 +183,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          Color(0xFF0b3c66), // Button background color
+                          Color.fromRGBO(16, 121, 63,1 ), // Button background color
                       padding:
                           EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                       textStyle:
@@ -205,7 +205,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          Color(0xFF0b3c66), // Button background color
+                          Color.fromRGBO(16, 121, 63,1 ), // Button background color
                       padding:
                           EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                       textStyle:

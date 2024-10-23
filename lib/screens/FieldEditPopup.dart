@@ -266,7 +266,7 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
         //style: TextStyle(
           //fontSize: 22,
           //fontWeight: FontWeight.bold,
-          //color: Color(0xFF0b3c66),
+          //color: Color.fromRGBO(16, 121, 63,1 ),
         //),
         //textAlign: TextAlign.center,
       //),
@@ -284,7 +284,7 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
       : "No API Response",
   style: TextStyle(
     fontSize: 22,
-    color: Color(0xFF0b3c66),
+    color: Color.fromRGBO(16, 121, 63,1 ),
     fontWeight: FontWeight.bold,
   ),
 ),
@@ -294,17 +294,17 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
                 controller: _controller,
                 decoration: InputDecoration(
                   labelText: 'Enter Value',
-                  labelStyle: TextStyle(color: Color(0xFF0b3c66)),
+                  labelStyle: TextStyle(color: Color.fromRGBO(16, 121, 63,1 )),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Color(0xFF0b3c66)),
+                    borderSide: BorderSide(color: Color.fromRGBO(16, 121, 63,1 )),
                   ),
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   suffixIcon: IconButton(
                     onPressed: isRecording ? _stopRecording : _startRecording,
                     icon: Icon(
                       isRecording ? Icons.stop : Icons.mic,
-                      color: isRecording ? Colors.red : Color(0xFF0b3c66),
+                      color: isRecording ? Colors.red : Color.fromRGBO(16, 121, 63,1 ),
                     ),
                   ),
                 ),
@@ -328,13 +328,13 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
                     IconButton(
                       icon: Icon(
                         isPlaying ? Icons.stop : Icons.play_arrow,
-                        color: Color(0xFF0b3c66),
+                        color: Color.fromRGBO(16, 121, 63,1 ),
                       ),
                       onPressed: isPlaying ? _stopAudio : _playAudio,
                     ),
                     Text(
                       isPlaying ? "Stop Audio" : "Play Audio",
-                      style: TextStyle(color: Color(0xFF0b3c66)),
+                      style: TextStyle(color: Color.fromRGBO(16, 121, 63,1 )),
                     ),
                   ],
                 ),
@@ -342,7 +342,7 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
               ],
               ElevatedButton(
   style: ElevatedButton.styleFrom(
-    backgroundColor: Color(0xFF0b3c66),  // Button background color
+    backgroundColor: Color.fromRGBO(16, 121, 63,1 ),  // Button background color
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(8),
     ),

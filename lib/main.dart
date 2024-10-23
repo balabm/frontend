@@ -31,10 +31,10 @@ class MyApp extends StatelessWidget {
       
       title: 'Form Capture App',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.green,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      initialRoute: '/db', // Set UserInputScreen as the initial route
+      initialRoute: '/userInput', // Set UserInputScreen as the initial route
       routes: {
         '/userInput': (context) => UserInputScreen(),
         '/home': (context) => HomeScreen(),

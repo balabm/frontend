@@ -20,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadSubmittedForms();
     _loadUserName();
     _loadCapturedImages();
+    _showSlideToDeleteMessage();
   }
 
   Future<void> _loadSubmittedForms() async {
@@ -64,12 +65,23 @@ class _HomeScreenState extends State<HomeScreen> {
     prefs.setStringList('capturedImages', _capturedImages);
   }
 
+  void _showSlideToDeleteMessage() {
+    Future.delayed(Duration.zero, () {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Slide to delete an image'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[200],
       appBar: AppBar(
-        backgroundColor: Color(0xFF0b3c66),
+        backgroundColor: const  Color(0xFF00A699),
         leading: IconButton(
           icon: Icon(Icons.home, color: Colors.white),
           onPressed: () {
@@ -119,22 +131,39 @@ class _HomeScreenState extends State<HomeScreen> {
                     }).toList();
                   });
                 },
-
               ),
             ),
             SizedBox(height: 20),
-
             Expanded(
               child: _capturedImages.isNotEmpty
                   ? ListView.builder(
                       itemCount: _capturedImages.length,
                       itemBuilder: (context, index) {
                         final imagePath = _capturedImages[index];
-                        final fileName = imagePath.split('/').last; // Extract file name
-                        return ListTile(
-                          leading: Container(
-                            width: 60, 
-                            height: 60,
+                        return Dismissible(
+                          key: Key(imagePath),
+                          direction: DismissDirection.endToStart,
+                          onDismissed: (direction) {
+                            _deleteImage(imagePath);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Image deleted'),
+                              ),
+                            );
+                          },
+                          background: Container(
+                            color: Colors.red,
+                            alignment: Alignment.centerRight,
+                            padding: EdgeInsets.symmetric(horizontal: 20),
+                            child: Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                            ),
+                          ),
+                          child: Container(
+                            margin: EdgeInsets.symmetric(vertical: 10),
+                            width: MediaQuery.of(context).size.width,
+                            height: MediaQuery.of(context).size.width*1.4,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               boxShadow: [
@@ -150,50 +179,41 @@ class _HomeScreenState extends State<HomeScreen> {
                               fit: BoxFit.cover,
                             ),
                           ),
-                          title: Text(fileName), // Display the file name or title
-                          trailing: IconButton(
-                            icon: Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              _deleteImage(imagePath);
-                            },
-                          ),
-                          onTap: () {
-                            // Handle tapping on an image
-                            Navigator.pushNamed(
-                              context, '/image_processing',
-                              arguments: imagePath,
-                            );
-                          },
                         );
                       },
                     )
                   : Center(child: Text('No captured images yet.')),
             ),
-
+            SizedBox(height: 10), // Add some space before the message
+            Text(
+              'Swipe to delete an image',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
       floatingActionButton: Padding(
-  padding: const EdgeInsets.only(bottom: 20.0),
-  child: Align(
-    alignment: Alignment.bottomCenter,
-    child: Container(
-      width: 200, // Adjust the width here
-      child: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, '/camera');
-        },
-        icon: Icon(Icons.upload_file, color: Colors.white), // Add the upload icon here
-        label: Text(
-          'Upload New Form', 
-          style: TextStyle(color: Colors.white),
+        padding: const EdgeInsets.only(bottom: 20.0),
+        child: Align(
+          alignment: Alignment.bottomRight,
+          child: Container(
+            width: 130, // Adjust the width here
+            child: FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.pushNamed(context, '/camera');
+              },
+              icon: Icon(Icons.upload_file,
+                  color: Colors.white), // Add the upload icon here
+              label: Text(
+                'Upload',
+                style: TextStyle(color: Colors.white),
+              ),
+              backgroundColor: const  Color(0xFF00A699),
+            ),
+          ),
         ),
-        backgroundColor: Color(0xFF0b3c66),
       ),
-    ),
-  ),
-),
-
     );
   }
 }

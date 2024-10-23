@@ -16,7 +16,7 @@ class AnswerDisplayScreen extends StatelessWidget {
       backgroundColor: Colors.white, // Set the body background to white
       appBar: AppBar(
         title: Text(''),
-        backgroundColor: Color(0xFF0b3c66),
+        backgroundColor: Color.fromRGBO(16, 121, 63,1 ),
         iconTheme: IconThemeData(color: Colors.white),
       ),
       body: Padding(
@@ -29,7 +29,7 @@ class AnswerDisplayScreen extends StatelessWidget {
               padding: const EdgeInsets.only(top: 48.0, bottom: 18.0), // Padding for top and bottom
               child: ShaderMask(
                 shaderCallback: (bounds) => LinearGradient(
-                  colors: [Color(0xFF0b3c66), Color(0xFF0b3c66)],
+                  colors: [Color.fromRGBO(16, 121, 63,1 ), Color.fromRGBO(16, 121, 63,1 )],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ).createShader(bounds),
@@ -67,7 +67,7 @@ class AnswerDisplayScreen extends StatelessWidget {
                     child: Row(
                       children: [
                         CircleAvatar(
-                          backgroundColor: Color(0xFF0b3c66),
+                          backgroundColor: Color.fromRGBO(16, 121, 63,1 ),
                           child: Icon(
                             Icons.question_answer,
                             color: Colors.white,
@@ -107,7 +107,7 @@ class AnswerDisplayScreen extends StatelessWidget {
                       child: Text('Back'),
                       style: ElevatedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        backgroundColor: Color(0xFF0b3c66),
+                        backgroundColor: Color.fromRGBO(16, 121, 63,1 ),
                         padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
