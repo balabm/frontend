@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class ReviewSubmitScreen extends StatelessWidget {
+  const ReviewSubmitScreen({super.key});
+
   Future<void> _submitData(String imagePath, String audioPath) async {
     // Create a multipart request
     // var request = http.MultipartRequest('POST', Uri.parse('YOUR_API_ENDPOINT'));

@@ -4,12 +4,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
 class ExtractedFieldsScreen extends StatefulWidget {
+  const ExtractedFieldsScreen({super.key});
+
   @override
   _ExtractedFieldsScreenState createState() => _ExtractedFieldsScreenState();
 }
 
 class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
-  TextEditingController _queryController = TextEditingController();
+  final TextEditingController _queryController = TextEditingController();
   bool isRecording = false; // For mic recording status
   bool isPlaying = false; // For audio playback status
   FlutterSoundRecorder? _audioRecorder; // Flutter Sound recorder instance
@@ -105,9 +107,9 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(''),
-        backgroundColor: Color(0xFF0b3c66),
-        iconTheme: IconThemeData(color: Colors.white), // Set arrow color to white
+        title: const Text(''),
+        backgroundColor: const Color(0xFF0b3c66),
+        iconTheme: const IconThemeData(color: Colors.white), // Set arrow color to white
       ),
       body: Container(
         color: Colors.white, // Set background to white
@@ -120,10 +122,10 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text('${entry.key}: ${entry.value}',
-                    style: TextStyle(fontSize: 18, color: Colors.black87)),
+                    style: const TextStyle(fontSize: 18, color: Colors.black87)),
               );
-            }).toList(),
-            Spacer(),
+            }),
+            const Spacer(),
             Row(
               children: [
                 // Stylish Microphone button
@@ -133,7 +135,7 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
                         ? Colors.red
                         : isPlaying
                             ? Colors.green
-                            : Color(0xFF0b3c66), // Dynamic color change
+                            : const Color(0xFF0b3c66), // Dynamic color change
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -157,7 +159,7 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
                 // Expanded TextField to occupy the entire width
                 Expanded(
                   child: Container(
-                    margin: EdgeInsets.only(left: 8.0), // Adjust space between mic and TextField
+                    margin: const EdgeInsets.only(left: 8.0), // Adjust space between mic and TextField
                     child: TextField(
                       controller: _queryController,
                       decoration: InputDecoration(
@@ -169,13 +171,13 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
                         filled: true,
                         fillColor: Colors.grey[200],
                         suffixIcon: IconButton(
-                          icon: Icon(Icons.send, color: Color(0xFF0b3c66)),
+                          icon: const Icon(Icons.send, color: Color(0xFF0b3c66)),
                           onPressed: () {
                             // Handle submit action
                             print('User input: ${_queryController.text}');
                           },
                         ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 20.0),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
                       ),
                     ),
                   ),
@@ -188,22 +190,22 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      icon: Icon(Icons.play_arrow, color: Colors.green),
+                      icon: const Icon(Icons.play_arrow, color: Colors.green),
                       onPressed: isPlaying ? null : _playAudio,
                     ),
                     IconButton(
-                      icon: Icon(Icons.replay, color: Colors.blue),
+                      icon: const Icon(Icons.replay, color: Colors.blue),
                       onPressed: _reRecord,
                     ),
                     if (isPlaying)
                       IconButton(
-                        icon: Icon(Icons.stop, color: Colors.red),
+                        icon: const Icon(Icons.stop, color: Colors.red),
                         onPressed: _stopPlaying,
                       ),
                   ],
                 ),
               ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
           ],
         ),
       ),

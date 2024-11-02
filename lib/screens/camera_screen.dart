@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 
 class CameraScreen extends StatefulWidget {
+  const CameraScreen({super.key});
+
   @override
   _CameraScreenState createState() => _CameraScreenState();
 }
@@ -88,7 +90,7 @@ final imagePath = '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toS
   @override
   Widget build(BuildContext context) {
     if (_controller == null || !_controller!.value.isInitialized) {
-      return Scaffold(
+      return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
@@ -126,7 +128,7 @@ final imagePath = '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toS
             bottom: 16,
             left: 16,
             child: IconButton(
-              icon: Icon(Icons.switch_camera, color: Colors.white),
+              icon: const Icon(Icons.switch_camera, color: Colors.white),
               onPressed: _switchCamera,
             ),
           ),
@@ -134,7 +136,7 @@ final imagePath = '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toS
             bottom: 16,
             right: 16,
             child: IconButton(
-              icon: Icon(Icons.photo_library, color: Colors.white),
+              icon: const Icon(Icons.photo_library, color: Colors.white),
               onPressed: _pickImage, // Handle gallery button press
             ),
           ),
@@ -144,7 +146,7 @@ final imagePath = '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toS
             right: 0,
             child: Center(
               child: IconButton(
-                icon: Icon(Icons.camera, color: Colors.white, size: 48),
+                icon: const Icon(Icons.camera, color: Colors.white, size: 48),
                 onPressed: () async {
                   try {
                     final image = await _controller!.takePicture();

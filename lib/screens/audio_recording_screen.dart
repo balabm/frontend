@@ -5,6 +5,8 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:async';
 
 class AudioRecordingScreen extends StatefulWidget {
+  const AudioRecordingScreen({super.key});
+
   @override
   _AudioRecordingScreenState createState() => _AudioRecordingScreenState();
 }
@@ -69,7 +71,7 @@ class _AudioRecordingScreenState extends State<AudioRecordingScreen> {
       _recordingDuration = 0;
     });
 
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         _recordingDuration++;
       });
@@ -131,7 +133,7 @@ class _AudioRecordingScreenState extends State<AudioRecordingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Record Audio')),
+      appBar: AppBar(title: const Text('Record Audio')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Center(
@@ -140,7 +142,7 @@ class _AudioRecordingScreenState extends State<AudioRecordingScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (!_hasPermission)
-                Text(
+                const Text(
                   'Microphone permission not granted',
                   style: TextStyle(color: Colors.red, fontSize: 16),
                   textAlign: TextAlign.center,
@@ -148,10 +150,10 @@ class _AudioRecordingScreenState extends State<AudioRecordingScreen> {
               if (_hasPermission) ...[
                 Text(
                   _formatDuration(_recordingDuration),
-                  style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 ElevatedButton.icon(
                   icon: Icon(_isRecording ? Icons.stop : Icons.mic),
                   label:
@@ -159,23 +161,23 @@ class _AudioRecordingScreenState extends State<AudioRecordingScreen> {
                   onPressed: _isRecording ? _stopRecording : _startRecording,
                 ),
                 if (!_isRecording && _recordingPath != null) ...[
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   ElevatedButton.icon(
                     icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
                     label:
                         Text(_isPlaying ? 'Stop Playback' : 'Play Recording'),
                     onPressed: _playRecording,
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   ElevatedButton.icon(
-                    icon: Icon(Icons.replay),
-                    label: Text('Re-record'),
+                    icon: const Icon(Icons.replay),
+                    label: const Text('Re-record'),
                     onPressed: _reRecord,
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   ElevatedButton.icon(
-                    icon: Icon(Icons.navigate_next),
-                    label: Text('Next'),
+                    icon: const Icon(Icons.navigate_next),
+                    label: const Text('Next'),
                     onPressed: () {
                       Navigator.pushNamed(
                         context,

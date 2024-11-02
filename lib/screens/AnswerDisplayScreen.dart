@@ -4,7 +4,7 @@ class AnswerDisplayScreen extends StatelessWidget {
   final String query;
   final String answer;
 
-  AnswerDisplayScreen({required this.query, required this.answer});
+  const AnswerDisplayScreen({super.key, required this.query, required this.answer});
 
   void _submit() {
     print("Back button pressed");
@@ -15,9 +15,9 @@ class AnswerDisplayScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white, // Set the body background to white
       appBar: AppBar(
-        title: Text(''),
-        backgroundColor: Color(0xFF0b3c66),
-        iconTheme: IconThemeData(color: Colors.white),
+        title: const Text(''),
+        backgroundColor: const Color(0xFF0b3c66),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -28,12 +28,12 @@ class AnswerDisplayScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 48.0, bottom: 18.0), // Padding for top and bottom
               child: ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
+                shaderCallback: (bounds) => const LinearGradient(
                   colors: [Color(0xFF0b3c66), Color(0xFF0b3c66)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ).createShader(bounds),
-                child: Text(
+                child: const Text(
                   "Response To Your Query:",
                   style: TextStyle(
                     fontSize: 18, // Updated font size for professionalism
@@ -49,7 +49,7 @@ class AnswerDisplayScreen extends StatelessWidget {
             // Main card displaying the query and answer
             Container(
               decoration: BoxDecoration(
-                color: Color(0xFFE8F0FE), // Subtle blue background for card
+                color: const Color(0xFFE8F0FE), // Subtle blue background for card
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -66,18 +66,18 @@ class AnswerDisplayScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(20.0),
                     child: Row(
                       children: [
-                        CircleAvatar(
+                        const CircleAvatar(
                           backgroundColor: Color(0xFF0b3c66),
                           child: Icon(
                             Icons.question_answer,
                             color: Colors.white,
                           ),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             query, // Dynamically display the query
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
@@ -87,39 +87,39 @@ class AnswerDisplayScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Divider(height: 1, color: Colors.black26),
+                  const Divider(height: 1, color: Colors.black26),
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
                       answer, // Dynamically display the answer
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
                         color: Colors.black54,
                       ),
                     ),
                   ),
-                  SizedBox(height: 46), // Spacing between text and button
+                  const SizedBox(height: 46), // Spacing between text and button
 
                   // Back Button inside the card
                   Center(
                     child: ElevatedButton(
                       onPressed: _submit,
-                      child: Text('Back'),
                       style: ElevatedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        backgroundColor: Color(0xFF0b3c66),
-                        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                        backgroundColor: const Color(0xFF0b3c66),
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        textStyle: TextStyle(
+                        textStyle: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      child: Text('Back'),
                     ),
                   ),
-                  SizedBox(height: 20), // Padding after the button
+                  const SizedBox(height: 20), // Padding after the button
                 ],
               ),
             ),
