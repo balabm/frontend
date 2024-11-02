@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'dart:io';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -11,7 +13,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, String>> _submittedForms = [];
   List<String> _capturedImages = [];
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   String _userName = '';
 
   @override
@@ -69,14 +71,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[200],
       appBar: AppBar(
-        backgroundColor: Color(0xFF0b3c66),
+        backgroundColor: const Color(0xFF0b3c66),
         leading: IconButton(
-          icon: Icon(Icons.home, color: Colors.white),
+          icon: const Icon(Icons.home, color: Colors.white),
           onPressed: () {
             // Handle home button press
           },
         ),
-        title: Text('Hi $_userName', style: TextStyle(color: Colors.white)),
+        title: Text('Hi $_userName', style: const TextStyle(color: Colors.white)),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -84,16 +86,16 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
+            const Text(
               'Previously Captured Forms:',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black26,
                     offset: Offset(0, 2),
@@ -109,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
-                  prefixIcon: Icon(Icons.search),
+                  prefixIcon: const Icon(Icons.search),
                 ),
                 onChanged: (query) {
                   setState(() {
@@ -122,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             Expanded(
               child: _capturedImages.isNotEmpty
@@ -137,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             height: 60,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
+                              boxShadow: const [
                                 BoxShadow(
                                   color: Colors.black26,
                                   offset: Offset(0, 2),
@@ -152,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           title: Text(fileName), // Display the file name or title
                           trailing: IconButton(
-                            icon: Icon(Icons.delete, color: Colors.red),
+                            icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () {
                               _deleteImage(imagePath);
                             },
@@ -167,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       },
                     )
-                  : Center(child: Text('No captured images yet.')),
+                  : const Center(child: Text('No captured images yet.')),
             ),
 
           ],
@@ -177,18 +179,18 @@ class _HomeScreenState extends State<HomeScreen> {
   padding: const EdgeInsets.only(bottom: 20.0),
   child: Align(
     alignment: Alignment.bottomCenter,
-    child: Container(
+    child: SizedBox(
       width: 200, // Adjust the width here
       child: FloatingActionButton.extended(
         onPressed: () {
           Navigator.pushNamed(context, '/camera');
         },
-        icon: Icon(Icons.upload_file, color: Colors.white), // Add the upload icon here
-        label: Text(
+        icon: const Icon(Icons.upload_file, color: Colors.white), // Add the upload icon here
+        label: const Text(
           'Upload New Form', 
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Color(0xFF0b3c66),
+        backgroundColor: const Color(0xFF0b3c66),
       ),
     ),
   ),

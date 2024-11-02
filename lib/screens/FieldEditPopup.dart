@@ -15,14 +15,14 @@ import 'AnswerDisplayScreen.dart';  // Import statement at the top of your file
 class FieldEditPopup extends StatefulWidget {
   final String fieldName;
 
-  FieldEditPopup({required this.fieldName});
+  const FieldEditPopup({super.key, required this.fieldName});
 
   @override
   _FieldEditPopupState createState() => _FieldEditPopupState();
 }
 
 class _FieldEditPopupState extends State<FieldEditPopup> {
-  TextEditingController _controller = TextEditingController();
+  final TextEditingController _controller = TextEditingController();
   bool isRecording = false;
   bool isPlaying = false;
   String? _audioPath; // Path to store the recorded audio
@@ -282,36 +282,36 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
   ocrResponse != null
       ? " ${jsonDecode(ocrResponse)['extracted_text'] ?? 'No text found'}"
       : "No API Response",
-  style: TextStyle(
+  style: const TextStyle(
     fontSize: 22,
     color: Color(0xFF0b3c66),
     fontWeight: FontWeight.bold,
   ),
 ),
 
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               TextField(
                 controller: _controller,
                 decoration: InputDecoration(
                   labelText: 'Enter Value',
-                  labelStyle: TextStyle(color: Color(0xFF0b3c66)),
+                  labelStyle: const TextStyle(color: Color(0xFF0b3c66)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Color(0xFF0b3c66)),
+                    borderSide: const BorderSide(color: Color(0xFF0b3c66)),
                   ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   suffixIcon: IconButton(
                     onPressed: isRecording ? _stopRecording : _startRecording,
                     icon: Icon(
                       isRecording ? Icons.stop : Icons.mic,
-                      color: isRecording ? Colors.red : Color(0xFF0b3c66),
+                      color: isRecording ? Colors.red : const Color(0xFF0b3c66),
                     ),
                   ),
                 ),
                 maxLines: 2,
                 maxLength: 100,
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 'How can I assist you with this section?',
                 style: TextStyle(
@@ -320,7 +320,7 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               if (_audioPath != null) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -328,21 +328,21 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
                     IconButton(
                       icon: Icon(
                         isPlaying ? Icons.stop : Icons.play_arrow,
-                        color: Color(0xFF0b3c66),
+                        color: const Color(0xFF0b3c66),
                       ),
                       onPressed: isPlaying ? _stopAudio : _playAudio,
                     ),
                     Text(
                       isPlaying ? "Stop Audio" : "Play Audio",
-                      style: TextStyle(color: Color(0xFF0b3c66)),
+                      style: const TextStyle(color: Color(0xFF0b3c66)),
                     ),
                   ],
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
               ],
               ElevatedButton(
   style: ElevatedButton.styleFrom(
-    backgroundColor: Color(0xFF0b3c66),  // Button background color
+    backgroundColor: const Color(0xFF0b3c66),  // Button background color
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(8),
     ),
@@ -367,7 +367,7 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
       }
     }
   },
-  child: Text(
+  child: const Text(
     'Submit',
     style: TextStyle(
       color: Colors.white,  // Set the text color to white

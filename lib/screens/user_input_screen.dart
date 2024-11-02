@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserInputScreen extends StatefulWidget {
+  const UserInputScreen({super.key});
+
   @override
   _UserInputScreenState createState() => _UserInputScreenState();
 }
@@ -12,7 +14,7 @@ class _UserInputScreenState extends State<UserInputScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  late String _userName = '';
+  late final String _userName = '';
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Future<void> _submit() async {
@@ -28,8 +30,8 @@ class _UserInputScreenState extends State<UserInputScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xFF0b3c66),
-        title: Text('  '),
+        backgroundColor: const Color(0xFF0b3c66),
+        title: const Text('  '),
       ),
       backgroundColor: Colors.white,
       body: Padding(
@@ -41,8 +43,8 @@ class _UserInputScreenState extends State<UserInputScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  SizedBox(height: 2),
-                  Text(
+                  const SizedBox(height: 2),
+                  const Text(
                     'Welcome!',
                     style: TextStyle(
                       color: Color(0xFF0b3c66),
@@ -51,7 +53,7 @@ class _UserInputScreenState extends State<UserInputScreen> {
                       letterSpacing: 1.5,
                     ),
                   ),
-                  Text(
+                  const Text(
                     'Please enter your details to proceed.',
                     style: TextStyle(
                       color: Colors.black87,
@@ -60,28 +62,28 @@ class _UserInputScreenState extends State<UserInputScreen> {
                       letterSpacing: 0.5,
                     ),
                   ),
-                  SizedBox(height: 40),
+                  const SizedBox(height: 40),
                   _buildTextField(_nameController, 'Name', false),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   _buildTextField(_emailController, 'Email', true),
-                  SizedBox(height: 40),
+                  const SizedBox(height: 40),
                   Center(
                     child: ElevatedButton(
                       onPressed: _submit,
-                      child: Text('Submit'),
                       style: ElevatedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        backgroundColor: Color(0xFF0b3c66),
+                        backgroundColor: const Color(0xFF0b3c66),
                         padding:
-                            EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                            const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        textStyle: TextStyle(
+                        textStyle: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      child: Text('Submit'),
                     ),
                   ),
                 ],
@@ -96,11 +98,11 @@ class _UserInputScreenState extends State<UserInputScreen> {
   Widget _buildTextField(
       TextEditingController controller, String label, bool isEmail) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
             color: Colors.black26,
             offset: Offset(0, 4),
@@ -113,7 +115,7 @@ class _UserInputScreenState extends State<UserInputScreen> {
         keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(
+          labelStyle: const TextStyle(
             color: Color(0xFF0b3c66),
             fontWeight: FontWeight.w500,
             fontSize: 16,
@@ -122,7 +124,7 @@ class _UserInputScreenState extends State<UserInputScreen> {
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none,
           ),
-          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         ),
         validator: (value) {
           if (value == null || value.isEmpty) {
