@@ -44,6 +44,9 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   Timer? _recordingTimer;
   Duration _recordingDuration = Duration.zero;
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  bool _needsScroll = false;
+  Map<String, dynamic>? selectedBox;
+  Set<Map<String, dynamic>> previouslySelectedBoxes = {};
 
   @override
   void initState() {
@@ -182,6 +185,27 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     }
   }
 
+ 
+    
+  // Add a new method to handle the actual scrolling
+  void _performScroll() {
+    if (_needsScroll && _scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+      _needsScroll = false;
+    }
+  }
+
+  // Override didUpdateWidget to handle scroll after state updates
+  @override
+  void didUpdateWidget(FieldEditScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _performScroll());
+  }
+
   Widget _buildMicrophoneButton() {
     return GestureDetector(
       onLongPressStart: (_) {
@@ -206,8 +230,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
         margin: EdgeInsets.only(left: 8),
         decoration: BoxDecoration(
           color: _isLongPressing
-              ? Color.fromRGBO(16, 121, 63,1 ).withOpacity(0.7)
-              : Color.fromRGBO(16, 121, 63,1 ),
+              ? Color(0xFF0b3c66).withOpacity(0.7)
+              : Color(0xFF0b3c66),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -280,7 +304,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   Future<String?> _sendAudioToApi(File zipFile) async {
     try {
       var request = http.MultipartRequest(
-          'POST', Uri.parse('http://192.168.227.227:8001/upload-audio-zip/'));
+          'POST', Uri.parse('http://192.168.77.227:8001/upload-audio-zip/'));
 
       request.files.add(await http.MultipartFile.fromPath(
         'file',
@@ -314,14 +338,22 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     if (await zipFile.exists()) {
       String? asrResponse = await _sendAudioToApi(zipFile);
       if (asrResponse != null) {
+        // Parse ASR response
+        Map<String, dynamic> asrData = jsonDecode(asrResponse);
+        String transcribedText = asrData['dummy_text'] ?? 'No transcription available';
+        
         // Add audio message to chat
         setState(() {
           chatMessages.add({
             'sender': 'user',
-            'message': 'Audio message',
+            'message': 'Audio message • $transcribedText', // Combine audio message with ASR text
             'audioPath': _recordedFilePath,
+            'isAudioMessage': true, // Add flag to identify audio messages
           });
         });
+
+        // Ensure scroll to bottom
+        _scrollToBottom();
 
         // Send to LLM API
         await _sendToLLMApi(asrResponse, isAudioQuery: true);
@@ -332,7 +364,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   }
 
   Future<void> _sendToLLMApi(String query, {bool isAudioQuery = false}) async {
-    final uri = Uri.parse('http://192.168.227.227:8021/get_llm_response');
+    final uri = Uri.parse('http://192.168.77.227:8021/get_llm_response');
     try {
       final response = await http.post(
         uri,
@@ -344,29 +376,23 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
       );
 
       if (response.statusCode == 200) {
-    print('my LLM Response: ${response.body}');
+        print('my LLM Response: ${response.body}');
+        final Map<String, dynamic> llmResponse = jsonDecode(response.body);
+        _dbHelper.saveLlmResponse(jsonEncode(llmResponse));
 
-    // Decode the response body (which is a JSON string) into a map
-    final Map<String, dynamic> llmResponse = jsonDecode(response.body);
-
-    // Save the response using your DB helper function (assuming it's expecting a Map)
- _dbHelper.saveLlmResponse(jsonEncode(llmResponse));
-    // Update the chat messages state
-    setState(() {
-      chatMessages.add({
-        'sender': 'assistant',
-        'message': llmResponse['response'] ?? 'No response available', // Check if 'response' exists
-      });
-    });
-
-    // Scroll to bottom of the chat
-    _scrollToBottom();
-  } else {
-    print('Failed to get LLM response: ${response.statusCode}');
-  }
-} catch (e) {
-  print('Error occurred while sending data to LLM API: $e');
-}
+        setState(() {
+          chatMessages.add({
+            'sender': 'assistant',
+            'message': llmResponse['response'] ?? 'No response available',
+          });
+          _needsScroll = true;  // Set flag to scroll after setState
+        });
+      } else {
+        print('Failed to get LLM response: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error occurred while sending data to LLM API: $e');
+    }
   }
 
   @override
@@ -384,6 +410,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   }
 
   void _scrollToBottom() {
+     setState(() {
+      _needsScroll = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -393,19 +421,29 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
         );
       }
     });
+     });
   }
+
 
   void _onBoundingBoxTap(Map<String, dynamic> box) {
     setState(() {
       _inputEnabled = true;
       _selectedFieldName = box['class'];
+      selectedBox = box;
+      // If selecting a new box, add the current selected box to previouslySelectedBoxes
+      if (selectedBox != null) {
+        previouslySelectedBoxes.add(selectedBox!);
+      }
+      selectedBox = box; // Set the newly tapped box as the current selection
+  
+      
     });
 
     _sendDataToApi(box);
   }
 
   Future<void> _sendDataToApi(Map<String, dynamic> box) async {
-    final uri = Uri.parse('http://192.168.227.227:8080/cv/ocr');
+    final uri = Uri.parse('http://192.168.77.227:8080/cv/ocr');
     var request = http.MultipartRequest('POST', uri);
 
     // Crop the image
@@ -465,6 +503,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     }
   }
 
+  
+
   Future<String> _cropImage(
       String imagePath, int xCenter, int yCenter, int width, int height) async {
     final imageFile = img.decodeImage(File(imagePath).readAsBytesSync())!;
@@ -480,13 +520,12 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
 
     return croppedImagePath;
   }
-
-  @override
+@override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Form Field Extraction'),
-        backgroundColor: Color.fromRGBO(16, 121, 63,1 ),
+        backgroundColor: Color(0xFF0b3c66),
         elevation: 0,
       ),
       body: Stack(
@@ -509,13 +548,23 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
                     ),
                   if (boundingBoxes != null)
                     ...boundingBoxes!.map((box) {
-                      final int x =
-                          box['x_center'].toInt() - (box['width'].toInt() ~/ 2);
-                      final int y = box['y_center'].toInt() -
-                          (box['height'].toInt() ~/ 2);
+                      final int x = box['x_center'].toInt() - (box['width'].toInt() ~/ 2);
+                      final int y = box['y_center'].toInt() - (box['height'].toInt() ~/ 2);
                       final int width = box['width'].toInt();
                       final int height = box['height'].toInt();
                       final String fieldType = box['class'];
+
+                      // Determine box color based on its selection state
+                      final isCurrentlySelected = selectedBox == box;
+                      final wasEverSelected = previouslySelectedBoxes.contains(box);
+                      
+                      final borderColor = isCurrentlySelected
+                          ? Colors.blue // Current selection in blue
+                          : wasEverSelected
+                              ? Colors.red // Previously selected in red
+                              : Colors.green; // Never selected in green
+
+                      final fillColor = borderColor.withOpacity(0.1);
 
                       return Positioned(
                         left: x.toDouble(),
@@ -526,20 +575,16 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
                           onTap: () => _onBoundingBoxTap(box),
                           child: Container(
                             decoration: BoxDecoration(
-                              border: Border.all(
-                                  color: const Color.fromRGBO(245, 10, 10, 1),
-                                  width: 2),
-                              color: const Color.fromARGB(255, 243, 33, 33)
-                                  .withOpacity(0.1),
+                              border: Border.all(color: borderColor, width: 2),
+                              color: fillColor,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             child: Center(
                               child: Text(
                                 fieldType,
                                 style: TextStyle(
-                                  color: const Color.fromARGB(255, 243, 37, 33),
+                                  color: borderColor,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -548,8 +593,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
                         ),
                       );
                     }).toList(),
-                ],
-              ),
+                ],         ),
             ),
           ),
           DraggableScrollableSheet(
@@ -559,6 +603,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
             snap: true,
             snapSizes: [0.3, 0.6, 0.9],
             builder: (BuildContext context, ScrollController scrollController) {
+              _scrollController = scrollController;
+              WidgetsBinding.instance.addPostFrameCallback((_) => _performScroll());
               return Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -602,73 +648,74 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
                             avatar: message['sender'] == 'user'
                                 ? 'assets/user_avatar.png'
                                 : 'assets/bot_avatar.png',
+                            isAudioMessage: message['isAudioMessage'] ?? false,
                           );
                         },
                       ),
                     ),
                     // Chat Input Area
-                    Container(
-                      margin: EdgeInsets.all(8),
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.2),
-                            spreadRadius: 1,
-                            blurRadius: 3,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          _isRecording
-                              ? _buildRecordingIndicator()
-                              : Expanded(
-                                  child: TextField(
-                                    controller: _messageController,
-                                    decoration: InputDecoration(
-                                      hintText: 'Type a message',
-                                      border: InputBorder.none,
-                                      hintStyle:
-                                          TextStyle(color: Colors.grey[400]),
+                     Container(
+                        margin: EdgeInsets.all(8),
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.2),
+                              spreadRadius: 1,
+                              blurRadius: 3,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            _isRecording
+                                ? _buildRecordingIndicator()
+                                : Expanded(
+                                    child: TextField(
+                                      controller: _messageController,
+                                      decoration: InputDecoration(
+                                        hintText: 'Type a message',
+                                        border: InputBorder.none,
+                                        hintStyle:
+                                            TextStyle(color: Colors.grey[400]),
+                                      ),
+                                      enabled: _inputEnabled,
+                                      onChanged: (text) {
+                                        setState(() {});
+                                      },
                                     ),
-                                    enabled: _inputEnabled,
-                                    onChanged: (text) {
-                                      setState(() {});
-                                    },
                                   ),
-                                ),
-                          AnimatedContainer(
-                            duration: Duration(milliseconds: 200),
-                            transform:
-                                Matrix4.translationValues(_slidingOffset, 0, 0),
-                            child: _messageController.text.isEmpty
-                                ? _buildMicrophoneButton()
-                                : IconButton(
-                                    icon: Icon(Icons.send,
-                                        color: Color.fromRGBO(16, 121, 63,1 )),
-                                    onPressed: _inputEnabled
-                                        ? () {
-                                            if (_messageController
-                                                .text.isNotEmpty) {
-                                              setState(() {
-                                                chatMessages.add({
-                                                  'sender': 'user',
-                                                  'message':
-                                                      _messageController.text,
+                            AnimatedContainer(
+                              duration: Duration(milliseconds: 200),
+                              transform:
+                                  Matrix4.translationValues(_slidingOffset, 0, 0),
+                              child: _messageController.text.isEmpty
+                                  ? _buildMicrophoneButton()
+                                  : IconButton(
+                                      icon: Icon(Icons.send,
+                                          color: Color(0xFF0b3c66)),
+                                      onPressed: _inputEnabled
+                                          ? () {
+                                              if (_messageController
+                                                  .text.isNotEmpty) {
+                                                setState(() {
+                                                  chatMessages.add({
+                                                    'sender': 'user',
+                                                    'message':
+                                                        _messageController.text,
+                                                  });
+                                                  _needsScroll = true;  // Set flag to scroll
                                                 });
-                                              });
-                                              _sendToLLMApi(
-                                                  _messageController.text);
-                                              _messageController.clear();
-                                              _scrollToBottom();
+                                                _sendToLLMApi(
+                                                    _messageController.text);
+                                                _messageController.clear();
+                                              }
                                             }
-                                          }
-                                        : null,
-                                  ),
+                                          : null,
+                                    ),
                           ),
                         ],
                       ),
@@ -690,6 +737,7 @@ class ChatBubble extends StatelessWidget {
   final String? audioPath;
   final Function(String)? onPlayAudio;
   final String avatar;
+  final bool isAudioMessage;
 
   ChatBubble({
     required this.sender,
@@ -697,6 +745,7 @@ class ChatBubble extends StatelessWidget {
     this.audioPath,
     this.onPlayAudio,
     required this.avatar,
+    this.isAudioMessage = false,
   });
 
   @override
@@ -721,13 +770,12 @@ class ChatBubble extends StatelessWidget {
               duration: Duration(milliseconds: 300),
               curve: Curves.easeInOut,
               decoration: BoxDecoration(
-                color: isUser ? Color(0xFFDCF8C6) : Color(0xFFE0E0E0),
+                color: isUser ? Color.fromARGB(255, 202, 225, 238) : Color(0xFFE0E0E0),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
                   bottomLeft: isUser ? Radius.circular(16) : Radius.circular(0),
-                  bottomRight:
-                      isUser ? Radius.circular(0) : Radius.circular(16),
+                  bottomRight: isUser ? Radius.circular(0) : Radius.circular(16),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -742,25 +790,47 @@ class ChatBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (audioPath != null)
+                  if (audioPath != null) ...[
                     AudioPlayerWidget(
-                        audioPath: audioPath!, onPlayAudio: onPlayAudio),
-                  if (message.isNotEmpty)
-                    FadeInWidget(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 6.0),
-                        child: Text(
-                          message,
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
-                            height: 1.4,
+                      audioPath: audioPath!,
+                      onPlayAudio: onPlayAudio,
+                    ),
+                    if (isAudioMessage)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Audio message',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' • ${message.split('• ').last}',
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
+                  ] else if (message.isNotEmpty)
+                    FadeInWidget(
+                      child: Text(
+                        message,
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w400,
+                          height: 1.4,
+                        ),
+                      ),
                     ),
-                  SizedBox(height: 6),
                 ],
               ),
             ),
@@ -949,7 +1019,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
             onTap: _togglePlayback,
             child: CircleAvatar(
               radius: 28,
-              backgroundColor: Color(0xFF00A884),
+              backgroundColor: Color(0xFF0b3c66),
               child: Icon(
                 _isPlaying ? Icons.pause : Icons.play_arrow,
                 color: Colors.white,
@@ -978,9 +1048,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
                                   .toInt()));
                     });
                   },
-                  activeColor: Color(0xFF00A884),
+                  activeColor: Color(0xFF0b3c66),
                   inactiveColor: Colors.grey.shade300,
-                  thumbColor: Color(0xFF00A884), // Thumb color for the slider
+                  thumbColor: Color(0xFF0b3c66), // Thumb color for the slider
                 ),
                 SizedBox(height: 4),
 
@@ -1011,7 +1081,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
           SizedBox(width: 8),
 
           // Microphone Icon
-          Icon(Icons.mic, color: Color(0xFF00A884), size: 28),
+          Icon(Icons.mic, color: Color(0xFF0b3c66), size: 28),
         ],
       ),
     );
