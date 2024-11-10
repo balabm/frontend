@@ -447,21 +447,25 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     var request = http.MultipartRequest('POST', uri);
 
     // Crop the image
-    String croppedImagePath = await _cropImage(
-        imagePath!,
-        box['x_center'].toInt(),
-        box['y_center'].toInt(),
-        box['width'].toInt(),
-        box['height'].toInt());
+    // String croppedImagePath = await _cropImage(
+    //     imagePath!,
+    //     box['x_center'].toInt(),
+    //     box['y_center'].toInt(),
+    //     box['width'].toInt(),
+    //     box['height'].toInt());
 
-    var file = File(croppedImagePath);
+    var file = File(imagePath as String);
     if (await file.exists()) {
-      List<int> imageBytes = await file.readAsBytes();
-      request.files.add(http.MultipartFile.fromBytes('form_image', imageBytes,
-          filename: 'cropped_image.png'));
+    // Fix: Add filename and content-type to the MultipartFile
+    request.files.add(await http.MultipartFile.fromPath(
+      'file',
+      file.path,
+      // Optional: Add content type if needed
+      contentType: MediaType('image', 'png'),
+    ));
     } else {
       print(
-          'Cropped image file does not exist at the given path: $croppedImagePath');
+          'Cropped image file does not exist at the given path: $imagePath');
       return;
     }
 
