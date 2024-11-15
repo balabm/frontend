@@ -16,6 +16,8 @@ import 'dart:math';
 import 'package:flutter/scheduler.dart';
 import 'package:image/image.dart' as img;
 import 'dart:async';
+import 'widgets/index.dart';
+
 
 class FieldEditScreen extends StatefulWidget {
   @override
@@ -206,88 +208,41 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _performScroll());
   }
 
-  Widget _buildMicrophoneButton() {
-    return GestureDetector(
-      onLongPressStart: (_) {
-        setState(() {
-          _isLongPressing = true;
-        });
-        _startRecording();
-      },
-      onLongPressMoveUpdate: (details) {
-        setState(() {
-          _slidingOffset = details.offsetFromOrigin.dx;
-        });
-      },
-      onLongPressEnd: (_) {
-        if (_slidingOffset < -50) {
-          _cancelRecording();
-        } else {
-          _stopAndSendRecording();
-        }
-      },
-      child: Container(
-        margin: EdgeInsets.only(left: 8),
-        decoration: BoxDecoration(
-          color: _isLongPressing
-              ? Color(0xFF0b3c66).withOpacity(0.7)
-              : Color(0xFF0b3c66),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              spreadRadius: 1,
-              blurRadius: 3,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: IconButton(
-          icon: Icon(
-            Icons.mic,
-            color: Colors.white,
-          ),
-          onPressed: null, // Disable tap, we're using long press
-        ),
-      ),
-    );
-  }
+// Replace the widget building methods with:
+Widget _buildMicrophoneButton() {
+  return MicrophoneButton(
+    isLongPressing: _isLongPressing,
+    onLongPressStart: (_) {
+      setState(() {
+        _isLongPressing = true;
+      });
+      _startRecording();
+    },
+    onLongPressMoveUpdate: (details) {
+      setState(() {
+        _slidingOffset = details.offsetFromOrigin.dx;
+      });
+    },
+    onLongPressEnd: (_) {
+      if (_slidingOffset < -50) {
+        _cancelRecording();
+      } else {
+        _stopAndSendRecording();
+      }
+    },
+  );
+}
 
-  Widget _buildRecordingIndicator() {
-    if (!_isRecording) return SizedBox.shrink();
+Widget _buildRecordingIndicator() {
+  if (!_isRecording) return SizedBox.shrink();
 
-    return Expanded(
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            Icon(
-              Icons.mic,
-              color: Colors.red,
-              size: 20,
-            ),
-            SizedBox(width: 8),
-            Text(
-              _formatDuration(_recordingDuration),
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
-            ),
-            SizedBox(width: 16),
-            if (_slidingOffset < 0)
-              Text(
-                "< Slide to cancel",
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
+  return RecordingIndicator(
+    recordingDuration: _recordingDuration,
+    slidingOffset: _slidingOffset,
+    formatDuration: _formatDuration,
+  );
+}
+
 
   Future<String> _zipRecordedAudio() async {
     Directory tempDir = await getTemporaryDirectory();
@@ -483,7 +438,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
         final responseBody = await response.stream.bytesToString();
         print('Data sent successfully! Response: $responseBody');
 
-        provider.setOcrResponse(responseBody);
+        provider.setOcrResponse(responseBody); 
 
         // Parse OCR response and extract text
         final ocrData = jsonDecode(responseBody);
@@ -525,576 +480,244 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     return croppedImagePath;
   }
 @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Form Field Extraction'),
-        backgroundColor: Color(0xFF0b3c66),
-        elevation: 0,
-      ),
-      body: Stack(
-        children: [
-          Container(
-            height: MediaQuery.of(context).size.height,
-            child: InteractiveViewer(
-              panEnabled: true,
-              boundaryMargin: EdgeInsets.all(100),
-              minScale: 0.5,
-              maxScale: 4.0,
-              child: Stack(
-                children: [
-                  if (imagePath != null)
-                    Image.file(
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text('Form Field Extraction'),
+      backgroundColor: Color(0xFF0b3c66),
+      elevation: 0,
+    ),
+    body: Stack(
+      children: [
+        // Image and Bounding Boxes Container
+        InteractiveViewer(
+          
+          panEnabled: true,
+          minScale: 0.5,
+          maxScale: 4.0,
+          child: FittedBox(
+            fit: BoxFit.cover,
+            alignment: Alignment.center, 
+            child: Stack(
+              
+              children: [
+                // Base Image
+                if (imagePath != null)
+                  Align(
+                    alignment: Alignment.center,
+                    child: Image.file(
                       File(imagePath!),
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
                     ),
-                  if (boundingBoxes != null)
-                    ...boundingBoxes!.map((box) {
-                      final int x = box['x_center'].toInt() - (box['width'].toInt() ~/ 2);
-                      final int y = box['y_center'].toInt() - (box['height'].toInt() ~/ 2);
-                      final int width = box['width'].toInt();
-                      final int height = box['height'].toInt();
-                      final String fieldType = box['class'];
-
-                      // Determine box color based on its selection state
-                      final isCurrentlySelected = selectedBox == box;
-                      final wasEverSelected = previouslySelectedBoxes.contains(box);
-                      
-                      final borderColor = isCurrentlySelected
-                          ? Colors.blue // Current selection in blue
-                          : wasEverSelected
-                              ? Colors.red // Previously selected in red
-                              : Colors.green; // Never selected in green
-
-                      final fillColor = borderColor.withOpacity(0.1);
-
-                      return Positioned(
-                        left: x.toDouble(),
-                        top: y.toDouble(),
-                        width: width.toDouble(),
-                        height: height.toDouble(),
-                        child: GestureDetector(
-                          onTap: () => _onBoundingBoxTap(box),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(color: borderColor, width: 2),
-                              color: fillColor,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            child: Center(
-                              child: Text(
-                                fieldType,
-                                style: TextStyle(
-                                  color: borderColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                ],         ),
-            ),
-          ),
-          DraggableScrollableSheet(
-            initialChildSize: 0.3,
-            minChildSize: 0.3,
-            maxChildSize: 0.9,
-            snap: true,
-            snapSizes: [0.3, 0.6, 0.9],
-            builder: (BuildContext context, ScrollController scrollController) {
-              _scrollController = scrollController;
-              WidgetsBinding.instance.addPostFrameCallback((_) => _performScroll());
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.5),
-                      spreadRadius: 5,
-                      blurRadius: 7,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      child: Container(
-                        width: 40,
-                        height: 5,
-                        margin: EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2.5),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        controller: scrollController,
-                        itemCount: chatMessages.length,
-                        itemBuilder: (context, index) {
-                          final message = chatMessages[index];
-                          return ChatBubble(
-                            sender: message['sender'],
-                            message: message['message'],
-                            audioPath: message['audioPath'],
-                            onPlayAudio: _playAudio,
-                            avatar: message['sender'] == 'user'
-                                ? 'assets/user_avatar.png'
-                                : 'assets/bot_avatar.png',
-                            isAudioMessage: message['isAudioMessage'] ?? false,
-                          );
-                        },
-                      ),
-                    ),
-                    // Chat Input Area
-                     Container(
-                        margin: EdgeInsets.all(8),
-                        padding: EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.2),
-                              spreadRadius: 1,
-                              blurRadius: 3,
-                              offset: Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            _isRecording
-                                ? _buildRecordingIndicator()
-                                : Expanded(
-                                    child: TextField(
-                                      controller: _messageController,
-                                      decoration: InputDecoration(
-                                        hintText: 'Type a message',
-                                        border: InputBorder.none,
-                                        hintStyle:
-                                            TextStyle(color: Colors.grey[400]),
+                    
+                // Bounding Boxes Overlay
+                if (boundingBoxes != null)
+                  Positioned.fill(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Image size to calculate scaling factors
+                        final imageFile = File(imagePath!);
+                        final image = Image.file(imageFile);
+                        final ImageStream stream = image.image.resolve(ImageConfiguration());
+                        late double scaleX;
+                        late double scaleY;
+                    
+                        stream.addListener(ImageStreamListener((info, _) {
+                          final double imageWidth = info.image.width.toDouble();
+                          final double imageHeight = info.image.height.toDouble();
+                    
+                          // Calculate scaling factors
+                          scaleX = constraints.maxWidth / imageWidth;
+                          scaleY = constraints.maxHeight / imageHeight;
+                        }));
+                    
+                        return Stack(
+                          children: boundingBoxes!.map((box) {
+                            // Scale the coordinates
+                            final scaledX = box['x_center'] * scaleX - (box['width'] * scaleX / 2);
+                            final scaledY = box['y_center'] * scaleY - (box['height'] * scaleY / 2);
+                            final scaledWidth = box['width'] * scaleX;
+                            final scaledHeight = box['height'] * scaleY;
+                            final fieldType = box['class'];
+                    
+                            // Determine box color based on selection state
+                            final isCurrentlySelected = selectedBox == box;
+                            final wasEverSelected = previouslySelectedBoxes.contains(box);
+                    
+                            final borderColor = isCurrentlySelected
+                                ? Colors.blue
+                                : wasEverSelected
+                                    ? const Color.fromARGB(255, 192, 191, 155)
+                                    : Colors.green;
+                            final fillColor = borderColor.withOpacity(0.1);
+                    
+                            return Positioned(
+                              left: scaledX,
+                              top: scaledY,
+                              width: scaledWidth,
+                              height: scaledHeight,
+                              child: GestureDetector(
+                                onTap: () => _onBoundingBoxTap(box),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: borderColor,
+                                      width: 2,
+                                    ),
+                                    color: fillColor,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      fieldType,
+                                      style: TextStyle(
+                                        color: borderColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        backgroundColor: Colors.white.withOpacity(0.7),
                                       ),
-                                      enabled: _inputEnabled,
-                                      onChanged: (text) {
-                                        setState(() {});
-                                      },
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
-                            AnimatedContainer(
-                              duration: Duration(milliseconds: 200),
-                              transform:
-                                  Matrix4.translationValues(_slidingOffset, 0, 0),
-                              child: _messageController.text.isEmpty
-                                  ? _buildMicrophoneButton()
-                                  : IconButton(
-                                      icon: Icon(Icons.send,
-                                          color: Color(0xFF0b3c66)),
-                                      onPressed: _inputEnabled
-                                          ? () {
-                                              if (_messageController
-                                                  .text.isNotEmpty) {
-                                                setState(() {
-                                                  chatMessages.add({
-                                                    'sender': 'user',
-                                                    'message':
-                                                        _messageController.text,
-                                                  });
-                                                  _needsScroll = true;  // Set flag to scroll
-                                                });
-                                                _sendToLLMApi(
-                                                    _messageController.text);
-                                                _messageController.clear();
-                                              }
-                                            }
-                                          : null,
-                                    ),
-                          ),
-                        ],
-                      ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ChatBubble extends StatelessWidget {
-  final String sender;
-  final String message;
-  final String? audioPath;
-  final Function(String)? onPlayAudio;
-  final String avatar;
-  final bool isAudioMessage;
-
-  ChatBubble({
-    required this.sender,
-    required this.message,
-    this.audioPath,
-    this.onPlayAudio,
-    required this.avatar,
-    this.isAudioMessage = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    bool isUser = sender == 'user';
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 16.0),
-      child: Row(
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isUser) ...[
-            CircleAvatar(
-              backgroundImage: AssetImage(avatar),
-              radius: 24,
-            ),
-            SizedBox(width: 12),
-          ],
-          Flexible(
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              decoration: BoxDecoration(
-                color: isUser ? Color.fromARGB(255, 202, 225, 238) : Color(0xFFE0E0E0),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                  bottomLeft: isUser ? Radius.circular(16) : Radius.circular(0),
-                  bottomRight: isUser ? Radius.circular(0) : Radius.circular(16),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    spreadRadius: 2,
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
                   ),
-                ],
-              ),
-              padding: EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (audioPath != null) ...[
-                    AudioPlayerWidget(
-                      audioPath: audioPath!,
-                      onPlayAudio: onPlayAudio,
-                    ),
-                    if (isAudioMessage)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Audio message',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' • ${message.split('• ').last}',
-                                style: TextStyle(
-                                  color: Colors.black54,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ] else if (message.isNotEmpty)
-                    FadeInWidget(
-                      child: Text(
-                        message,
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w400,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          if (isUser) ...[
-            SizedBox(width: 12),
-            CircleAvatar(
-              backgroundImage: AssetImage(avatar),
-              radius: 24,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class FadeInWidget extends StatefulWidget {
-  final Widget child;
-
-  const FadeInWidget({Key? key, required this.child}) : super(key: key);
-
-  @override
-  _FadeInWidgetState createState() => _FadeInWidgetState();
-}
-
-class _FadeInWidgetState extends State<FadeInWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-
-    SchedulerBinding.instance?.addPostFrameCallback((_) {
-      _controller.forward();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _animation,
-      child: widget.child,
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-}
-
-class AudioPlayerWidget extends StatefulWidget {
-  final String audioPath;
-  final Function(String)? onPlayAudio;
-
-  AudioPlayerWidget({required this.audioPath, this.onPlayAudio});
-
-  @override
-  _AudioPlayerWidgetState createState() => _AudioPlayerWidgetState();
-}
-
-class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
-    with SingleTickerProviderStateMixin {
-  bool _isPlaying = false;
-  double _playbackProgress = 0.0;
-  late AnimationController _progressController;
-  Duration _audioDuration = Duration.zero;
-  FlutterSoundPlayer? _audioPlayer;
-  Duration _currentPosition = Duration.zero; // Track current audio position
-
-  @override
-  void initState() {
-    super.initState();
-    _initializePlayer();
-    _progressController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1), // Initial duration, will be updated
-    );
-    _progressController.addListener(() {
-      setState(() {
-        _playbackProgress = _progressController.value;
-      });
-    });
-  }
-
-  Future<void> _initializePlayer() async {
-    _audioPlayer = FlutterSoundPlayer();
-    await _audioPlayer!.openPlayer();
-    await _loadAudioDuration();
-  }
-
-  Future<void> _loadAudioDuration() async {
-    try {
-      await _audioPlayer!.startPlayer(
-        fromURI: widget.audioPath,
-        whenFinished: () {
-          setState(() {
-            _isPlaying = false;
-          });
-          _audioPlayer!.stopPlayer();
-        },
-      );
-
-      await Future.delayed(Duration(milliseconds: 100));
-      Duration? duration =
-          await _audioPlayer!.getProgress().then((value) => value['duration']);
-
-      await _audioPlayer!.stopPlayer();
-
-      setState(() {
-        _audioDuration = duration ?? Duration.zero;
-        _progressController.duration = _audioDuration;
-      });
-    } catch (e) {
-      print('Error loading audio duration: $e');
-      setState(() {
-        _audioDuration = Duration(seconds: 30);
-        _progressController.duration = _audioDuration;
-      });
-    }
-  }
-
-  void _togglePlayback() {
-    setState(() {
-      _isPlaying = !_isPlaying;
-    });
-    widget.onPlayAudio?.call(widget.audioPath);
-
-    if (_isPlaying) {
-      _audioPlayer!.startPlayer(
-        fromURI: widget.audioPath,
-        whenFinished: () {
-          setState(() {
-            _isPlaying = false;
-            _playbackProgress = 0;
-          });
-          _audioPlayer!.stopPlayer();
-        },
-      );
-
-      _progressController.forward(from: _playbackProgress);
-    } else {
-      _audioPlayer!.pausePlayer();
-      _progressController.stop();
-    }
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    String minutes = twoDigits(duration.inMinutes.remainder(60));
-    String seconds = twoDigits(duration.inSeconds.remainder(60));
-    return "$minutes:$seconds";
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      margin: EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: Color(0xFFFFFFFF), // White background for contrast
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Play/Pause Button
-          GestureDetector(
-            onTap: _togglePlayback,
-            child: CircleAvatar(
-              radius: 28,
-              backgroundColor: Color(0xFF0b3c66),
-              child: Icon(
-                _isPlaying ? Icons.pause : Icons.play_arrow,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-          ),
-          SizedBox(width: 16),
-
-          // Progress bar and audio details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Progress bar using Slider
-                Slider(
-                  value: _playbackProgress,
-                  min: 0,
-                  max: 1,
-                  onChanged: (newValue) {
-                    setState(() {
-                      _playbackProgress = newValue;
-                      _audioPlayer!.seekToPlayer(Duration(
-                          seconds:
-                              (_playbackProgress * _audioDuration.inSeconds)
-                                  .toInt()));
-                    });
-                  },
-                  activeColor: Color(0xFF0b3c66),
-                  inactiveColor: Colors.grey.shade300,
-                  thumbColor: Color(0xFF0b3c66), // Thumb color for the slider
-                ),
-                SizedBox(height: 4),
-
-                // Current and total duration
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _formatDuration(_currentPosition),
-                      style: TextStyle(
-                          color: Colors.grey[700],
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    Text(
-                      _formatDuration(_audioDuration),
-                      style: TextStyle(
-                          color: Colors.grey[700],
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
-
-          SizedBox(width: 8),
-
-          // Microphone Icon
-          Icon(Icons.mic, color: Color(0xFF0b3c66), size: 28),
-        ],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _progressController.dispose();
-    _audioPlayer?.closePlayer();
-    super.dispose();
-  }
+        ),
+        
+        // DraggableScrollableSheet
+        DraggableScrollableSheet(
+          initialChildSize: 0.3,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          snap: true,
+          snapSizes: [0.3, 0.6, 0.9],
+          builder: (BuildContext context, ScrollController scrollController) {
+            _scrollController = scrollController;
+            WidgetsBinding.instance.addPostFrameCallback((_) => _performScroll());
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.5),
+                    spreadRadius: 5,
+                    blurRadius: 7,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  GestureDetector(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      margin: EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2.5),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      itemCount: chatMessages.length,
+                      itemBuilder: (context, index) {
+                        final message = chatMessages[index];
+                        return ChatBubble(
+                          sender: message['sender'],
+                          message: message['message'],
+                          audioPath: message['audioPath'],
+                          onPlayAudio: _playAudio,
+                          avatar: message['sender'] == 'user'
+                              ? 'assets/user_avatar.png'
+                              : 'assets/bot_avatar.png',
+                          isAudioMessage: message['isAudioMessage'] ?? false,
+                        );
+                      },
+                    ),
+                  ),
+                  // Chat Input Area
+                  Container(
+                    margin: EdgeInsets.all(8),
+                  
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        _isRecording
+                            ? _buildRecordingIndicator()
+                            : Expanded(
+                                child: TextField(
+                                  controller: _messageController,
+                                  decoration: InputDecoration(
+                                    hintText: 'Type a message',
+                                    border: InputBorder.none,
+                                    hintStyle: TextStyle(color: Colors.grey[400]),
+                                  ),
+                                  enabled: _inputEnabled,
+                                  onChanged: (text) {
+                                    setState(() {});
+                                  },
+                                ),
+                              ),
+                        AnimatedContainer(
+                          duration: Duration(milliseconds: 200),
+                          transform: Matrix4.translationValues(_slidingOffset, 0, 0),
+                          child: _messageController.text.isEmpty
+                              ? _buildMicrophoneButton()
+                              : IconButton(
+                                  icon: Icon(Icons.send, color: Color(0xFF0b3c66)),
+                                  onPressed: _inputEnabled
+                                      ? () {
+                                          if (_messageController.text.isNotEmpty) {
+                                            setState(() {
+                                              chatMessages.add({
+                                                'sender': 'user',
+                                                'message': _messageController.text,
+                                              });
+                                              _needsScroll = true;  // Set flag to scroll
+                                            });
+                                            _sendToLLMApi(_messageController.text);
+                                            _messageController.clear();
+                                          }
+                                        }
+                                      : null,
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    ),
+  );
+}
 }

@@ -121,7 +121,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
               'imagePath': imagePath!,
               'bounding_boxes':
                   decodedResponse['bounding_boxes'], // Pass bounding boxes
-            },
+            }, 
           );
         } else {
           // Handle other non-200 or non-400 errors (network errors, etc.)
@@ -171,7 +171,8 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
           children: [
             Expanded(
               child: imagePath != null
-                  ? Image.file(File(imagePath!))
+                  ? Image.file
+                  (File(imagePath!),fit: BoxFit.cover,)
                   : Center(child: Text('No image selected')),
             ),
             SizedBox(height: 20),
@@ -179,6 +180,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
+
                   width: 150,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(

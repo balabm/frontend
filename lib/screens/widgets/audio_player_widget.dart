@@ -1,0 +1,184 @@
+// lib/screens/widgets/audio_player_widget.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+
+class AudioPlayerWidget extends StatefulWidget {
+  final String audioPath;
+  final Function(String)? onPlayAudio;
+
+  AudioPlayerWidget({required this.audioPath, this.onPlayAudio});
+
+  @override
+  _AudioPlayerWidgetState createState() => _AudioPlayerWidgetState();
+}
+
+class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
+    with SingleTickerProviderStateMixin {
+  bool _isPlaying = false;
+  double _playbackProgress = 0.0;
+  late AnimationController _progressController;
+  Duration _audioDuration = Duration.zero;
+  FlutterSoundPlayer? _audioPlayer;
+  Duration _currentPosition = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePlayer();
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+    _progressController.addListener(() {
+      setState(() {
+        _playbackProgress = _progressController.value;
+      });
+    });
+  }
+
+  Future<void> _initializePlayer() async {
+    _audioPlayer = FlutterSoundPlayer();
+    await _audioPlayer!.openPlayer();
+    await _loadAudioDuration();
+  }
+
+  Future<void> _loadAudioDuration() async {
+    try {
+      await _audioPlayer!.startPlayer(
+        fromURI: widget.audioPath,
+        whenFinished: () {
+          setState(() {
+            _isPlaying = false;
+          });
+          _audioPlayer!.stopPlayer();
+        },
+      );
+
+      await Future.delayed(Duration(milliseconds: 100));
+      Duration? duration =
+          await _audioPlayer!.getProgress().then((value) => value['duration']);
+
+      await _audioPlayer!.stopPlayer();
+
+      setState(() {
+        _audioDuration = duration ?? Duration.zero;
+        _progressController.duration = _audioDuration;
+      });
+    } catch (e) {
+      print('Error loading audio duration: $e');
+      setState(() {
+        _audioDuration = Duration(seconds: 30);
+        _progressController.duration = _audioDuration;
+      });
+    }
+  }
+
+  void _togglePlayback() {
+    setState(() {
+      _isPlaying = !_isPlaying;
+    });
+    widget.onPlayAudio?.call(widget.audioPath);
+
+    if (_isPlaying) {
+      _audioPlayer!.startPlayer(
+        fromURI: widget.audioPath,
+        whenFinished: () {
+          setState(() {
+            _isPlaying = false;
+            _playbackProgress = 0;
+          });
+          _audioPlayer!.stopPlayer();
+        },
+      );
+
+      _progressController.forward(from: _playbackProgress);
+    } else {
+      _audioPlayer!.pausePlayer();
+      _progressController.stop();
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String minutes = twoDigits(duration.inMinutes.remainder(60));
+    String seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$minutes:$seconds";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      margin: EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.3),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: _togglePlayback,
+            child: CircleAvatar(
+              radius: 28,
+              backgroundColor: Color(0xFF0b3c66),
+              child: Icon(
+                _isPlaying ? Icons.pause : Icons.play_arrow,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LinearProgressIndicator(
+                  value: _playbackProgress,
+                  backgroundColor: Colors.grey[300],
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0b3c66)),
+                ),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _formatDuration(_currentPosition),
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      _formatDuration(_audioDuration),
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _progressController.dispose();
+    _audioPlayer?.closePlayer();
+    super.dispose();
+  }
+}
