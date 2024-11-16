@@ -19,6 +19,7 @@ import 'dart:async';
 import 'widgets/index.dart';
 
 
+
 class FieldEditScreen extends StatefulWidget {
   @override
   _FieldEditScreenState createState() => _FieldEditScreenState();
@@ -49,6 +50,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   bool _needsScroll = false;
   Map<String, dynamic>? selectedBox;
   Set<Map<String, dynamic>> previouslySelectedBoxes = {};
+  
 
   @override
   void initState() {
@@ -59,6 +61,66 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     _initializeRecorder();
     _initializePlayer();
   }
+
+
+
+  // Add this function inside your class
+void _showErrorMessage(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide any existing Snackbar
+  
+  final snackBar = SnackBar(
+    behavior: SnackBarBehavior.floating,
+    backgroundColor: Colors.red[400],
+    duration: Duration(seconds: 3),
+    margin: EdgeInsets.only(
+      bottom: MediaQuery.of(context).viewInsets.bottom + 16, // Adjust for keyboard height
+      left: 16,
+      right: 16,
+    ),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
+    ),
+    content: TweenAnimationBuilder(
+      tween: Tween<Offset>(begin: Offset(0, 1), end: Offset(0, 0)),
+      duration: Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      builder: (context, Offset offset, child) {
+        return AnimatedOpacity(
+          opacity: 1.0,
+          duration: Duration(milliseconds: 300),
+          child: Transform.translate(
+            offset: offset,
+            child: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Expanded( // Ensures text does not overflow
+                  child: Text(
+                    message,
+                    style: TextStyle(fontSize: 14, color: Colors.white),
+                    overflow: TextOverflow.ellipsis, // Handle long text
+                    maxLines: 2, // Limit to two lines
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+    action: SnackBarAction(
+      label: 'OK',
+      textColor: Colors.white,
+      onPressed: () {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      },
+    ),
+  );
+
+  ScaffoldMessenger.of(context).showSnackBar(snackBar);
+}
+
+ 
 
   Future<void> _initializeRecorder() async {
     await _audioRecorder!.openRecorder();
@@ -287,68 +349,106 @@ Widget _buildRecordingIndicator() {
   }
 
   Future<void> _processAudioAndSendToLLM() async {
-    String zipFilePath = await _zipRecordedAudio();
-    File zipFile = File(zipFilePath);
-
-    if (await zipFile.exists()) {
-      String? asrResponse = await _sendAudioToApi(zipFile);
-      if (asrResponse != null) {
-        // Parse ASR response
-        Map<String, dynamic> asrData = jsonDecode(asrResponse);
-        String transcribedText = asrData['dummy_text'] ?? 'No transcription available';
-        
-        // Add audio message to chat
-        setState(() {
-          chatMessages.add({
-            'sender': 'user',
-            'message': 'Audio message • $transcribedText', // Combine audio message with ASR text
-            'audioPath': _recordedFilePath,
-            'isAudioMessage': true, // Add flag to identify audio messages
-          });
-        });
-
-        // Ensure scroll to bottom
-        _scrollToBottom();
-
-        // Send to LLM API
-        await _sendToLLMApi(asrResponse, isAudioQuery: true);
-      }
-    } else {
-      print("ZIP file does not exist at the path: $zipFilePath");
-    }
+  // Check if OCR text is available
+  if (_ocrText == null || _ocrText!.isEmpty) {
+    setState(() {
+      chatMessages.add({
+        'sender': 'assistant',
+        'message': 'Please select a field to extract text first.',
+      });
+      _needsScroll = true;
+    });
+    return;
   }
+
+  String zipFilePath = await _zipRecordedAudio();
+  File zipFile = File(zipFilePath);
+
+  if (await zipFile.exists()) {
+    String? asrResponse = await _sendAudioToApi(zipFile);
+    if (asrResponse != null) {
+      // Parse ASR response
+      Map<String, dynamic> asrData = jsonDecode(asrResponse);
+      String transcribedText = asrData['dummy_text'] ?? 'No transcription available';
+      
+      // Add audio message to chat
+      setState(() {
+        chatMessages.add({
+          'sender': 'user',
+          'message': 'Audio message • $transcribedText',
+          'audioPath': _recordedFilePath,
+          'isAudioMessage': true,
+        });
+      });
+
+      // Ensure scroll to bottom
+      _scrollToBottom();
+
+      // Send to LLM API
+      await _sendToLLMApi(asrResponse, isAudioQuery: true);
+    }
+  } else {
+    print("ZIP file does not exist at the path: $zipFilePath");
+  }
+}
 
   Future<void> _sendToLLMApi(String query, {bool isAudioQuery = false}) async {
-    final uri = Uri.parse('http://192.168.77.227:8021/get_llm_response');
-    try {
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'form_entry': _ocrText ?? '',
-          'voice_query': isAudioQuery ? query : '',
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        print('my LLM Response: ${response.body}');
-        final Map<String, dynamic> llmResponse = jsonDecode(response.body);
-        _dbHelper.saveLlmResponse(jsonEncode(llmResponse));
-
-        setState(() {
-          chatMessages.add({
-            'sender': 'assistant',
-            'message': llmResponse['response'] ?? 'No response available',
-          });
-          _needsScroll = true;  // Set flag to scroll after setState
-        });
-      } else {
-        print('Failed to get LLM response: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error occurred while sending data to LLM API: $e');
-    }
+  // Check if OCR text is available
+  if (_ocrText == null || _ocrText!.isEmpty) {
+    setState(() {
+      chatMessages.add({
+        'sender': 'assistant',
+        'message': 'Please select a field to extract text first.',
+      });
+      _needsScroll = true;
+    });
+    return;
   }
+
+  final uri = Uri.parse('http://192.168.77.227:8021/get_llm_response');
+  try {
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'form_entry': _ocrText!,
+        'voice_query': isAudioQuery ? query : '',
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('my LLM Response: ${response.body}');
+      final Map<String, dynamic> llmResponse = jsonDecode(response.body);
+      _dbHelper.saveLlmResponse(jsonEncode(llmResponse));
+
+      setState(() {
+        chatMessages.add({
+          'sender': 'assistant',
+          'message': llmResponse['response'] ?? 'No response available',
+        });
+        _needsScroll = true;
+      });
+    } else {
+      setState(() {
+        chatMessages.add({
+          'sender': 'assistant',
+          'message': 'Failed to get response. Please try again.',
+        });
+        _needsScroll = true;
+      });
+      print('Failed to get LLM response: ${response.statusCode}');
+    }
+  } catch (e) {
+    setState(() {
+      chatMessages.add({
+        'sender': 'assistant',
+        'message': 'An error occurred. Please try again.',
+      });
+      _needsScroll = true;
+    });
+    print('Error occurred while sending data to LLM API: $e');
+  }
+}
 
   @override
   void didChangeDependencies() {
@@ -490,25 +590,23 @@ Widget build(BuildContext context) {
     body: Stack(
       children: [
         // Image and Bounding Boxes Container
-        InteractiveViewer(
-          
-          panEnabled: true,
-          minScale: 0.5,
-          maxScale: 4.0,
-          child: FittedBox(
-            fit: BoxFit.cover,
-            alignment: Alignment.center, 
-            child: Stack(
-              
-              children: [
-                // Base Image
-                if (imagePath != null)
-                  Align(
-                    alignment: Alignment.center,
-                    child: Image.file(
-                      File(imagePath!),
-                    ),
-                  ),
+     InteractiveViewer(
+  panEnabled: true,
+  minScale: 0.5,
+  maxScale: 4.0,
+  child: FittedBox(
+    fit: BoxFit.contain, // Adjust as needed
+    alignment: Alignment.center,  //therer ???
+    child: Stack(
+      children: [
+        // Base Image
+        if (imagePath != null)
+          Center(  
+            child: Image.file(
+              File(imagePath!),
+              fit: BoxFit.cover,
+            ),
+          ),
                     
                 // Bounding Boxes Overlay
                 if (boundingBoxes != null)
@@ -671,43 +769,77 @@ Widget build(BuildContext context) {
                         _isRecording
                             ? _buildRecordingIndicator()
                             : Expanded(
-                                child: TextField(
-                                  controller: _messageController,
-                                  decoration: InputDecoration(
-                                    hintText: 'Type a message',
-                                    border: InputBorder.none,
-                                    hintStyle: TextStyle(color: Colors.grey[400]),
-                                  ),
-                                  enabled: _inputEnabled,
-                                  onChanged: (text) {
-                                    setState(() {});
-                                  },
-                                ),
-                              ),
-                        AnimatedContainer(
-                          duration: Duration(milliseconds: 200),
-                          transform: Matrix4.translationValues(_slidingOffset, 0, 0),
-                          child: _messageController.text.isEmpty
-                              ? _buildMicrophoneButton()
-                              : IconButton(
-                                  icon: Icon(Icons.send, color: Color(0xFF0b3c66)),
-                                  onPressed: _inputEnabled
-                                      ? () {
-                                          if (_messageController.text.isNotEmpty) {
-                                            setState(() {
-                                              chatMessages.add({
-                                                'sender': 'user',
-                                                'message': _messageController.text,
-                                              });
-                                              _needsScroll = true;  // Set flag to scroll
-                                            });
-                                            _sendToLLMApi(_messageController.text);
-                                            _messageController.clear();
-                                          }
-                                        }
-                                      : null,
-                                ),
-                        ),
+  child: TextField(
+    controller: _messageController,
+    decoration: InputDecoration(
+      hintText: 'Type a message',
+      border: InputBorder.none,
+      hintStyle: TextStyle(color: Colors.grey[400]),
+    ),
+    enabled: true,  // Always enable the TextField
+    onTap: () {
+      // Show error message if no bounding box is selected
+      if (!_inputEnabled) {
+        _showErrorMessage(
+          context,
+          "Please select a bounding box first",
+        );
+      }
+    },
+    onChanged: (text) {
+      // Show error and clear text if no bounding box is selected
+      if (!_inputEnabled) {
+        _showErrorMessage(
+          context,
+          "Please select a bounding box first",
+        );
+        _messageController.clear();
+      }
+      setState(() {});
+    },
+  ),
+),
+AnimatedContainer(
+  duration: Duration(milliseconds: 200),
+  transform: Matrix4.translationValues(_slidingOffset, 0, 0),
+  child: _messageController.text.isEmpty
+      ? _buildMicrophoneButton()
+      : IconButton(
+          icon: Icon(Icons.send, color: Color(0xFF0b3c66)),
+          onPressed: () {
+            // Debugging logs
+            print("Send button pressed");
+            print("_ocrText value: $_ocrText");
+
+            if (_messageController.text.isNotEmpty) {
+              if (_ocrText == null || _ocrText!.isEmpty) {
+                print("Error: Please select a bounding box first");
+                _showErrorMessage(
+                  context,
+                  "Please select a field",
+                );
+                return; // Ensure the function exits after showing the error
+              }
+
+              // Add message to chat
+              setState(() {
+                chatMessages.add({
+                  'sender': 'user',
+                  'message': _messageController.text,
+                });
+                _needsScroll = true;
+              });
+
+              // Send message to the LLM API
+              _sendToLLMApi(_messageController.text);
+
+              // Clear the message controller
+              _messageController.clear();
+            }
+          },
+        ),
+),
+
                       ],
                     ),
                   ),

@@ -69,6 +69,10 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
   // New method to send the image to the API
   Future<void> _sendImageToAPI() async {
     if (imagePath != null) {
+      // Extract file name from path using path package
+    String fileName = p.basename(imagePath!);
+    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    print('Uploaded image name: $fileName'); // Print the file name
       var url =
           Uri.parse('http://192.168.77.227:8000/cv/form-detection-with-box/');
       _dbHelper.saveUploadedImage(imagePath!);

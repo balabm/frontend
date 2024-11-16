@@ -53,9 +53,6 @@ dependencies:
   record: ^4.4.4
   just_audio: ^0.9.34
   sqflite: ^2.0.0+4
-  
-
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
