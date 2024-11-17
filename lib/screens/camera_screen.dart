@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -60,8 +59,7 @@ final imagePath = '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toS
   final imageFile = File(path);
   await imageFile.copy(imagePath);
   
-  // Save the image to the gallery
-  await ImageGallerySaver.saveFile(imagePath);
+  
 
   // Save the image path to SharedPreferences
   final prefs = await SharedPreferences.getInstance();

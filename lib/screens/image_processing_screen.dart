@@ -1,5 +1,5 @@
-import 'dart:io';
-import 'package:ass/helpers/database_helper.dart';
+import 'dart:io'; 
+import 'package:formbot/helpers/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_cropper/image_cropper.dart';
@@ -10,6 +10,7 @@ import 'package:mime/mime.dart'; // For MIME type lookup
 //import 'package:path/path.dart'; // For file paths
 import 'package:http_parser/http_parser.dart'; // For MediaType
 import 'package:path/path.dart' as p;
+String? originalFileName;
 
 class ImageProcessingScreen extends StatefulWidget {
   @override
@@ -26,6 +27,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
     super.didChangeDependencies();
     imagePath = ModalRoute.of(context)!.settings.arguments as String?;
     if (imagePath != null) {
+      originalFileName = p.basename(imagePath!); // Store the original filename
       _loadImage();
     }
   }
@@ -58,9 +60,24 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
       );
 
       if (croppedFile != null) {
+        // Get the directory of the cropped file
+        String directory = p.dirname(croppedFile.path);
+        // Create a new path with the original filename
+        String newPath = p.join(directory, originalFileName!);
+        
+        // If a file already exists at the new path, delete it
+        if (await File(newPath).exists()) {
+          await File(newPath).delete();
+        }
+
+        // Copy the cropped file to the new path with original filename
+        await File(croppedFile.path).copy(newPath);
+        // Delete the temporary cropped file
+        await File(croppedFile.path).delete();
+
         setState(() {
-          imagePath = croppedFile.path;
-          image = img.decodeImage(File(croppedFile.path).readAsBytesSync());
+          imagePath = newPath;
+          image = img.decodeImage(File(newPath).readAsBytesSync());
         });
       }
     }
@@ -71,10 +88,10 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
     if (imagePath != null) {
       // Extract file name from path using path package
     String fileName = p.basename(imagePath!);
-    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
     print('Uploaded image name: $fileName'); // Print the file name
       var url =
-          Uri.parse('http://192.168.77.227:8000/cv/form-detection-with-box/');
+          Uri.parse('http://10.64.26.90:8000/cv/form-detection-with-box/');
       _dbHelper.saveUploadedImage(imagePath!);
       // Prepare the image file and lookup MIME type
       var mimeType = lookupMimeType(imagePath!);
@@ -163,7 +180,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Image Processing', style: TextStyle(color: Colors.white)),
+        //title: Text('Image Processing', style: TextStyle(color: Colors.white)),
         backgroundColor: Color(0xFF0b3c66),
         iconTheme:
             IconThemeData(color: Colors.white), // Change arrow color to white

@@ -1,5 +1,6 @@
-import 'package:ass/helpers/database_helper.dart';
-import 'package:ass/models/models.dart';
+import 'package:formbot/helpers/database_helper.dart';
+import 'package:formbot/models/models.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -29,64 +30,76 @@ class _UserInputScreenState extends State<UserInputScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0b3c66),
-        title: const Text('  '),
-      ),
-      backgroundColor: Colors.white,
+      // appBar: AppBar(
+      //   backgroundColor: const Color(0xFF0b3c66),
+      //   title: const Text('  '),
+      // ),
+      backgroundColor: CupertinoColors.lightBackgroundGray,
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(8.0),
         child: Center(
           child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Welcome!',
-                    style: TextStyle(
-                      color: Color(0xFF0b3c66),
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const Text(
-                    'Please enter your details to proceed.',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  _buildTextField(_nameController, 'Name', false),
-                  const SizedBox(height: 20),
-                  _buildTextField(_emailController, 'Email', true),
-                  const SizedBox(height: 40),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: _submit,
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: const Color(0xFF0b3c66),
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 18,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                // color: Colors.blueGrey.withOpacity(0.1),
+                // backgroundBlendMode:BlendMode
+
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Welcome!',
+                        style: TextStyle(
+                          color: Color(0xFF0b3c66),
+                          fontSize: 30,
                           fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
                         ),
                       ),
-                      child: Text('Submit'),
-                    ),
+                      const Text(
+                        'Please enter your details to proceed.',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 50),
+                      _buildTextField(_nameController, 'Name', false),
+                      const SizedBox(height: 20),
+                      _buildTextField(_emailController, 'Email', true),
+                      const SizedBox(height: 50),
+                      ElevatedButton(
+                        
+                        onPressed: _submit,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: Size.fromHeight(10),
+                          foregroundColor: Colors.white,
+                          backgroundColor: const Color(0xFF0b3c66),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        child: Text('Submit'),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -98,7 +111,7 @@ class _UserInputScreenState extends State<UserInputScreen> {
   Widget _buildTextField(
       TextEditingController controller, String label, bool isEmail) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10),
+      // margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
