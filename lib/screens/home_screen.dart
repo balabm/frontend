@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _capturedImages = prefs.getStringList('capturedImages') ?? [];
     });
-  }
+  } 
 
   Future<void> _loadUserName() async {
     final prefs = await SharedPreferences.getInstance();
@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0b3c66),
         leading: IconButton(
-          icon: const Icon(Icons.home, color: Colors.white),
+          icon: const Icon(Icons.person, color: Colors.white),
           onPressed: () {
             // Handle home button press
           },
@@ -86,10 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const Text(
-              'Previously Captured Forms:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            
             const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(

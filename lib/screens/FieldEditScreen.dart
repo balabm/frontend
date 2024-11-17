@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:ass/helpers/database_helper.dart';
+import 'package:formbot/helpers/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
@@ -32,7 +32,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   TextEditingController _messageController = TextEditingController();
   ScrollController _scrollController = ScrollController();
   DraggableScrollableController _dragController =
-      DraggableScrollableController();
+  DraggableScrollableController();
   FlutterSoundRecorder? _audioRecorder;
   FlutterSoundPlayer? _audioPlayer;
   bool _isRecording = false;
@@ -50,7 +50,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   bool _needsScroll = false;
   Map<String, dynamic>? selectedBox;
   Set<Map<String, dynamic>> previouslySelectedBoxes = {};
-  
+
 
   @override
   void initState() {
@@ -65,66 +65,66 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
 
 
   // Add this function inside your class
-void _showErrorMessage(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide any existing Snackbar
-  
-  final snackBar = SnackBar(
-    behavior: SnackBarBehavior.floating,
-    backgroundColor: Colors.red[400],
-    duration: Duration(seconds: 3),
-    margin: EdgeInsets.only(
-      bottom: MediaQuery.of(context).viewInsets.bottom + 16, // Adjust for keyboard height
-      left: 16,
-      right: 16,
-    ),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(8),
-    ),
-    content: TweenAnimationBuilder(
-      tween: Tween<Offset>(begin: Offset(0, 1), end: Offset(0, 0)),
-      duration: Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      builder: (context, Offset offset, child) {
-        return AnimatedOpacity(
-          opacity: 1.0,
-          duration: Duration(milliseconds: 300),
-          child: Transform.translate(
-            offset: offset,
-            child: Row(
-              children: [
-                Icon(Icons.error_outline, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Expanded( // Ensures text does not overflow
-                  child: Text(
-                    message,
-                    style: TextStyle(fontSize: 14, color: Colors.white),
-                    overflow: TextOverflow.ellipsis, // Handle long text
-                    maxLines: 2, // Limit to two lines
+  void _showErrorMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide any existing Snackbar
+
+    final snackBar = SnackBar(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Colors.red[400],
+      duration: const Duration(seconds: 3),
+      margin: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16, // Adjust for keyboard height
+        left: 16,
+        right: 16,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      content: TweenAnimationBuilder(
+        tween: Tween<Offset>(begin: const Offset(0, 1), end: const Offset(0, 0)),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        builder: (context, Offset offset, child) {
+          return AnimatedOpacity(
+            opacity: 1.0,
+            duration: const Duration(milliseconds: 300),
+            child: Transform.translate(
+              offset: offset,
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded( // Ensures text does not overflow
+                    child: Text(
+                      message,
+                      style: const TextStyle(fontSize: 14, color: Colors.white),
+                      overflow: TextOverflow.ellipsis, // Handle long text
+                      maxLines: 2, // Limit to two lines
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
-    ),
-    action: SnackBarAction(
-      label: 'OK',
-      textColor: Colors.white,
-      onPressed: () {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      },
-    ),
-  );
+          );
+        },
+      ),
+      action: SnackBarAction(
+        label: 'OK',
+        textColor: Colors.white,
+        onPressed: () {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        },
+      ),
+    );
 
-  ScaffoldMessenger.of(context).showSnackBar(snackBar);
-}
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
 
- 
+
 
   Future<void> _initializeRecorder() async {
     await _audioRecorder!.openRecorder();
-    await _audioRecorder!.setSubscriptionDuration(Duration(milliseconds: 10));
+    await _audioRecorder!.setSubscriptionDuration(const Duration(milliseconds: 10));
     print("Recorder initialized");
   }
 
@@ -171,7 +171,7 @@ void _showErrorMessage(BuildContext context, String message) {
       });
 
       // Start the timer to update duration every 100ms
-      _recordingTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+      _recordingTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
         if (_recordingStartTime != null) {
           setState(() {
             _recordingDuration =
@@ -249,15 +249,15 @@ void _showErrorMessage(BuildContext context, String message) {
     }
   }
 
- 
-    
+
+
   // Add a new method to handle the actual scrolling
   void _performScroll() {
     if (_needsScroll && _scrollController.hasClients) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.decelerate,
       );
       _needsScroll = false;
     }
@@ -271,39 +271,39 @@ void _showErrorMessage(BuildContext context, String message) {
   }
 
 // Replace the widget building methods with:
-Widget _buildMicrophoneButton() {
-  return MicrophoneButton(
-    isLongPressing: _isLongPressing,
-    onLongPressStart: (_) {
-      setState(() {
-        _isLongPressing = true;
-      });
-      _startRecording();
-    },
-    onLongPressMoveUpdate: (details) {
-      setState(() {
-        _slidingOffset = details.offsetFromOrigin.dx;
-      });
-    },
-    onLongPressEnd: (_) {
-      if (_slidingOffset < -50) {
-        _cancelRecording();
-      } else {
-        _stopAndSendRecording();
-      }
-    },
-  );
-}
+  Widget _buildMicrophoneButton() {
+    return MicrophoneButton(
+      isLongPressing: _isLongPressing,
+      onLongPressStart: (_) {
+        setState(() {
+          _isLongPressing = true;
+        });
+        _startRecording();
+      },
+      onLongPressMoveUpdate: (details) {
+        setState(() {
+          _slidingOffset = details.offsetFromOrigin.dx;
+        });
+      },
+      onLongPressEnd: (_) {
+        if (_slidingOffset < -50) {
+          _cancelRecording();
+        } else {
+          _stopAndSendRecording();
+        }
+      },
+    );
+  }
 
-Widget _buildRecordingIndicator() {
-  if (!_isRecording) return SizedBox.shrink();
+  Widget _buildRecordingIndicator() {
+    if (!_isRecording) return const SizedBox.shrink();
 
-  return RecordingIndicator(
-    recordingDuration: _recordingDuration,
-    slidingOffset: _slidingOffset,
-    formatDuration: _formatDuration,
-  );
-}
+    return RecordingIndicator(
+      recordingDuration: _recordingDuration,
+      slidingOffset: _slidingOffset,
+      formatDuration: _formatDuration,
+    );
+  }
 
 
   Future<String> _zipRecordedAudio() async {
@@ -321,7 +321,7 @@ Widget _buildRecordingIndicator() {
   Future<String?> _sendAudioToApi(File zipFile) async {
     try {
       var request = http.MultipartRequest(
-          'POST', Uri.parse('http://192.168.77.227:8001/upload-audio-zip/'));
+          'POST', Uri.parse('http://10.64.26.90:8001/upload-audio-zip/'));
 
       request.files.add(await http.MultipartFile.fromPath(
         'file',
@@ -349,112 +349,112 @@ Widget _buildRecordingIndicator() {
   }
 
   Future<void> _processAudioAndSendToLLM() async {
-  // Check if OCR text is available
-  if (_ocrText == null || _ocrText!.isEmpty) {
-    setState(() {
-      chatMessages.add({
-        'sender': 'assistant',
-        'message': 'Please select a field to extract text first.',
-      });
-      _needsScroll = true;
-    });
-    return;
-  }
-
-  String zipFilePath = await _zipRecordedAudio();
-  File zipFile = File(zipFilePath);
-
-  if (await zipFile.exists()) {
-    String? asrResponse = await _sendAudioToApi(zipFile);
-    if (asrResponse != null) {
-      // Parse ASR response
-      Map<String, dynamic> asrData = jsonDecode(asrResponse);
-      String transcribedText = asrData['dummy_text'] ?? 'No transcription available';
-      
-      // Add audio message to chat
+    // Check if OCR text is available
+    if (_ocrText == null || _ocrText!.isEmpty) {
       setState(() {
         chatMessages.add({
-          'sender': 'user',
-          'message': 'Audio message • $transcribedText',
-          'audioPath': _recordedFilePath,
-          'isAudioMessage': true,
+          'sender': 'assistant',
+          'message': 'Please select a field to extract text first.',
         });
+        _needsScroll = true;
       });
-
-      // Ensure scroll to bottom
-      _scrollToBottom();
-
-      // Send to LLM API
-      await _sendToLLMApi(asrResponse, isAudioQuery: true);
+      return;
     }
-  } else {
-    print("ZIP file does not exist at the path: $zipFilePath");
+
+    String zipFilePath = await _zipRecordedAudio();
+    File zipFile = File(zipFilePath);
+
+    if (await zipFile.exists()) {
+      String? asrResponse = await _sendAudioToApi(zipFile);
+      if (asrResponse != null) {
+        // Parse ASR response
+        Map<String, dynamic> asrData = jsonDecode(asrResponse);
+        String transcribedText = asrData['dummy_text'] ?? 'No transcription available';
+
+        // Add audio message to chat
+        setState(() {
+          chatMessages.add({
+            'sender': 'user',
+            'message': 'Audio message • $transcribedText',
+            'audioPath': _recordedFilePath,
+            'isAudioMessage': true,
+          });
+        });
+
+        // Ensure scroll to bottom
+        _scrollToBottom();
+
+        // Send to LLM API
+        await _sendToLLMApi(asrResponse, isAudioQuery: true);
+      }
+    } else {
+      print("ZIP file does not exist at the path: $zipFilePath");
+    }
   }
-}
 
   Future<void> _sendToLLMApi(String query, {bool isAudioQuery = false}) async {
-  // Check if OCR text is available
-  if (_ocrText == null || _ocrText!.isEmpty) {
-    setState(() {
-      chatMessages.add({
-        'sender': 'assistant',
-        'message': 'Please select a field to extract text first.',
-      });
-      _needsScroll = true;
-    });
-    return;
-  }
-
-  final uri = Uri.parse('http://192.168.77.227:8021/get_llm_response');
-  try {
-    final response = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'form_entry': _ocrText!,
-        'voice_query': isAudioQuery ? query : '',
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      print('my LLM Response: ${response.body}');
-      final Map<String, dynamic> llmResponse = jsonDecode(response.body);
-      _dbHelper.saveLlmResponse(jsonEncode(llmResponse));
-
+    // Check if OCR text is available
+    if (_ocrText == null || _ocrText!.isEmpty) {
       setState(() {
         chatMessages.add({
           'sender': 'assistant',
-          'message': llmResponse['response'] ?? 'No response available',
+          'message': 'Please select a field to extract text first.',
         });
         _needsScroll = true;
       });
-    } else {
-      setState(() {
-        chatMessages.add({
-          'sender': 'assistant',
-          'message': 'Failed to get response. Please try again.',
-        });
-        _needsScroll = true;
-      });
-      print('Failed to get LLM response: ${response.statusCode}');
+      return;
     }
-  } catch (e) {
-    setState(() {
-      chatMessages.add({
-        'sender': 'assistant',
-        'message': 'An error occurred. Please try again.',
+
+    final uri = Uri.parse('http://10.64.26.90:8021/get_llm_response');
+    try {
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'form_entry': _ocrText!,
+          'voice_query': isAudioQuery ? query : '',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('my LLM Response: ${response.body}');
+        final Map<String, dynamic> llmResponse = jsonDecode(response.body);
+        _dbHelper.saveLlmResponse(jsonEncode(llmResponse));
+
+        setState(() {
+          chatMessages.add({
+            'sender': 'assistant',
+            'message': llmResponse['response'] ?? 'No response available',
+          });
+          _needsScroll = true;
+        });
+      } else {
+        setState(() {
+          chatMessages.add({
+            'sender': 'assistant',
+            'message': 'Failed to get response. Please try again.',
+          });
+          _needsScroll = true;
+        });
+        print('Failed to get LLM response: ${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() {
+        chatMessages.add({
+          'sender': 'assistant',
+          'message': 'An error occurred. Please try again.',
+        });
+        _needsScroll = true;
       });
-      _needsScroll = true;
-    });
-    print('Error occurred while sending data to LLM API: $e');
+      print('Error occurred while sending data to LLM API: $e');
+    }
   }
-}
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final arguments =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     imagePath = arguments['imagePath'] as String?;
     boundingBoxes = arguments['bounding_boxes'] as List<dynamic>?;
 
@@ -465,18 +465,18 @@ Widget _buildRecordingIndicator() {
   }
 
   void _scrollToBottom() {
-     setState(() {
+    setState(() {
       _needsScroll = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     });
-     });
   }
 
 
@@ -490,15 +490,15 @@ Widget _buildRecordingIndicator() {
         previouslySelectedBoxes.add(selectedBox!);
       }
       selectedBox = box; // Set the newly tapped box as the current selection
-  
-      
+
+
     });
 
     _sendDataToApi(box);
   }
 
   Future<void> _sendDataToApi(Map<String, dynamic> box) async {
-    final uri = Uri.parse('http://192.168.77.227:8080/cv/ocr');
+    final uri = Uri.parse('http://10.64.26.90:8080/cv/ocr');
     var request = http.MultipartRequest('POST', uri);
 
     // Crop the image
@@ -511,13 +511,13 @@ Widget _buildRecordingIndicator() {
 
     var file = File(imagePath as String);
     if (await file.exists()) {
-    // Fix: Add filename and content-type to the MultipartFile
-    request.files.add(await http.MultipartFile.fromPath(
-      'file',
-      file.path,
-      // Optional: Add content type if needed
-      contentType: MediaType('image', 'png'),
-    ));
+      // Fix: Add filename and content-type to the MultipartFile
+      request.files.add(await http.MultipartFile.fromPath(
+        'file',
+        file.path,
+        // Optional: Add content type if needed
+        contentType: MediaType('image', 'png'),
+      ));
     } else {
       print(
           'Cropped image file does not exist at the given path: $imagePath');
@@ -538,7 +538,7 @@ Widget _buildRecordingIndicator() {
         final responseBody = await response.stream.bytesToString();
         print('Data sent successfully! Response: $responseBody');
 
-        provider.setOcrResponse(responseBody); 
+        provider.setOcrResponse(responseBody);
 
         // Parse OCR response and extract text
         final ocrData = jsonDecode(responseBody);
@@ -548,7 +548,7 @@ Widget _buildRecordingIndicator() {
           chatMessages.add({
             'sender': 'assistant',
             'message':
-                'Field ${box['class']} selected. The detected text is: $_ocrText',
+            'Field ${box['class']} selected. The detected text is: $_ocrText',
           });
         });
         _scrollToBottom();
@@ -562,7 +562,7 @@ Widget _buildRecordingIndicator() {
     }
   }
 
-  
+
 
   Future<String> _cropImage(
       String imagePath, int xCenter, int yCenter, int width, int height) async {
@@ -579,277 +579,295 @@ Widget _buildRecordingIndicator() {
 
     return croppedImagePath;
   }
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text('Form Field Extraction'),
-      backgroundColor: Color(0xFF0b3c66),
-      elevation: 0,
-    ),
-    body: Stack(
-      children: [
-        // Image and Bounding Boxes Container
-     InteractiveViewer(
-  panEnabled: true,
-  minScale: 0.5,
-  maxScale: 4.0,
-  child: FittedBox(
-    fit: BoxFit.contain, // Adjust as needed
-    alignment: Alignment.center,  //therer ???
-    child: Stack(
-      children: [
-        // Base Image
-        if (imagePath != null)
-          Center(  
-            child: Image.file(
-              File(imagePath!),
-              fit: BoxFit.cover,
-            ),
-          ),
-                    
-                // Bounding Boxes Overlay
-                if (boundingBoxes != null)
-                  Positioned.fill(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        // Image size to calculate scaling factors
-                        final imageFile = File(imagePath!);
-                        final image = Image.file(imageFile);
-                        final ImageStream stream = image.image.resolve(ImageConfiguration());
-                        late double scaleX;
-                        late double scaleY;
-                    
-                        stream.addListener(ImageStreamListener((info, _) {
-                          final double imageWidth = info.image.width.toDouble();
-                          final double imageHeight = info.image.height.toDouble();
-                    
-                          // Calculate scaling factors
-                          scaleX = constraints.maxWidth / imageWidth;
-                          scaleY = constraints.maxHeight / imageHeight;
-                        }));
-                    
-                        return Stack(
-                          children: boundingBoxes!.map((box) {
-                            // Scale the coordinates
-                            final scaledX = box['x_center'] * scaleX - (box['width'] * scaleX / 2);
-                            final scaledY = box['y_center'] * scaleY - (box['height'] * scaleY / 2);
-                            final scaledWidth = box['width'] * scaleX;
-                            final scaledHeight = box['height'] * scaleY;
-                            final fieldType = box['class'];
-                    
-                            // Determine box color based on selection state
-                            final isCurrentlySelected = selectedBox == box;
-                            final wasEverSelected = previouslySelectedBoxes.contains(box);
-                    
-                            final borderColor = isCurrentlySelected
-                                ? Colors.blue
-                                : wasEverSelected
-                                    ? const Color.fromARGB(255, 192, 191, 155)
-                                    : Colors.green;
-                            final fillColor = borderColor.withOpacity(0.1);
-                    
-                            return Positioned(
-                              left: scaledX,
-                              top: scaledY,
-                              width: scaledWidth,
-                              height: scaledHeight,
-                              child: GestureDetector(
-                                onTap: () => _onBoundingBoxTap(box),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: borderColor,
-                                      width: 2,
-                                    ),
-                                    color: fillColor,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      fieldType,
-                                      style: TextStyle(
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        iconTheme: IconThemeData(color: Colors.white),
+        // title: const Text('Form Field Extraction'),
+        backgroundColor: const Color(0xFF0b3c66),
+        elevation: 0,
+      ),
+      body: Stack(
+        children: [
+          // Image and Bounding Boxes Container
+          InteractiveViewer(
+            panEnabled: true,
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: FittedBox(
+              fit: BoxFit.contain, // Adjust as needed
+              alignment: Alignment.center,  //therer ???
+              child: Stack(
+                children: [
+                  // Base Image
+                  if (imagePath != null)
+                    Center(
+                      child: Image.file(
+                        // width: MediaQuery.of(context).size.width,
+                        // height: MediaQuery.of(context).size.height,
+                        File(imagePath!),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+
+                  // Bounding Boxes Overlay
+                  if (boundingBoxes != null)
+                    Positioned.fill(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          // Image size to calculate scaling factors
+                          final imageFile = File(imagePath!);
+                          final image = Image.file(imageFile ,
+                            height: MediaQuery.of(context).size.height,
+
+                          );
+                          final ImageStream stream = image.image.resolve(const ImageConfiguration());
+                          late double scaleX;
+                          late double scaleY;
+
+                          stream.addListener(ImageStreamListener((info, _) {
+                            final double imageWidth = info.image.width.toDouble();
+                            final double imageHeight = info.image.height.toDouble();
+
+                            // Calculate scaling factors
+                            scaleX = constraints.maxWidth / imageWidth;
+                            scaleY = constraints.maxHeight / imageHeight;
+                          }));
+
+                          return Stack(
+                            children: boundingBoxes!.map((box) {
+                              // Scale the coordinates
+                              final scaledX = box['x_center'] * scaleX - (box['width'] * scaleX / 2);
+                              final scaledY = box['y_center'] * scaleY - (box['height'] * scaleY / 2);
+                              final scaledWidth = box['width'] * scaleX;
+                              final scaledHeight = box['height'] * scaleY;
+                              final fieldType = box['class'];
+
+                              // Determine box color based on selection state
+                              final isCurrentlySelected = selectedBox == box;
+                              final wasEverSelected = previouslySelectedBoxes.contains(box);
+
+                              final borderColor = isCurrentlySelected
+                                  ? Colors.blue
+                                  : wasEverSelected
+                                  ? const Color.fromARGB(255, 192, 191, 155)
+                                  : Colors.green;
+                              final fillColor = borderColor.withOpacity(0.1);
+
+                              return Positioned(
+                                left: scaledX,
+                                top: scaledY,
+                                width: scaledWidth,
+                                height: scaledHeight,
+                                child: GestureDetector(
+                                  onTap: () => _onBoundingBoxTap(box),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
                                         color: borderColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        backgroundColor: Colors.white.withOpacity(0.7),
+                                        width: 2,
                                       ),
-                                      textAlign: TextAlign.center,
+                                      color: fillColor,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        fieldType,
+                                        style: TextStyle(
+                                          color: borderColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          backgroundColor: Colors.white.withOpacity(0.7),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            );
-                          }).toList(),
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        
-        // DraggableScrollableSheet
-        DraggableScrollableSheet(
-          initialChildSize: 0.3,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          snap: true,
-          snapSizes: [0.3, 0.6, 0.9],
-          builder: (BuildContext context, ScrollController scrollController) {
-            _scrollController = scrollController;
-            WidgetsBinding.instance.addPostFrameCallback((_) => _performScroll());
-            return Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.5),
-                    spreadRadius: 5,
-                    blurRadius: 7,
-                    offset: Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    child: Container(
-                      width: 40,
-                      height: 5,
-                      margin: EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2.5),
+                              );
+                            }).toList(),
+                          );
+                        },
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      itemCount: chatMessages.length,
-                      itemBuilder: (context, index) {
-                        final message = chatMessages[index];
-                        return ChatBubble(
-                          sender: message['sender'],
-                          message: message['message'],
-                          audioPath: message['audioPath'],
-                          onPlayAudio: _playAudio,
-                          avatar: message['sender'] == 'user'
-                              ? 'assets/user_avatar.png'
-                              : 'assets/bot_avatar.png',
-                          isAudioMessage: message['isAudioMessage'] ?? false,
-                        );
-                      },
-                    ),
-                  ),
-                  // Chat Input Area
-                  Container(
-                    margin: EdgeInsets.all(8),
-                  
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(25),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        _isRecording
-                            ? _buildRecordingIndicator()
-                            : Expanded(
-  child: TextField(
-    controller: _messageController,
-    decoration: InputDecoration(
-      hintText: 'Type a message',
-      border: InputBorder.none,
-      hintStyle: TextStyle(color: Colors.grey[400]),
-    ),
-    enabled: true,  // Always enable the TextField
-    onTap: () {
-      // Show error message if no bounding box is selected
-      if (!_inputEnabled) {
-        _showErrorMessage(
-          context,
-          "Please select a bounding box first",
-        );
-      }
-    },
-    onChanged: (text) {
-      // Show error and clear text if no bounding box is selected
-      if (!_inputEnabled) {
-        _showErrorMessage(
-          context,
-          "Please select a bounding box first",
-        );
-        _messageController.clear();
-      }
-      setState(() {});
-    },
-  ),
-),
-AnimatedContainer(
-  duration: Duration(milliseconds: 200),
-  transform: Matrix4.translationValues(_slidingOffset, 0, 0),
-  child: _messageController.text.isEmpty
-      ? _buildMicrophoneButton()
-      : IconButton(
-          icon: Icon(Icons.send, color: Color(0xFF0b3c66)),
-          onPressed: () {
-            // Debugging logs
-            print("Send button pressed");
-            print("_ocrText value: $_ocrText");
-
-            if (_messageController.text.isNotEmpty) {
-              if (_ocrText == null || _ocrText!.isEmpty) {
-                print("Error: Please select a bounding box first");
-                _showErrorMessage(
-                  context,
-                  "Please select a field",
-                );
-                return; // Ensure the function exits after showing the error
-              }
-
-              // Add message to chat
-              setState(() {
-                chatMessages.add({
-                  'sender': 'user',
-                  'message': _messageController.text,
-                });
-                _needsScroll = true;
-              });
-
-              // Send message to the LLM API
-              _sendToLLMApi(_messageController.text);
-
-              // Clear the message controller
-              _messageController.clear();
-            }
-          },
-        ),
-),
-
-                      ],
-                    ),
-                  ),
                 ],
               ),
-            );
-          },
-        ),
-      ],
-    ),
-  );
-}
+            ),
+          ),
+
+          // DraggableScrollableSheet
+          DraggableScrollableSheet(
+            controller: _dragController,
+            initialChildSize: 0.3,
+            minChildSize: 0.3,
+            maxChildSize: 1,
+            builder: (BuildContext context, ScrollController scrollController) {
+              _scrollController = scrollController;
+              WidgetsBinding.instance.addPostFrameCallback((_) => _performScroll());
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 5,
+                      blurRadius: 7,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      child: Container(
+                        width: 40,
+                        height: 5,
+                        margin: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2.5),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: chatMessages.length,
+                        itemBuilder: (context, index) {
+                          final message = chatMessages[index];
+                          return ChatBubble(
+                            sender: message['sender'],
+                            message: message['message'],
+                            audioPath: message['audioPath'],
+                            onPlayAudio: _playAudio,
+                            avatar: message['sender'] == 'user'
+                                ? 'assets/user_avatar.png'
+                                : 'assets/bot_avatar.png',
+                            isAudioMessage: message['isAudioMessage'] ?? false,
+                          );
+                        },
+                      ),
+                    ),
+                    // Chat Input Area
+                    Container(
+                      margin: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(25),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          _isRecording
+                              ? _buildRecordingIndicator()
+                              : Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: TextField(
+                                onSubmitted:(tes){
+                                  // _dragController.animateTo(0.3, duration:Duration(seconds: 2), curve: Curves.easeIn);
+                                  // Show error message if no bounding box is selected
+
+                                },
+
+
+                                controller: _messageController,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.white54,
+                                  hintText: 'Type a message',
+                                  border: InputBorder.none,
+                                  hintStyle: TextStyle(color: Colors.grey[400]),
+                                ),
+                                enabled: true,
+                                // Always enable the TextField
+                                onTap: () {
+                                  _dragController.animateTo(1, duration:Duration(seconds: 2), curve: Curves.easeIn);
+                                  // Show error message if no bounding box is selected
+                                  if (!_inputEnabled) {
+                                    _showErrorMessage(
+                                      context,
+                                      "Please select a bounding box first",
+                                    );
+                                  }
+                                },
+                                onChanged: (text) {
+                                  // Show error and clear text if no bounding box is selected
+                                  if (!_inputEnabled) {
+                                    _showErrorMessage(
+                                      context,
+                                      "Please select a bounding box first",
+                                    );
+                                    _messageController.clear();
+                                  }
+                                  setState(() {});
+                                },
+                              ),
+                            ),
+                          ),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            transform: Matrix4.translationValues(_slidingOffset, 0, 0),
+                            child: _messageController.text.isEmpty
+                                ? _buildMicrophoneButton()
+                                : IconButton(
+                              icon: const Icon(Icons.send, color: Color(0xFF0b3c66)),
+                              onPressed: () {
+                                // Debugging logs
+                                print("Send button pressed");
+                                print("_ocrText value: $_ocrText");
+
+                                if (_messageController.text.isNotEmpty) {
+                                  if (_ocrText == null || _ocrText!.isEmpty) {
+                                    print("Error: Please select a bounding box first");
+                                    _showErrorMessage(
+                                      context,
+                                      "Please select a field",
+                                    );
+                                    return; // Ensure the function exits after showing the error
+                                  }
+
+                                  // Add message to chat
+                                  setState(() {
+                                    chatMessages.add({
+                                      'sender': 'user',
+                                      'message': _messageController.text,
+                                    });
+                                    _needsScroll = true;
+                                  });
+
+                                  // Send message to the LLM API
+                                  _sendToLLMApi(_messageController.text);
+
+                                  // Clear the message controller
+                                  _messageController.clear();
+                                }
+                              },
+                            ),
+                          ),
+
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
