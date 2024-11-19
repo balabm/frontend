@@ -71,14 +71,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[200],
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0b3c66),
-        leading: IconButton(
+        backgroundColor: const Color.fromRGBO(11, 60, 102, 1),
+        // leading: 
+        title: Row(
+          children: [
+            IconButton(
           icon: const Icon(Icons.person, color: Colors.white),
           onPressed: () {
             // Handle home button press
           },
         ),
-        title: Text('Hi $_userName', style: const TextStyle(color: Colors.white)),
+            Text('Hi ${_userName.toUpperCase()}', style: const TextStyle(color: Colors.white)),
+          ],
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

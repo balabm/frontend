@@ -35,7 +35,7 @@ class ChatBubble extends StatelessWidget {
           children: [
             if (!isUser) ...[
               Container(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -45,37 +45,38 @@ class ChatBubble extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: CircleAvatar(
-                  backgroundImage: AssetImage(avatar),
-                  radius: 20,
+                child: const CircleAvatar(
+                  backgroundColor: Colors.blueGrey ,
+                  child: Text('AI',style: TextStyle(color: Colors.white,letterSpacing: 5,fontWeight: FontWeight.bold),),
+                  radius: 24,
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
             ],
             Flexible(
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isUser 
-                      ? [Color.fromARGB(255, 157, 192, 222), Color.fromARGB(255, 156, 193, 229)]
-                      : [Color(0xFFE8EAF6), Color.fromARGB(255, 225, 227, 236)],
+                      ? [const Color.fromARGB(255, 157, 192, 222), const Color.fromARGB(255, 156, 193, 229)]
+                      : [const Color(0xFFE8EAF6), const Color.fromARGB(255, 225, 227, 236)],
                   ),
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                    bottomLeft: isUser ? Radius.circular(20) : Radius.circular(0),
-                    bottomRight: isUser ? Radius.circular(0) : Radius.circular(20),
+                    topLeft: const Radius.circular(20),
+                    topRight: const Radius.circular(20),
+                    bottomLeft: isUser ? const Radius.circular(20) : const Radius.circular(0),
+                    bottomRight: isUser ? const Radius.circular(0) : const Radius.circular(20),
                   ), 
                   boxShadow: [
                     BoxShadow(
                       color: Colors.grey.withOpacity(0.2),
                       spreadRadius: 2,
                       blurRadius: 8,
-                      offset: Offset(0, 4),
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                padding: EdgeInsets.all(14),
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -90,7 +91,7 @@ class ChatBubble extends StatelessWidget {
                           child: RichText(
                             text: TextSpan(
                               children: [
-                                TextSpan(
+                                const TextSpan(
                                   text: 'Audio message',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
@@ -99,7 +100,7 @@ class ChatBubble extends StatelessWidget {
                                 ),
                                 TextSpan(
                                   text: ' • ${message.split('• ').last}',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.black54,
                                     fontStyle: FontStyle.italic,
                                   ),
@@ -112,7 +113,7 @@ class ChatBubble extends StatelessWidget {
                       FadeInWidget(
                         child: Text(
                           message,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.black87,
                             fontSize: 15,
                             fontWeight: FontWeight.w400,
@@ -125,11 +126,12 @@ class ChatBubble extends StatelessWidget {
               ),
             ),
             if (isUser) ...[
-              SizedBox(width: 12),
-              CircleAvatar(
-                backgroundImage: AssetImage(avatar),
-                radius: 24,
-              ),
+              const SizedBox(width: 12),
+               const CircleAvatar(
+                  backgroundColor: Color(0xFF0b3c66) ,
+                  child: Icon(Icons.person,color: Colors.white,),
+                  radius: 24,
+                ),
             ],
           ],
         ),
