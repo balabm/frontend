@@ -4,7 +4,8 @@ class AnswerDisplayScreen extends StatelessWidget {
   final String query;
   final String answer;
 
-  const AnswerDisplayScreen({super.key, required this.query, required this.answer});
+  const AnswerDisplayScreen(
+      {super.key, required this.query, required this.answer});
 
   void _submit() {
     print("Back button pressed");
@@ -16,17 +17,19 @@ class AnswerDisplayScreen extends StatelessWidget {
       backgroundColor: Colors.white, // Set the body background to white
       appBar: AppBar(
         title: const Text(''),
-        backgroundColor: const Color(0xFF0b3c66),
+        backgroundColor: Colors.teal,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, // Align content to the left
+          crossAxisAlignment:
+              CrossAxisAlignment.start, // Align content to the left
           children: [
             // Styled text positioned above the card
             Padding(
-              padding: const EdgeInsets.only(top: 48.0, bottom: 18.0), // Padding for top and bottom
+              padding: const EdgeInsets.only(
+                  top: 48.0, bottom: 18.0), // Padding for top and bottom
               child: ShaderMask(
                 shaderCallback: (bounds) => const LinearGradient(
                   colors: [Color(0xFF0b3c66), Color(0xFF0b3c66)],
@@ -49,7 +52,8 @@ class AnswerDisplayScreen extends StatelessWidget {
             // Main card displaying the query and answer
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F0FE), // Subtle blue background for card
+                color:
+                    const Color(0xFFE8F0FE), // Subtle blue background for card
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -106,8 +110,9 @@ class AnswerDisplayScreen extends StatelessWidget {
                       onPressed: _submit,
                       style: ElevatedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        backgroundColor: const Color(0xFF0b3c66),
-                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                        backgroundColor: Colors.teal,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
@@ -116,7 +121,7 @@ class AnswerDisplayScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      child: Text('Back'),
+                      child: const Text('Back'),
                     ),
                   ),
                   const SizedBox(height: 20), // Padding after the button

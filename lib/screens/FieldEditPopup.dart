@@ -5,12 +5,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive_io.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart'; 
+import 'package:http_parser/http_parser.dart';
 import 'package:provider/provider.dart';
 import 'api_response_provider.dart';
-import 'dart:convert';  // For JSON encoding
-import 'AnswerDisplayScreen.dart';  // Import statement at the top of your file
-
+import 'dart:convert'; // For JSON encoding
+import 'AnswerDisplayScreen.dart'; // Import statement at the top of your file
 
 class FieldEditPopup extends StatefulWidget {
   final String fieldName;
@@ -144,71 +143,69 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
   Future<void> _sendAudioToApi(File zipFile) async {
     try {
       var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('http://192.168.31.227:8001/upload-audio-zip/')
-      );
+          'POST', Uri.parse('http://150.230.166.29/asr/upload-audio-zip/'));
 
-      request.files.add(await http.MultipartFile.fromPath(
-        'file',
-        zipFile.path,
-        contentType: MediaType('application', 'zip')
-      ));
+      request.files.add(await http.MultipartFile.fromPath('file', zipFile.path,
+          contentType: MediaType('application', 'zip')));
 
       var response = await request.send();
       if (response.statusCode == 200) {
         String responseBody = await response.stream.bytesToString();
-        Provider.of<ApiResponseProvider>(context, listen: false).setAudioZipResponse(responseBody);
+        Provider.of<ApiResponseProvider>(context, listen: false)
+            .setAudioZipResponse(responseBody);
       }
     } catch (e) {
       print('Error uploading audio file: $e');
     }
   }
+
   //new function for textbox
-  Future<void> _sendDataToLLMApiWithText(String typedText, String ocrResponse) async {
-  final url = Uri.parse('http://192.168.31.227:8021/get_llm_response');
+  Future<void> _sendDataToLLMApiWithText(
+      String typedText, String ocrResponse) async {
+    final url = Uri.parse('http://150.230.166.29/llm//get_llm_response');
 
-  try {
-    Map<String, dynamic> ocrData = jsonDecode(ocrResponse);
-    String extractedText = ocrData['extracted_text'];
+    try {
+      Map<String, dynamic> ocrData = jsonDecode(ocrResponse);
+      String extractedText = ocrData['extracted_text'];
 
-    // Create the request body, including the typed text.
-    Map<String, dynamic> body = {
-      "form_entry": extractedText,   // Pass extracted text from ocrResponse
-      "voice_query": typedText       // Pass the typed text from the TextField
-    };
+      // Create the request body, including the typed text.
+      Map<String, dynamic> body = {
+        "form_entry": extractedText, // Pass extracted text from ocrResponse
+        "voice_query": typedText // Pass the typed text from the TextField
+      };
 
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(body),
-    );
-
-    if (response.statusCode == 200) {
-      // Navigate to the AnswerDisplayScreen with the LLM response.
-      Map<String, dynamic> llmResponse = jsonDecode(response.body);
-      String query = llmResponse['query'] ?? 'No query';
-      String responseText = llmResponse['response'] ?? 'No response';
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AnswerDisplayScreen(
-            query: query,
-            answer: responseText,
-          ),
-        ),
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
       );
-    } else {
-      print("Failed to get LLM response: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        // Navigate to the AnswerDisplayScreen with the LLM response.
+        Map<String, dynamic> llmResponse = jsonDecode(response.body);
+        String query = llmResponse['query'] ?? 'No query';
+        String responseText = llmResponse['response'] ?? 'No response';
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AnswerDisplayScreen(
+              query: query,
+              answer: responseText,
+            ),
+          ),
+        );
+      } else {
+        print("Failed to get LLM response: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error in LLM API call with text: $e");
     }
-  } catch (e) {
-    print("Error in LLM API call with text: $e");
   }
-}
 
-
-  Future<void> _sendDataToLLMApi(String audioZipResponse, String ocrResponse) async {
-    final url = Uri.parse('http://192.168.31.227:8021/get_llm_response');
+  Future<void> _sendDataToLLMApi(
+      String audioZipResponse, String ocrResponse) async {
+    final url = Uri.parse('http://150.230.166.29/llm//get_llm_response');
 
     try {
       // Parse the JSON response
@@ -217,11 +214,11 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
 
       String extractedText = ocrData['extracted_text'];
       String dummyText = audioData['dummy_text'];
-      
+
       // Create the request body
       Map<String, dynamic> body = {
-        "form_entry": extractedText,   // Pass extracted text from ocrResponse
-        "voice_query": dummyText       // Pass dummy text from audioZipResponse
+        "form_entry": extractedText, // Pass extracted text from ocrResponse
+        "voice_query": dummyText // Pass dummy text from audioZipResponse
       };
 
       // Send POST request
@@ -256,19 +253,20 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
 
   @override
   Widget build(BuildContext context) {
-    final audioZipResponse = Provider.of<ApiResponseProvider>(context).audioZipResponse;
+    final audioZipResponse =
+        Provider.of<ApiResponseProvider>(context).audioZipResponse;
     final ocrResponse = Provider.of<ApiResponseProvider>(context).ocrResponse;
 
     return AlertDialog(
       backgroundColor: Colors.white,
       //title: Text(
-        //widget.fieldName,
-        //style: TextStyle(
-          //fontSize: 22,
-          //fontWeight: FontWeight.bold,
-          //color: Color(0xFF0b3c66),
-        //),
-        //textAlign: TextAlign.center,
+      //widget.fieldName,
+      //style: TextStyle(
+      //fontSize: 22,
+      //fontWeight: FontWeight.bold,
+      //color: Color(0xFF0b3c66),
+      //),
+      //textAlign: TextAlign.center,
       //),
       content: SingleChildScrollView(
         child: Padding(
@@ -279,16 +277,15 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
             children: [
               if (ocrResponse != null)
                 Text(
-  ocrResponse != null
-      ? " ${jsonDecode(ocrResponse)['extracted_text'] ?? 'No text found'}"
-      : "No API Response",
-  style: const TextStyle(
-    fontSize: 22,
-    color: Color(0xFF0b3c66),
-    fontWeight: FontWeight.bold,
-  ),
-),
-
+                  ocrResponse != null
+                      ? " ${jsonDecode(ocrResponse)['extracted_text'] ?? 'No text found'}"
+                      : "No API Response",
+                  style: const TextStyle(
+                    fontSize: 22,
+                    color: Color(0xFF0b3c66),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               const SizedBox(height: 8),
               TextField(
                 controller: _controller,
@@ -299,12 +296,13 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: Color(0xFF0b3c66)),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   suffixIcon: IconButton(
                     onPressed: isRecording ? _stopRecording : _startRecording,
                     icon: Icon(
                       isRecording ? Icons.stop : Icons.mic,
-                      color: isRecording ? Colors.red : const Color(0xFF0b3c66),
+                      color: isRecording ? Colors.red : Colors.teal,
                     ),
                   ),
                 ),
@@ -328,7 +326,7 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
                     IconButton(
                       icon: Icon(
                         isPlaying ? Icons.stop : Icons.play_arrow,
-                        color: const Color(0xFF0b3c66),
+                        color: Colors.teal,
                       ),
                       onPressed: isPlaying ? _stopAudio : _playAudio,
                     ),
@@ -341,40 +339,42 @@ class _FieldEditPopupState extends State<FieldEditPopup> {
                 const SizedBox(height: 16),
               ],
               ElevatedButton(
-  style: ElevatedButton.styleFrom(
-    backgroundColor: const Color(0xFF0b3c66),  // Button background color
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(8),
-    ),
-  ),
-  onPressed: () async {
-    if (_controller.text.isNotEmpty) {
-      // If text is typed in the TextField, directly send it with ocrResponse to the LLM model.
-      if (ocrResponse != null) {
-        await _sendDataToLLMApiWithText(_controller.text, ocrResponse);
-      } else {
-        print('OCR response is missing.');
-      }
-    } else if (_audioPath != null) {
-      // Existing logic for audio: zip and send the audio file to the API.
-      File zipFile = await _zipAudioFile(_audioPath!);
-      await _sendAudioToApi(zipFile);
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal, // Button background color
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () async {
+                  if (_controller.text.isNotEmpty) {
+                    // If text is typed in the TextField, directly send it with ocrResponse to the LLM model.
+                    if (ocrResponse != null) {
+                      await _sendDataToLLMApiWithText(
+                          _controller.text, ocrResponse);
+                    } else {
+                      print('OCR response is missing.');
+                    }
+                  } else if (_audioPath != null) {
+                    // Existing logic for audio: zip and send the audio file to the API.
+                    File zipFile = await _zipAudioFile(_audioPath!);
+                    await _sendAudioToApi(zipFile);
 
-      // After audio is uploaded, if both audioZipResponse and ocrResponse are available, send them to LLM.
-      final audioZipResponse = Provider.of<ApiResponseProvider>(context, listen: false).audioZipResponse;
-      if (audioZipResponse != null && ocrResponse != null) {
-        await _sendDataToLLMApi(audioZipResponse, ocrResponse);
-      }
-    }
-  },
-  child: const Text(
-    'Submit',
-    style: TextStyle(
-      color: Colors.white,  // Set the text color to white
-    ),
-  ),
-),
-
+                    // After audio is uploaded, if both audioZipResponse and ocrResponse are available, send them to LLM.
+                    final audioZipResponse =
+                        Provider.of<ApiResponseProvider>(context, listen: false)
+                            .audioZipResponse;
+                    if (audioZipResponse != null && ocrResponse != null) {
+                      await _sendDataToLLMApi(audioZipResponse, ocrResponse);
+                    }
+                  }
+                },
+                child: const Text(
+                  'Submit',
+                  style: TextStyle(
+                    color: Colors.white, // Set the text color to white
+                  ),
+                ),
+              ),
             ],
           ),
         ),

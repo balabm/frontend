@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api_response_provider.dart';
 import 'package:archive/archive_io.dart';
 import 'package:path_provider/path_provider.dart';
@@ -12,15 +13,12 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
-import 'dart:math';
-import 'package:flutter/scheduler.dart';
-import 'package:image/image.dart' as img;
 import 'dart:async';
 import 'widgets/index.dart';
 
-
-
 class FieldEditScreen extends StatefulWidget {
+  const FieldEditScreen({super.key});
+
   @override
   _FieldEditScreenState createState() => _FieldEditScreenState();
 }
@@ -29,10 +27,10 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   String? imagePath;
   List<dynamic>? boundingBoxes;
   List<Map<String, dynamic>> chatMessages = [];
-  TextEditingController _messageController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
   ScrollController _scrollController = ScrollController();
-  DraggableScrollableController _dragController =
-  DraggableScrollableController();
+  final DraggableScrollableController _dragController =
+      DraggableScrollableController();
   FlutterSoundRecorder? _audioRecorder;
   FlutterSoundPlayer? _audioPlayer;
   bool _isRecording = false;
@@ -50,8 +48,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   bool _needsScroll = false;
   Map<String, dynamic>? selectedBox;
   Set<Map<String, dynamic>> previouslySelectedBoxes = {};
-
-
+  bool _isThinking = false;
+  String _userName = 'You';
   @override
   void initState() {
     super.initState();
@@ -60,20 +58,30 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     _audioPlayer = FlutterSoundPlayer();
     _initializeRecorder();
     _initializePlayer();
+    _loadUserName();
   }
 
-
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _userName = prefs.getString('userName') ?? 'You';
+      });
+    }
+  }
 
   // Add this function inside your class
   void _showErrorMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide any existing Snackbar
+    ScaffoldMessenger.of(context)
+        .hideCurrentSnackBar(); // Hide any existing Snackbar
 
     final snackBar = SnackBar(
       behavior: SnackBarBehavior.floating,
       backgroundColor: Colors.red[400],
       duration: const Duration(seconds: 3),
       margin: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16, // Adjust for keyboard height
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            16, // Adjust for keyboard height
         left: 16,
         right: 16,
       ),
@@ -81,7 +89,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
         borderRadius: BorderRadius.circular(8),
       ),
       content: TweenAnimationBuilder(
-        tween: Tween<Offset>(begin: const Offset(0, 1), end: const Offset(0, 0)),
+        tween:
+            Tween<Offset>(begin: const Offset(0, 1), end: const Offset(0, 0)),
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
         builder: (context, Offset offset, child) {
@@ -92,9 +101,11 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
               offset: offset,
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                  const Icon(Icons.error_outline,
+                      color: Colors.white, size: 20),
                   const SizedBox(width: 8),
-                  Expanded( // Ensures text does not overflow
+                  Expanded(
+                    // Ensures text does not overflow
                     child: Text(
                       message,
                       style: const TextStyle(fontSize: 14, color: Colors.white),
@@ -120,11 +131,10 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-
-
   Future<void> _initializeRecorder() async {
     await _audioRecorder!.openRecorder();
-    await _audioRecorder!.setSubscriptionDuration(const Duration(milliseconds: 10));
+    await _audioRecorder!
+        .setSubscriptionDuration(const Duration(milliseconds: 10));
     print("Recorder initialized");
   }
 
@@ -171,7 +181,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
       });
 
       // Start the timer to update duration every 100ms
-      _recordingTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      _recordingTimer =
+          Timer.periodic(const Duration(milliseconds: 100), (timer) {
         if (_recordingStartTime != null) {
           setState(() {
             _recordingDuration =
@@ -249,8 +260,6 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     }
   }
 
-
-
   // Add a new method to handle the actual scrolling
   void _performScroll() {
     if (_needsScroll && _scrollController.hasClients) {
@@ -305,7 +314,6 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     );
   }
 
-
   Future<String> _zipRecordedAudio() async {
     Directory tempDir = await getTemporaryDirectory();
     String zipFilePath = path.join(tempDir.path, 'audio_zip.zip');
@@ -319,9 +327,13 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   }
 
   Future<String?> _sendAudioToApi(File zipFile) async {
+    setState(() {
+      _needsScroll = true;
+      _isThinking = true;
+    });
     try {
       var request = http.MultipartRequest(
-          'POST', Uri.parse('http://10.64.26.90:8001/upload-audio-zip/'));
+          'POST', Uri.parse('http://150.230.166.29/asr/upload-audio-zip/'));
 
       request.files.add(await http.MultipartFile.fromPath(
         'file',
@@ -332,6 +344,9 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
       var response = await request.send();
 
       if (response.statusCode == 200) {
+        setState(() {
+          _isThinking = false;
+        });
         String responseBody = await response.stream.bytesToString();
         _dbHelper.saveAsrResponse(responseBody);
         Provider.of<ApiResponseProvider>(context, listen: false)
@@ -339,10 +354,16 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
         print('Audio ZIP sent successfully!');
         return responseBody;
       } else {
+        setState(() {
+          _isThinking = false;
+        });
         print('Failed to upload ZIP: ${response.statusCode}');
         return null;
       }
     } catch (e) {
+      setState(() {
+        _isThinking = false;
+      });
       print('Error uploading audio ZIP file: $e');
       return null;
     }
@@ -369,7 +390,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
       if (asrResponse != null) {
         // Parse ASR response
         Map<String, dynamic> asrData = jsonDecode(asrResponse);
-        String transcribedText = asrData['dummy_text'] ?? 'No transcription available';
+        String transcribedText =
+            asrData['dummy_text'] ?? 'No transcription available';
 
         // Add audio message to chat
         setState(() {
@@ -405,7 +427,12 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
       return;
     }
 
-    final uri = Uri.parse('http://10.64.26.90:8021/get_llm_response');
+    setState(() {
+      _needsScroll = true;
+      _isThinking = true;
+    });
+
+    final uri = Uri.parse('http://150.230.166.29/llm//get_llm_response');
     try {
       final response = await http.post(
         uri,
@@ -427,6 +454,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
             'message': llmResponse['response'] ?? 'No response available',
           });
           _needsScroll = true;
+          _isThinking = false;
         });
       } else {
         setState(() {
@@ -435,6 +463,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
             'message': 'Failed to get response. Please try again.',
           });
           _needsScroll = true;
+          _isThinking = false;
         });
         print('Failed to get LLM response: ${response.statusCode}');
       }
@@ -445,6 +474,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
           'message': 'An error occurred. Please try again.',
         });
         _needsScroll = true;
+        _isThinking = false;
       });
       print('Error occurred while sending data to LLM API: $e');
     }
@@ -454,7 +484,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final arguments =
-    ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     imagePath = arguments['imagePath'] as String?;
     boundingBoxes = arguments['bounding_boxes'] as List<dynamic>?;
 
@@ -479,7 +509,6 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
     });
   }
 
-
   void _onBoundingBoxTap(Map<String, dynamic> box) {
     setState(() {
       _inputEnabled = true;
@@ -490,16 +519,18 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
         previouslySelectedBoxes.add(selectedBox!);
       }
       selectedBox = box; // Set the newly tapped box as the current selection
-
-
     });
 
     _sendDataToApi(box);
   }
 
   Future<void> _sendDataToApi(Map<String, dynamic> box) async {
-    final uri = Uri.parse('http://10.64.26.90:8080/cv/ocr');
+    final uri = Uri.parse('http://150.230.166.29/ocr/cv/ocr');
     var request = http.MultipartRequest('POST', uri);
+    setState(() {
+      _needsScroll = true;
+      _isThinking = true;
+    });
 
     // Crop the image
     // String croppedImagePath = await _cropImage(
@@ -519,8 +550,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
         contentType: MediaType('image', 'png'),
       ));
     } else {
-      print(
-          'Cropped image file does not exist at the given path: $imagePath');
+      print('Cropped image file does not exist at the given path: $imagePath');
       return;
     }
 
@@ -548,21 +578,26 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
           chatMessages.add({
             'sender': 'assistant',
             'message':
-            'Field ${box['class']} selected. The detected text is: $_ocrText',
+                'Field ${box['class']} selected. The detected text is: $_ocrText',
           });
+          _isThinking = false;
         });
         _scrollToBottom();
       } else {
         print('Failed to send data: ${response.statusCode}');
         final errorResponse = await response.stream.bytesToString();
         print('Error response: $errorResponse');
+        setState(() {
+          _isThinking = false;
+        });
       }
     } catch (e) {
       print('Error occurred while sending data: $e');
+      setState(() {
+        _isThinking = false;
+      });
     }
   }
-
-
 
   Future<String> _cropImage(
       String imagePath, int xCenter, int yCenter, int width, int height) async {
@@ -579,13 +614,14 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
 
     return croppedImagePath;
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.white),
         // title: const Text('Form Field Extraction'),
-        backgroundColor: const Color(0xFF0b3c66),
+        backgroundColor: Colors.teal,
         elevation: 0,
       ),
       body: Stack(
@@ -597,7 +633,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
             maxScale: 4.0,
             child: FittedBox(
               fit: BoxFit.contain, // Adjust as needed
-              alignment: Alignment.center,  //therer ???
+              alignment: Alignment.center, //therer ???
               child: Stack(
                 children: [
                   // Base Image
@@ -618,17 +654,20 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
                         builder: (context, constraints) {
                           // Image size to calculate scaling factors
                           final imageFile = File(imagePath!);
-                          final image = Image.file(imageFile ,
+                          final image = Image.file(
+                            imageFile,
                             height: MediaQuery.of(context).size.height,
-
                           );
-                          final ImageStream stream = image.image.resolve(const ImageConfiguration());
+                          final ImageStream stream =
+                              image.image.resolve(const ImageConfiguration());
                           late double scaleX;
                           late double scaleY;
 
                           stream.addListener(ImageStreamListener((info, _) {
-                            final double imageWidth = info.image.width.toDouble();
-                            final double imageHeight = info.image.height.toDouble();
+                            final double imageWidth =
+                                info.image.width.toDouble();
+                            final double imageHeight =
+                                info.image.height.toDouble();
 
                             // Calculate scaling factors
                             scaleX = constraints.maxWidth / imageWidth;
@@ -638,21 +677,24 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
                           return Stack(
                             children: boundingBoxes!.map((box) {
                               // Scale the coordinates
-                              final scaledX = box['x_center'] * scaleX - (box['width'] * scaleX / 2);
-                              final scaledY = box['y_center'] * scaleY - (box['height'] * scaleY / 2);
+                              final scaledX = box['x_center'] * scaleX -
+                                  (box['width'] * scaleX / 2);
+                              final scaledY = box['y_center'] * scaleY -
+                                  (box['height'] * scaleY / 2);
                               final scaledWidth = box['width'] * scaleX;
                               final scaledHeight = box['height'] * scaleY;
                               final fieldType = box['class'];
 
                               // Determine box color based on selection state
                               final isCurrentlySelected = selectedBox == box;
-                              final wasEverSelected = previouslySelectedBoxes.contains(box);
+                              final wasEverSelected =
+                                  previouslySelectedBoxes.contains(box);
 
                               final borderColor = isCurrentlySelected
                                   ? Colors.blue
                                   : wasEverSelected
-                                  ? const Color.fromARGB(255, 192, 191, 155)
-                                  : Colors.green;
+                                      ? const Color.fromARGB(255, 192, 191, 155)
+                                      : Colors.green;
                               final fillColor = borderColor.withOpacity(0.1);
 
                               return Positioned(
@@ -678,7 +720,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
                                           color: borderColor,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 12,
-                                          backgroundColor: Colors.white.withOpacity(0.7),
+                                          backgroundColor:
+                                              Colors.white.withOpacity(0.7),
                                         ),
                                         textAlign: TextAlign.center,
                                       ),
@@ -704,7 +747,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
             maxChildSize: 1,
             builder: (BuildContext context, ScrollController scrollController) {
               _scrollController = scrollController;
-              WidgetsBinding.instance.addPostFrameCallback((_) => _performScroll());
+              WidgetsBinding.instance
+                  .addPostFrameCallback((_) => _performScroll());
               return Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -737,8 +781,16 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
                     Expanded(
                       child: ListView.builder(
                         controller: scrollController,
-                        itemCount: chatMessages.length,
+                        itemCount: chatMessages.length + (_isThinking ? 1 : 0),
                         itemBuilder: (context, index) {
+                          if (_isThinking && index == chatMessages.length) {
+                            return ChatBubble(
+                              sender: 'assistant',
+                              message: 'Thinking...',
+                              avatar: 'assets/bot_avatar.png',
+                              userName: _userName,
+                            );
+                          }
                           final message = chatMessages[index];
                           return ChatBubble(
                             sender: message['sender'],
@@ -749,6 +801,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
                                 ? 'assets/user_avatar.png'
                                 : 'assets/bot_avatar.png',
                             isAudioMessage: message['isAudioMessage'] ?? false,
+                            userName: _userName.toUpperCase(),
                           );
                         },
                       ),
@@ -773,91 +826,97 @@ class _FieldEditScreenState extends State<FieldEditScreen> {
                           _isRecording
                               ? _buildRecordingIndicator()
                               : Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: TextField(
-                                onSubmitted:(tes){
-                                  // _dragController.animateTo(0.3, duration:Duration(seconds: 2), curve: Curves.easeIn);
-                                  // Show error message if no bounding box is selected
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    child: TextField(
+                                      onSubmitted: (tes) {
+                                        // _dragController.animateTo(0.3, duration:Duration(seconds: 2), curve: Curves.easeIn);
+                                        // Show error message if no bounding box is selected
+                                      },
 
-                                },
-
-
-                                controller: _messageController,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.white54,
-                                  hintText: 'Type a message',
-                                  border: InputBorder.none,
-                                  hintStyle: TextStyle(color: Colors.grey[400]),
+                                      controller: _messageController,
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.white54,
+                                        hintText: 'Type a message',
+                                        border: InputBorder.none,
+                                        hintStyle:
+                                            TextStyle(color: Colors.grey[400]),
+                                      ),
+                                      enabled: true,
+                                      // Always enable the TextField
+                                      onTap: () {
+                                        _dragController.animateTo(1,
+                                            duration:
+                                                const Duration(seconds: 2),
+                                            curve: Curves.easeIn);
+                                        // Show error message if no bounding box is selected
+                                        if (!_inputEnabled) {
+                                          _showErrorMessage(
+                                            context,
+                                            "Please select a bounding box first",
+                                          );
+                                        }
+                                      },
+                                      onChanged: (text) {
+                                        // Show error and clear text if no bounding box is selected
+                                        if (!_inputEnabled) {
+                                          _showErrorMessage(
+                                            context,
+                                            "Please select a bounding box first",
+                                          );
+                                          _messageController.clear();
+                                        }
+                                        setState(() {});
+                                      },
+                                    ),
+                                  ),
                                 ),
-                                enabled: true,
-                                // Always enable the TextField
-                                onTap: () {
-                                  _dragController.animateTo(1, duration:Duration(seconds: 2), curve: Curves.easeIn);
-                                  // Show error message if no bounding box is selected
-                                  if (!_inputEnabled) {
-                                    _showErrorMessage(
-                                      context,
-                                      "Please select a bounding box first",
-                                    );
-                                  }
-                                },
-                                onChanged: (text) {
-                                  // Show error and clear text if no bounding box is selected
-                                  if (!_inputEnabled) {
-                                    _showErrorMessage(
-                                      context,
-                                      "Please select a bounding box first",
-                                    );
-                                    _messageController.clear();
-                                  }
-                                  setState(() {});
-                                },
-                              ),
-                            ),
-                          ),
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            transform: Matrix4.translationValues(_slidingOffset, 0, 0),
+                            transform:
+                                Matrix4.translationValues(_slidingOffset, 0, 0),
                             child: _messageController.text.isEmpty
                                 ? _buildMicrophoneButton()
                                 : IconButton(
-                              icon: const Icon(Icons.send, color: Color(0xFF0b3c66)),
-                              onPressed: () {
-                                // Debugging logs
-                                print("Send button pressed");
-                                print("_ocrText value: $_ocrText");
+                                    icon: const Icon(Icons.send,
+                                        color: Color(0xFF0b3c66)),
+                                    onPressed: () {
+                                      // Debugging logs
+                                      print("Send button pressed");
+                                      print("_ocrText value: $_ocrText");
 
-                                if (_messageController.text.isNotEmpty) {
-                                  if (_ocrText == null || _ocrText!.isEmpty) {
-                                    print("Error: Please select a bounding box first");
-                                    _showErrorMessage(
-                                      context,
-                                      "Please select a field",
-                                    );
-                                    return; // Ensure the function exits after showing the error
-                                  }
+                                      if (_messageController.text.isNotEmpty) {
+                                        if (_ocrText == null ||
+                                            _ocrText!.isEmpty) {
+                                          print(
+                                              "Error: Please select a bounding box first");
+                                          _showErrorMessage(
+                                            context,
+                                            "Please select a field",
+                                          );
+                                          return; // Ensure the function exits after showing the error
+                                        }
 
-                                  // Add message to chat
-                                  setState(() {
-                                    chatMessages.add({
-                                      'sender': 'user',
-                                      'message': _messageController.text,
-                                    });
-                                    _needsScroll = true;
-                                  });
+                                        // Add message to chat
+                                        setState(() {
+                                          chatMessages.add({
+                                            'sender': 'user',
+                                            'message': _messageController.text,
+                                          });
+                                          _needsScroll = true;
+                                        });
 
-                                  // Send message to the LLM API
-                                  _sendToLLMApi(_messageController.text);
+                                        // Send message to the LLM API
+                                        _sendToLLMApi(_messageController.text);
 
-                                  // Clear the message controller
-                                  _messageController.clear();
-                                }
-                              },
-                            ),
+                                        // Clear the message controller
+                                        _messageController.clear();
+                                      }
+                                    },
+                                  ),
                           ),
-
                         ],
                       ),
                     ),

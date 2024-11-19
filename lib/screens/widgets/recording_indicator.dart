@@ -6,25 +6,25 @@ class RecordingIndicator extends StatelessWidget {
   final String Function(Duration) formatDuration;
 
   const RecordingIndicator({
-    Key? key,
+    super.key,
     required this.recordingDuration,
     required this.slidingOffset,
     required this.formatDuration,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            Icon(
+            const Icon(
               Icons.mic,
               color: Colors.red,
               size: 20,
             ),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Text(
               formatDuration(recordingDuration),
               style: TextStyle(
@@ -32,7 +32,7 @@ class RecordingIndicator extends StatelessWidget {
                 fontSize: 16,
               ),
             ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             if (slidingOffset < 0)
               Text(
                 "< Slide to cancel",

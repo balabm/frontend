@@ -7,9 +7,9 @@ class FadeInWidget extends StatefulWidget {
   final Widget child;
 
   const FadeInWidget({
-    Key? key,
+    super.key,
     required this.child,
-  }) : super(key: key);
+  });
 
   @override
   State<FadeInWidget> createState() => _FadeInWidgetState();

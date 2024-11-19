@@ -58,7 +58,8 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
     await _audioRecorder!.stopRecorder();
     setState(() {
       isRecording = false;
-      _queryController.text = 'Audio recorded at $_audioFilePath'; // Display file path
+      _queryController.text =
+          'Audio recorded at $_audioFilePath'; // Display file path
     });
   }
 
@@ -108,8 +109,9 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(''),
-        backgroundColor: const Color(0xFF0b3c66),
-        iconTheme: const IconThemeData(color: Colors.white), // Set arrow color to white
+        backgroundColor: Colors.teal,
+        iconTheme: const IconThemeData(
+            color: Colors.white), // Set arrow color to white
       ),
       body: Container(
         color: Colors.white, // Set background to white
@@ -122,7 +124,8 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text('${entry.key}: ${entry.value}',
-                    style: const TextStyle(fontSize: 18, color: Colors.black87)),
+                    style:
+                        const TextStyle(fontSize: 18, color: Colors.black87)),
               );
             }),
             const Spacer(),
@@ -135,7 +138,7 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
                         ? Colors.red
                         : isPlaying
                             ? Colors.green
-                            : const Color(0xFF0b3c66), // Dynamic color change
+                            : Colors.teal, // Dynamic color change
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -159,32 +162,36 @@ class _ExtractedFieldsScreenState extends State<ExtractedFieldsScreen> {
                 // Expanded TextField to occupy the entire width
                 Expanded(
                   child: Container(
-                    margin: const EdgeInsets.only(left: 8.0), // Adjust space between mic and TextField
+                    margin: const EdgeInsets.only(
+                        left: 8.0), // Adjust space between mic and TextField
                     child: TextField(
                       controller: _queryController,
                       decoration: InputDecoration(
                         hintText: 'Ask a question or type',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30.0), // Add radius to all sides
+                          borderRadius: BorderRadius.circular(
+                              30.0), // Add radius to all sides
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
                         fillColor: Colors.grey[200],
                         suffixIcon: IconButton(
-                          icon: const Icon(Icons.send, color: Color(0xFF0b3c66)),
+                          icon:
+                              const Icon(Icons.send, color: Color(0xFF0b3c66)),
                           onPressed: () {
                             // Handle submit action
                             print('User input: ${_queryController.text}');
                           },
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 20.0),
                       ),
                     ),
                   ),
                 ),
               ],
             ),
-            if (_audioFilePath != null && !isRecording) 
+            if (_audioFilePath != null && !isRecording)
               Padding(
                 padding: const EdgeInsets.only(top: 20.0),
                 child: Row(

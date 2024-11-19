@@ -1,26 +1,51 @@
-import 'dart:io'; 
+import 'dart:io';
 import 'package:formbot/helpers/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_cropper/image_cropper.dart';
-import 'FieldEditScreen.dart'; // Import the FieldEditScreen class
+// Import the FieldEditScreen class
 import 'dart:convert'; // For base64 encoding
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart'; // For MIME type lookup
 //import 'package:path/path.dart'; // For file paths
 import 'package:http_parser/http_parser.dart'; // For MediaType
 import 'package:path/path.dart' as p;
+
 String? originalFileName;
 
 class ImageProcessingScreen extends StatefulWidget {
+  const ImageProcessingScreen({super.key});
+
   @override
   _ImageProcessingScreenState createState() => _ImageProcessingScreenState();
 }
 
-class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
+class _ImageProcessingScreenState extends State<ImageProcessingScreen>
+    with SingleTickerProviderStateMixin {
   String? imagePath;
   img.Image? image;
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  bool _isLoading = false;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _fadeAnimation =
+        Tween<double>(begin: 0.0, end: 1.0).animate(_fadeController);
+    _fadeController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -44,11 +69,11 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
     if (imagePath != null) {
       CroppedFile? croppedFile = await ImageCropper().cropImage(
         sourcePath: imagePath!,
-        aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Crop Image',
-            toolbarColor: Color(0xFF0b3c66),
+            toolbarColor: Colors.teal,
             toolbarWidgetColor: Colors.white,
             initAspectRatio: CropAspectRatioPreset.original,
             lockAspectRatio: false,
@@ -64,7 +89,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
         String directory = p.dirname(croppedFile.path);
         // Create a new path with the original filename
         String newPath = p.join(directory, originalFileName!);
-        
+
         // If a file already exists at the new path, delete it
         if (await File(newPath).exists()) {
           await File(newPath).delete();
@@ -83,171 +108,235 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen> {
     }
   }
 
-  // New method to send the image to the API
   Future<void> _sendImageToAPI() async {
     if (imagePath != null) {
-      // Extract file name from path using path package
-    String fileName = p.basename(imagePath!);
-    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-    print('Uploaded image name: $fileName'); // Print the file name
-      var url =
-          Uri.parse('http://10.64.26.90:8000/cv/form-detection-with-box/');
-      _dbHelper.saveUploadedImage(imagePath!);
-      // Prepare the image file and lookup MIME type
-      var mimeType = lookupMimeType(imagePath!);
-      var request = http.MultipartRequest('POST', url);
+      setState(() {
+        _isLoading = true;
+      });
 
-      // Add the file to the request
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'file', // The key expected by the FastAPI endpoint
-          imagePath!,
-          contentType: MediaType.parse(mimeType ??
-              'application/octet-stream'), // Handle unknown MIME types
-        ),
-      );
+      String fileName = p.basename(imagePath!);
+      var url = Uri.parse(
+          'http://150.230.166.29/abc_test//cv/form-detection-with-box/');
 
       try {
+        _dbHelper.saveUploadedImage(imagePath!);
+        var mimeType = lookupMimeType(imagePath!);
+        var request = http.MultipartRequest('POST', url);
+
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            imagePath!,
+            contentType:
+                MediaType.parse(mimeType ?? 'application/octet-stream'),
+          ),
+        );
+
         var response = await request.send();
+        var responseData = await response.stream.bytesToString();
+        var decodedResponse = jsonDecode(responseData);
 
-        // Check for 400 status code (client errors from FastAPI)
         if (response.statusCode == 400) {
-          var responseData = await response.stream.bytesToString();
-          var decodedResponse = jsonDecode(responseData);
-
-          // Print the error response for debugging
-          print('Error response: $decodedResponse');
-
-          // Display error message from the server (specific to 400 errors)
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text(decodedResponse['message'] ?? 'Error processing image'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          _showErrorSnackBar(
+              decodedResponse['message'] ?? 'Error processing image');
         } else if (response.statusCode == 200) {
-          // Parse the response for successful processing
-          var responseData = await response.stream.bytesToString();
-          var decodedResponse = jsonDecode(responseData);
-
-          // Print the successful response for debugging
-          print('Success response: $decodedResponse');
-
-          // Proceed with navigation if the image is valid
-          Navigator.pushNamed(
+          await Navigator.pushNamed(
             context,
             '/field_edit_screen',
             arguments: {
               'imagePath': imagePath!,
-              'bounding_boxes':
-                  decodedResponse['bounding_boxes'], // Pass bounding boxes
-            }, 
+              'bounding_boxes': decodedResponse['bounding_boxes'],
+            },
           );
         } else {
-          // Handle other non-200 or non-400 errors (network errors, etc.)
-          print('Error: ${response.statusCode}');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Network error or server error. Please try again later.'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          _showErrorSnackBar(
+              'Network error or server error. Please try again later.');
         }
       } catch (e) {
-        // Handle exceptions during sending
-        print('Error sending image to API: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error sending image. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackBar('Error sending image. Please try again.');
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     } else {
-      print('No image available to send.');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No image selected.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorSnackBar('No image selected.');
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        action: SnackBarAction(
+          label: 'Dismiss',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        //title: Text('Image Processing', style: TextStyle(color: Colors.white)),
-        backgroundColor: Color(0xFF0b3c66),
-        iconTheme:
-            IconThemeData(color: Colors.white), // Change arrow color to white
+        elevation: 0,
+        backgroundColor: Colors.teal,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'Process Image',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: Container(
-        color: Colors.white, // Background color
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Expanded(
-              child: imagePath != null
-                  ? Image.file
-                  (File(imagePath!),fit: BoxFit.cover,)
-                  : Center(child: Text('No image selected')),
-            ),
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+        color: Colors.grey[50],
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: imagePath != null
+                            ? Hero(
+                                tag: imagePath!,
+                                child: Image.file(
+                                  File(imagePath!),
+                                  fit: BoxFit.contain,
+                                ),
+                              )
+                            : const Center(
+                                child: Text(
+                                  'No image selected',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildButton(
+                          icon: Icons.crop,
+                          label: 'Crop',
+                          onPressed: _isLoading ? null : _cropImage,
+                        ),
+                        _buildButton(
+                          icon: Icons.navigate_next,
+                          label: 'Process',
+                          onPressed: _isLoading ? null : _sendImageToAPI,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+              if (_isLoading)
                 Container(
+                  color: Colors.black54,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Color(0xFF0b3c66)),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          child: const Text(
+                            'Processing image...',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-                  width: 150,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          Color(0xFF0b3c66), // Button background color
-                      padding:
-                          EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      textStyle:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(8), // Rounded corners
-                      ),
-                      elevation: 5, // Shadow effect
-                    ),
-                    icon: Icon(Icons.crop, color: Colors.white),
-                    label: Text('Crop', style: TextStyle(color: Colors.white)),
-                    onPressed: _cropImage,
-                  ),
-                ),
-                SizedBox(width: 20),
-                Container(
-                  width: 150,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          Color(0xFF0b3c66), // Button background color
-                      padding:
-                          EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      textStyle:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(8), // Rounded corners
-                      ),
-                      elevation: 5, // Shadow effect
-                    ),
-                    icon: Icon(Icons.navigate_next, color: Colors.white),
-                    label: Text('Next', style: TextStyle(color: Colors.white)),
-                    onPressed:
-                        _sendImageToAPI, // Call the API when "Next" is pressed
-                  ),
-                ),
-              ],
+  Widget _buildButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onPressed,
+  }) {
+    return SizedBox(
+      width: 150,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.teal,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: onPressed == null ? 0 : 3,
+        ),
+        onPressed: onPressed,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            SizedBox(height: 20),
           ],
         ),
       ),

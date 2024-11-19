@@ -6,7 +6,8 @@ class AudioPlayerWidget extends StatefulWidget {
   final String audioPath;
   final Function(String)? onPlayAudio;
 
-  AudioPlayerWidget({required this.audioPath, this.onPlayAudio});
+  const AudioPlayerWidget(
+      {super.key, required this.audioPath, this.onPlayAudio});
 
   @override
   _AudioPlayerWidgetState createState() => _AudioPlayerWidgetState();
@@ -19,7 +20,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
   late AnimationController _progressController;
   Duration _audioDuration = Duration.zero;
   FlutterSoundPlayer? _audioPlayer;
-  Duration _currentPosition = Duration.zero;
+  final Duration _currentPosition = Duration.zero;
 
   @override
   void initState() {
@@ -54,7 +55,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
         },
       );
 
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
       Duration? duration =
           await _audioPlayer!.getProgress().then((value) => value['duration']);
 
@@ -67,7 +68,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
     } catch (e) {
       print('Error loading audio duration: $e');
       setState(() {
-        _audioDuration = Duration(seconds: 30);
+        _audioDuration = const Duration(seconds: 30);
         _progressController.duration = _audioDuration;
       });
     }
@@ -108,17 +109,17 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(16),
-      margin: EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: Color(0xFFFFFFFF),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.3),
             spreadRadius: 2,
             blurRadius: 8,
-            offset: Offset(0, 3),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -129,7 +130,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
             onTap: _togglePlayback,
             child: CircleAvatar(
               radius: 28,
-              backgroundColor: Color(0xFF0b3c66),
+              backgroundColor: Colors.teal,
               child: Icon(
                 _isPlaying ? Icons.pause : Icons.play_arrow,
                 color: Colors.white,
@@ -137,7 +138,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
               ),
             ),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,9 +146,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
                 LinearProgressIndicator(
                   value: _playbackProgress,
                   backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0b3c66)),
+                  valueColor:
+                      const AlwaysStoppedAnimation<Color>(Color(0xFF0b3c66)),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

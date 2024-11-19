@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'fade_in_widget.dart';
 import 'audio_player_widget.dart';
-import 'message_animation_widget.dart'; // Add this import
+import 'message_animation_widget.dart';
 
 class ChatBubble extends StatelessWidget {
   final String sender;
@@ -10,23 +10,25 @@ class ChatBubble extends StatelessWidget {
   final Function(String)? onPlayAudio;
   final String avatar;
   final bool isAudioMessage;
+  final String? userName;
 
   const ChatBubble({
-    Key? key,
+    super.key,
     required this.sender,
     required this.message,
     this.audioPath,
     this.onPlayAudio,
     required this.avatar,
     this.isAudioMessage = false,
-  }) : super(key: key);
+    this.userName,
+  });
 
   @override
   Widget build(BuildContext context) {
     bool isUser = sender == 'user';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 16.0),
-      child: MessageAnimationWidget(  // Wrap the Row with MessageAnimationWidget
+      child: MessageAnimationWidget(
         isUser: isUser,
         child: Row(
           mainAxisAlignment:
@@ -45,10 +47,17 @@ class ChatBubble extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const CircleAvatar(
-                  backgroundColor: Colors.blueGrey ,
-                  child: Text('AI',style: TextStyle(color: Colors.white,letterSpacing: 5,fontWeight: FontWeight.bold),),
+                child: CircleAvatar(
+                  backgroundColor: Colors.teal.withOpacity(0.9),
                   radius: 24,
+                  child: const Text(
+                    'AI',
+                    style: TextStyle(
+                      color: Colors.white,
+                      letterSpacing: 2,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -57,16 +66,28 @@ class ChatBubble extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: isUser 
-                      ? [const Color.fromARGB(255, 157, 192, 222), const Color.fromARGB(255, 156, 193, 229)]
-                      : [const Color(0xFFE8EAF6), const Color.fromARGB(255, 225, 227, 236)],
+                    colors: isUser
+                        ? [
+                            Colors.deepOrange.withOpacity(0.2),
+                            Colors.deepOrange.withOpacity(0.4),
+                            Colors.deepOrange.withOpacity(0.5),
+                          ]
+                        : [
+                            Colors.teal.withOpacity(0.5),
+                            Colors.teal.withOpacity(0.4),
+                            Colors.teal.withOpacity(0.2)
+                          ],
                   ),
                   borderRadius: BorderRadius.only(
                     topLeft: const Radius.circular(20),
                     topRight: const Radius.circular(20),
-                    bottomLeft: isUser ? const Radius.circular(20) : const Radius.circular(0),
-                    bottomRight: isUser ? const Radius.circular(0) : const Radius.circular(20),
-                  ), 
+                    bottomLeft: isUser
+                        ? const Radius.circular(20)
+                        : const Radius.circular(0),
+                    bottomRight: isUser
+                        ? const Radius.circular(0)
+                        : const Radius.circular(20),
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.grey.withOpacity(0.2),
@@ -109,7 +130,31 @@ class ChatBubble extends StatelessWidget {
                             ),
                           ),
                         ),
-                    ] else if (message.isNotEmpty)
+                    ] else if (message == "Typing...")
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'AI is thinking',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF0b3c66),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else if (message.isNotEmpty)
                       FadeInWidget(
                         child: Text(
                           message,
@@ -127,11 +172,19 @@ class ChatBubble extends StatelessWidget {
             ),
             if (isUser) ...[
               const SizedBox(width: 12),
-               const CircleAvatar(
-                  backgroundColor: Color(0xFF0b3c66) ,
-                  child: Icon(Icons.person,color: Colors.white,),
-                  radius: 24,
-                ),
+              Column(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.deepOrange.withOpacity(0.9),
+                    radius: 24,
+                    child: const Icon(
+                      Icons.person,
+                      color: Colors.white,
+                      size: 44,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ],
         ),

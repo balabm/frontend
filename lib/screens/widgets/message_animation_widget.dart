@@ -5,10 +5,10 @@ class MessageAnimationWidget extends StatefulWidget {
   final bool isUser;
 
   const MessageAnimationWidget({
-    Key? key,
+    super.key,
     required this.child,
     required this.isUser,
-  }) : super(key: key);
+  });
 
   @override
   _MessageAnimationWidgetState createState() => _MessageAnimationWidgetState();

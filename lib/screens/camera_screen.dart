@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
 
@@ -49,25 +48,24 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _saveImage(String path) async {
-  // Get the application's document directory
-  final directory = await getApplicationDocumentsDirectory();
-  
-  // Define a unique path for the image file based on the current timestamp
-final imagePath = '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.jpg'; // Convert int to String
-  
-  // Copy the image file to the new location
-  final imageFile = File(path);
-  await imageFile.copy(imagePath);
-  
-  
+    // Get the application's document directory
+    final directory = await getApplicationDocumentsDirectory();
 
-  // Save the image path to SharedPreferences
-  final prefs = await SharedPreferences.getInstance();
-  List<String> capturedImages = prefs.getStringList('capturedImages') ?? [];
-  capturedImages.add(imagePath);  // Add the new image path
-  await prefs.setStringList('capturedImages', capturedImages);  // Save the updated list
-}
+    // Define a unique path for the image file based on the current timestamp
+    final imagePath =
+        '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.jpg'; // Convert int to String
 
+    // Copy the image file to the new location
+    final imageFile = File(path);
+    await imageFile.copy(imagePath);
+
+    // Save the image path to SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    List<String> capturedImages = prefs.getStringList('capturedImages') ?? [];
+    capturedImages.add(imagePath); // Add the new image path
+    await prefs.setStringList(
+        'capturedImages', capturedImages); // Save the updated list
+  }
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -76,8 +74,6 @@ final imagePath = '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toS
           arguments: pickedFile.path);
     }
   }
-
-  
 
   @override
   void dispose() {

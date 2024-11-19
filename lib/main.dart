@@ -16,12 +16,14 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => ApiResponseProvider()),
       ],
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -33,14 +35,14 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/userInput', // Set UserInputScreen as the initial route
       routes: {
-        '/userInput': (context) => UserInputScreen(),
-        '/home': (context) => HomeScreen(),
-        '/camera': (context) => CameraScreen(),
-        '/image_processing': (context) => ImageProcessingScreen(),
-        '/field_edit_screen': (context) => FieldEditScreen(),
-        '/extracted_fields': (context) => ExtractedFieldsScreen(),
-        '/audio_recording': (context) => AudioRecordingScreen(),
-        '/review_submit': (context) => ReviewSubmitScreen(),
+        '/userInput': (context) => const UserInputScreen(),
+        '/home': (context) => const HomeScreen(),
+        '/camera': (context) => const CameraScreen(),
+        '/image_processing': (context) => const ImageProcessingScreen(),
+        '/field_edit_screen': (context) => const FieldEditScreen(),
+        '/extracted_fields': (context) => const ExtractedFieldsScreen(),
+        '/audio_recording': (context) => const AudioRecordingScreen(),
+        '/review_submit': (context) => const ReviewSubmitScreen(),
       },
     );
   }
