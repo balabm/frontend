@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'fade_in_widget.dart';
 import 'audio_player_widget.dart';
+import 'fade_in_widget.dart';
 import 'message_animation_widget.dart';
 
 class ChatBubble extends StatelessWidget {
