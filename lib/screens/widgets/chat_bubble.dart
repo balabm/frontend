@@ -51,12 +51,14 @@ class ChatBubble extends StatelessWidget {
                   backgroundColor: Colors.teal.withOpacity(0.9),
                   radius: 24,
                   child: const Text(
-                    'AI',
+                    'Form\nBot',
                     style: TextStyle(
                       color: Colors.white,
                       letterSpacing: 2,
                       fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
@@ -68,14 +70,14 @@ class ChatBubble extends StatelessWidget {
                   gradient: LinearGradient(
                     colors: isUser
                         ? [
-                            Colors.deepOrange.withOpacity(0.2),
+                            Colors.deepOrange.withOpacity(0.4),
                             Colors.deepOrange.withOpacity(0.4),
                             Colors.deepOrange.withOpacity(0.5),
                           ]
                         : [
                             Colors.teal.withOpacity(0.5),
                             Colors.teal.withOpacity(0.4),
-                            Colors.teal.withOpacity(0.2)
+                            Colors.teal.withOpacity(0.4)
                           ],
                   ),
                   borderRadius: BorderRadius.only(
@@ -175,12 +177,13 @@ class ChatBubble extends StatelessWidget {
               Column(
                 children: [
                   CircleAvatar(
+
                     backgroundColor: Colors.deepOrange.withOpacity(0.9),
                     radius: 24,
                     child: const Icon(
                       Icons.person,
                       color: Colors.white,
-                      size: 44,
+                      size: 32,
                     ),
                   ),
                 ],

@@ -27,7 +27,8 @@ class BoundingBoxOverlay extends StatelessWidget {
             imageFile,
             height: MediaQuery.of(context).size.height,
           );
-          final ImageStream stream = image.image.resolve(const ImageConfiguration());
+          final ImageStream stream =
+              image.image.resolve(const ImageConfiguration());
           late double scaleX;
           late double scaleY;
 
@@ -41,8 +42,10 @@ class BoundingBoxOverlay extends StatelessWidget {
 
           return Stack(
             children: boundingBoxes.map((box) {
-              final scaledX = box['x_center'] * scaleX - (box['width'] * scaleX / 2);
-              final scaledY = box['y_center'] * scaleY - (box['height'] * scaleY / 2);
+              final scaledX =
+                  box['x_center'] * scaleX - (box['width'] * scaleX / 2);
+              final scaledY =
+                  box['y_center'] * scaleY - (box['height'] * scaleY / 2);
               final scaledWidth = box['width'] * scaleX;
               final scaledHeight = box['height'] * scaleY;
               final fieldType = box['class'];
@@ -68,7 +71,7 @@ class BoundingBoxOverlay extends StatelessWidget {
                     decoration: BoxDecoration(
                       border: Border.all(
                         color: borderColor,
-                        width: 2,
+                        width: 0.5,
                       ),
                       color: fillColor,
                       borderRadius: BorderRadius.circular(4),
@@ -77,10 +80,9 @@ class BoundingBoxOverlay extends StatelessWidget {
                       child: Text(
                         fieldType,
                         style: TextStyle(
-                          color: borderColor,
+                          color: borderColor.withOpacity(0.15),
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          backgroundColor: Colors.white.withOpacity(0.7),
+                          fontSize: 8,
                         ),
                         textAlign: TextAlign.center,
                       ),

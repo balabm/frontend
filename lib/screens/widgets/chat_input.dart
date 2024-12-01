@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:formbot/screens/widgets/common.dart';
 
-class ChatInput extends StatelessWidget {
+const Color kPrimaryColor = Color(0xFF009688); // Teal
+const Color kPrimaryLightColor = Color(0xFFE0F2F1); // Teal 50
+const Color kPrimaryDarkColor = Color(0xFF00796B); // Teal 700
+const Color kBackgroundColor = Color(0xFFF5F5F5); // Grey 100
+const Color kShadowColor = Color(0x1A000000); // Black with 10% opacity
+
+class ChatInput extends StatefulWidget {
   final TextEditingController messageController;
   final bool inputEnabled;
   final bool isRecording;
   final DraggableScrollableController dragController;
   final Widget recordingIndicator;
-  final Widget microphoneButton;
+  final Widget? microphoneButton;
   final Function() onSendPressed;
   final double slidingOffset;
 
@@ -18,72 +24,120 @@ class ChatInput extends StatelessWidget {
     required this.isRecording,
     required this.dragController,
     required this.recordingIndicator,
-    required this.microphoneButton,
+    this.microphoneButton,
     required this.onSendPressed,
     required this.slidingOffset,
   }) : super(key: key);
 
   @override
+  State<ChatInput> createState() => _ChatInputState();
+}
+
+class _ChatInputState extends State<ChatInput> {
+  @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: kBackgroundColor,
         borderRadius: BorderRadius.circular(25),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: kShadowColor,
             spreadRadius: 1,
-            blurRadius: 3,
+            blurRadius: 4,
             offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Row(
         children: [
-          isRecording
-              ? recordingIndicator
+          widget.isRecording
+              ? widget.recordingIndicator
               : Expanded(
-                  child: Padding(
+                  child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                    ),
                     child: TextField(
-                      controller: messageController,
+                      controller: widget.messageController,
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: Colors.white54,
+                        fillColor: Colors.white,
                         hintText: 'Type a message',
                         border: InputBorder.none,
-                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        hintStyle: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 16,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 8,
+                        ),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
                       ),
                       enabled: true,
                       onTap: () {
-                        dragController.animateTo(1,
-                            duration: const Duration(seconds: 2),
-                            curve: Curves.easeIn);
-                        if (!inputEnabled) {
+                        widget.dragController.animateTo(1,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOut);
+                        if (!widget.inputEnabled) {
                           Common.showErrorMessage(context,
                               "Please wait for the previous message to finish processing.");
                         }
                       },
                       onChanged: (text) {
-                        if (!inputEnabled) {
-                          Common.showErrorMessage(context,
-                              "Please wait for the previous message to finish processing.");
-                          messageController.clear();
-                        }
+                        setState(() {
+                          if (!widget.inputEnabled) {
+                            Common.showErrorMessage(context,
+                                "Please wait for the previous message to finish processing.");
+                            widget.messageController.clear();
+                          }
+                        });
                       },
                     ),
                   ),
                 ),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            transform: Matrix4.translationValues(slidingOffset, 0, 0),
-            child: messageController.text.isEmpty
-                ? microphoneButton
-                : IconButton(
-                    icon: const Icon(Icons.send, color: Color(0xFF0b3c66)),
-                    onPressed: onSendPressed,
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: widget.messageController,
+            builder: (context, value, child) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                transform:
+                    Matrix4.translationValues(widget.slidingOffset, 0, 0),
+                child: Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  decoration: BoxDecoration(
+                    color:
+                        value.text.isEmpty ? kPrimaryColor : kPrimaryDarkColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: kShadowColor,
+                        spreadRadius: 1,
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
+                  child: value.text.isEmpty
+                      ? widget.microphoneButton
+                      : IconButton(
+                          icon: const Icon(
+                            Icons.send,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          onPressed: widget.onSendPressed,
+                        ),
+                ),
+              );
+            },
           ),
         ],
       ),
