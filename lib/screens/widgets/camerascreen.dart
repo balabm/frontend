@@ -27,20 +27,28 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _initializeCamera() async {
     cameras = await availableCameras();
+    if (cameras.isEmpty) return;
+
     _controller =
         CameraController(cameras[selectedCameraIndex], ResolutionPreset.high);
-    await _controller!.initialize();
-    if (mounted) {
-      setState(() {});
+    try {
+      await _controller!.initialize();
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('Error initializing camera: $e');
     }
   }
 
   void _switchCamera() {
+    if (cameras.isEmpty) return;
     selectedCameraIndex = (selectedCameraIndex + 1) % cameras.length;
     _initializeCamera();
   }
 
   void _toggleFlash() {
+    if (_controller == null) return;
     setState(() {
       isFlashOn = !isFlashOn;
     });
@@ -53,7 +61,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
     // Define a unique path for the image file based on the current timestamp
     final imagePath =
-        '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.jpg'; // Convert int to String
+        '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.jpg';
 
     // Copy the image file to the new location
     final imageFile = File(path);
@@ -62,16 +70,20 @@ class _CameraScreenState extends State<CameraScreen> {
     // Save the image path to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     List<String> capturedImages = prefs.getStringList('capturedImages') ?? [];
-    capturedImages.add(imagePath); // Add the new image path
-    await prefs.setStringList(
-        'capturedImages', capturedImages); // Save the updated list
+    capturedImages.add(imagePath);
+    await prefs.setStringList('capturedImages', capturedImages);
   }
 
   Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      Navigator.pushNamed(context, '/image_processing',
-          arguments: pickedFile.path);
+    try {
+      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        if (!mounted) return;
+        Navigator.pushNamed(context, '/image_processing',
+            arguments: pickedFile.path);
+      }
+    } catch (e) {
+      print('Error picking image: $e');
     }
   }
 
@@ -131,7 +143,7 @@ class _CameraScreenState extends State<CameraScreen> {
             right: 16,
             child: IconButton(
               icon: const Icon(Icons.photo_library, color: Colors.white),
-              onPressed: _pickImage, // Handle gallery button press
+              onPressed: _pickImage,
             ),
           ),
           Positioned(
@@ -142,13 +154,17 @@ class _CameraScreenState extends State<CameraScreen> {
               child: IconButton(
                 icon: const Icon(Icons.camera, color: Colors.white, size: 48),
                 onPressed: () async {
+                  if (_controller == null || !_controller!.value.isInitialized)
+                    return;
+
                   try {
                     final image = await _controller!.takePicture();
                     await _saveImage(image.path);
+                    if (!mounted) return;
                     Navigator.pushNamed(context, '/image_processing',
                         arguments: image.path);
                   } catch (e) {
-                    print(e);
+                    print('Error taking picture: $e');
                   }
                 },
               ),
