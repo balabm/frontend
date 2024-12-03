@@ -36,7 +36,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       _isLongPressing = false,
       _needsScroll = false,
       _isThinking = false,
-      _showBottomSheet = false;
+      _showBottomSheet = false,
+      _isFieldLocked = false;
 
   @override
   void initState() {
@@ -185,6 +186,11 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   void _scrollToBottom() => setState(() {
         _needsScroll = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          _dragController.animateTo(
+            0.6,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
           if (_scrollController.hasClients) {
             _scrollController.animateTo(
               _scrollController.position.maxScrollExtent,
@@ -196,12 +202,31 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       });
 
   void _onBoundingBoxTap(Map<String, dynamic> box) {
+    if (_isThinking) {
+      return; // Prevent interaction while processing
+    }
+
+    if (_isFieldLocked) {
+      setState(() {
+        chatMessages.add({
+          'sender': 'assistant',
+          'message':
+              'Please complete your queries for $_selectedFieldName first before selecting another field.',
+        });
+        _needsScroll = true;
+      });
+      _scrollToBottom();
+      return;
+    }
+
     setState(() {
       _inputEnabled = true;
       _selectedFieldName = box['class'];
       if (selectedBox != null) previouslySelectedBoxes.add(selectedBox!);
       selectedBox = box;
       _showBottomSheet = true;
+      _isFieldLocked = true;
+      _scrollToBottom();
     });
     _sendDataToApi(box);
     _maximizeDraggableSheet();
@@ -259,6 +284,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
           _selectedFieldName = null;
           _inputEnabled = false;
           _showBottomSheet = false;
+          _isFieldLocked = false;
         });
         _minimizeDraggableSheet();
       },
@@ -305,12 +331,10 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   String _getInstructionText() {
     if (_isThinking) {
       return 'Processing...';
-    } else if (_ocrText?.isEmpty ?? true) {
-      return 'Type in your query for $_selectedFieldName or use voice.';
-    } else if (_selectedFieldName != null) {
+    } else if (_selectedFieldName != null && _inputEnabled) {
       return 'Type in your query for $_selectedFieldName or use voice.';
     } else {
-      return 'Please select a field to edit.';
+      return 'Please select a field to enquire.';
     }
   }
 
@@ -320,6 +344,18 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
           iconTheme: const IconThemeData(color: Colors.white),
           backgroundColor: kPrimaryColor,
           elevation: 0,
+          actions: [
+            TextButton.icon(
+              onPressed: () {
+                Navigator.pushNamed(context, '/camera');
+              },
+              icon: const Icon(Icons.camera_alt, color: Colors.white),
+              label: const Text(
+                'Upload Image',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
           title: const Text(
             '',
             style: TextStyle(
@@ -383,7 +419,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
                 // Image Viewer
                 Expanded(
                   child: FittedBox(
-                    fit: BoxFit.fitHeight,
+                    fit: BoxFit.contain,
                     alignment: Alignment.center,
                     child: InteractiveViewer(
                       panEnabled: true,
@@ -394,7 +430,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
                           if (imagePath != null)
                             Center(
                                 child: Image.file(File(imagePath!),
-                                    fit: BoxFit.contain)),
+                                    fit: BoxFit.fitWidth)),
                           if (boundingBoxes != null)
                             BoundingBoxOverlay(
                               imagePath: imagePath!,
@@ -415,7 +451,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
               DraggableScrollableSheet(
                 controller: _dragController,
                 initialChildSize: 0.9,
-                minChildSize: 0.9,
+                minChildSize: 0.2,
                 maxChildSize: 0.9,
                 builder: (context, scrollController) {
                   _scrollController = scrollController;
