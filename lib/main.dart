@@ -6,8 +6,11 @@ import 'screens/user_input_screen.dart'; // Ensure this import is correct
 import 'screens/home_screen.dart';
 import 'screens/image_processing_screen.dart';
 import 'screens/FieldEditScreen.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(
     MultiProvider(
       providers: [
@@ -24,6 +27,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Form Capture App',
       theme: ThemeData(
         primarySwatch: Colors.blue,

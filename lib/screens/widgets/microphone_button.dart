@@ -2,28 +2,32 @@ import 'package:flutter/material.dart';
 
 class MicrophoneButton extends StatelessWidget {
   final bool isLongPressing;
-  final Function(LongPressStartDetails) onLongPressStart;
-  final Function(LongPressMoveUpdateDetails) onLongPressMoveUpdate;
-  final Function(LongPressEndDetails) onLongPressEnd;
+  final Function(LongPressStartDetails)? onLongPressStart;
+  final Function(LongPressMoveUpdateDetails)? onLongPressMoveUpdate;
+  final Function(LongPressEndDetails)? onLongPressEnd;
+  final bool enabled;
 
   const MicrophoneButton({
     super.key,
     required this.isLongPressing,
-    required this.onLongPressStart,
-    required this.onLongPressMoveUpdate,
-    required this.onLongPressEnd,
+    this.onLongPressStart,
+    this.onLongPressMoveUpdate,
+    this.onLongPressEnd,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onLongPressStart: onLongPressStart,
-      onLongPressMoveUpdate: onLongPressMoveUpdate,
-      onLongPressEnd: onLongPressEnd,
+      onLongPressStart: enabled ? onLongPressStart : null,
+      onLongPressMoveUpdate: enabled ? onLongPressMoveUpdate : null,
+      onLongPressEnd: enabled ? onLongPressEnd : null,
       child: Container(
         margin: const EdgeInsets.only(left: 8),
         decoration: BoxDecoration(
-          color: isLongPressing ? Colors.teal.withOpacity(0.7) : Colors.teal,
+          color: !enabled 
+            ? Colors.grey.withOpacity(0.5) 
+            : (isLongPressing ? Colors.teal.withOpacity(0.7) : Colors.teal),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -34,10 +38,10 @@ class MicrophoneButton extends StatelessWidget {
             ),
           ],
         ),
-        child: const IconButton(
+        child: IconButton(
           icon: Icon(
             Icons.mic,
-            color: Colors.white,
+            color: enabled ? Colors.white : Colors.white54,
           ),
           onPressed: null, // Disable tap, we're using long press
         ),

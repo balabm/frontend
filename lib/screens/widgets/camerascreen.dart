@@ -101,22 +101,13 @@ class _CameraScreenState extends State<CameraScreen> {
       );
     }
 
-    final cameraPreviewSize = _controller!.value.previewSize;
-    final screenSize = MediaQuery.of(context).size;
-    final aspectRatio = cameraPreviewSize!.height / cameraPreviewSize.width;
-    final previewHeight = screenSize.width * aspectRatio;
-
     return Scaffold(
-      body: Stack(
+      body: SafeArea(child: Stack(
         children: [
-          SizedBox.expand(
-            child: FittedBox(
-              fit: BoxFit.fill,
-              child: SizedBox(
-                width: screenSize.width,
-                height: previewHeight,
-                child: CameraPreview(_controller!),
-              ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: CameraPreview(_controller!),
             ),
           ),
           Positioned(
@@ -125,34 +116,34 @@ class _CameraScreenState extends State<CameraScreen> {
             child: IconButton(
               icon: Icon(
                 isFlashOn ? Icons.flash_on : Icons.flash_off,
-                color: Colors.white,
+                color: Colors.black,
               ),
               onPressed: _toggleFlash,
             ),
           ),
           Positioned(
-            bottom: 16,
+            bottom: 0,
             left: 16,
             child: IconButton(
-              icon: const Icon(Icons.switch_camera, color: Colors.white),
+              icon: const Icon(Icons.switch_camera, color: Colors.black),
               onPressed: _switchCamera,
             ),
           ),
           Positioned(
-            bottom: 16,
+            bottom: 0,
             right: 16,
             child: IconButton(
-              icon: const Icon(Icons.photo_library, color: Colors.white),
+              icon: const Icon(Icons.photo_library, color: Colors.black),
               onPressed: _pickImage,
             ),
           ),
           Positioned(
-            bottom: 16,
+            bottom: 0,
             left: 0,
             right: 0,
             child: Center(
               child: IconButton(
-                icon: const Icon(Icons.camera, color: Colors.white, size: 48),
+                icon: const Icon(Icons.camera, color: Colors.black, size: 48),
                 onPressed: () async {
                   if (_controller == null || !_controller!.value.isInitialized)
                     return;
@@ -171,6 +162,7 @@ class _CameraScreenState extends State<CameraScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

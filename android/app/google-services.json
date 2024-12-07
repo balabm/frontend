@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "941695201308",
+    "project_id": "formbot-b4c3d",
+    "storage_bucket": "formbot-b4c3d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:941695201308:android:69604291e6bcc629d96fd9",
+        "android_client_info": {
+          "package_name": "com.example.flutter_UI"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzqx5lSkMtWd8o4xTogbUdEPtVmvf4uRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

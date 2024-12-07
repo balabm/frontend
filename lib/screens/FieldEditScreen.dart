@@ -11,6 +11,7 @@ import 'widgets/index.dart';
 import 'widgets/audio_handler.dart';
 import 'widgets/apirepository.dart';
 import 'widgets/common.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FieldEditScreen extends StatefulWidget {
   const FieldEditScreen({super.key});
@@ -24,6 +25,9 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   final _messageController = TextEditingController();
   final _dragController = DraggableScrollableController();
   late ScrollController _scrollController;
+  // New properties for tracking responses
+  String? _pendingAsrResponse;
+  Map<String, dynamic>? _pendingLlmResponse;
 
   String? imagePath, _selectedFieldName, _ocrText;
   List<dynamic>? boundingBoxes;
@@ -80,18 +84,42 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   }
 
   Widget _buildMicrophoneButton() => MicrophoneButton(
-        isLongPressing: _isLongPressing,
-        onLongPressStart: (_) {
-          setState(() => _isLongPressing = true);
-          startRecording();
-        },
-        onLongPressMoveUpdate: (details) =>
-            setState(() => _slidingOffset = details.offsetFromOrigin.dx),
-        onLongPressEnd: (_) => _slidingOffset < -50
-            ? cancelRecording()
-            : stopRecording().then((_) => _processAudioAndSendToLLM()),
-      );
-
+      enabled: !_isThinking, // Completely disable microphone button during processing
+      isLongPressing: _isLongPressing,
+      onLongPressStart: (_) {
+        setState(() {
+          _isLongPressing = true;
+          _slidingOffset = 0; // Reset sliding offset when starting
+        });
+        startRecording();
+      },
+      onLongPressMoveUpdate: (details) {
+        setState(() {
+          _slidingOffset = details.offsetFromOrigin.dx;
+          
+          // Cancel recording if slid far enough to the left
+          if (_slidingOffset < -50) {
+            cancelRecording();
+            _isLongPressing = false;
+          }
+        });
+      },
+      onLongPressEnd: (_) {
+        // If not already canceled during slide
+        if (_isLongPressing) {
+          _slidingOffset < -50
+              ? cancelRecording()
+              : stopRecording().then((_) => _processAudioAndSendToLLM());
+        }
+        
+        // Reset state
+        setState(() {
+          _slidingOffset = 0;
+          _isLongPressing = false;
+        });
+      },
+    );
+      
   Widget _buildRecordingIndicator() => !isRecording
       ? const SizedBox.shrink()
       : RecordingIndicator(
@@ -112,23 +140,41 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       return;
     }
 
+    setState(() {
+      _inputEnabled = false;
+    });
+
     final zipFile = File(await zipRecordedAudio());
-    if (!await zipFile.exists()) return;
+    if (!await zipFile.exists()) {
+      setState(() {
+        _inputEnabled = true;
+      });
+      return;
+    }
 
     final asrResponse = await _apiRepository.sendAudioToApi(zipFile);
-    if (asrResponse == null) return;
+    if (asrResponse == null) {
+      setState(() {
+        _inputEnabled = true;
+      });
+      return;
+    }
+    
 
     final asrData = jsonDecode(asrResponse);
-    final transcribedText =
-        asrData['dummy_text'] ?? 'No transcription available';
+    final transcribedText = asrData['dummy_text'] ?? 'No transcription available';
 
     setState(() {
+      // Store ASR response temporarily
+      _pendingAsrResponse = transcribedText;
+      
       chatMessages.add({
         'sender': 'user',
         'message': 'Audio message • $transcribedText',
         'audioPath': recordedFilePath,
         'isAudioMessage': true,
       });
+      _inputEnabled = true;
     });
 
     _scrollToBottom();
@@ -150,6 +196,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     setState(() {
       _needsScroll = true;
       _isThinking = true;
+      _isFieldLocked = false;
+      _inputEnabled = false;
     });
 
     final llmResponse = await _apiRepository.sendToLLMApi(
@@ -157,11 +205,10 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       voiceQuery: isAudioQuery ? query : null,
     );
 
-    if (llmResponse != null) {
-      _dbHelper.saveLlmResponse(jsonEncode(llmResponse));
-    }
-
     setState(() {
+      // Store LLM response temporarily
+      _pendingLlmResponse = llmResponse;
+
       chatMessages.add({
         'sender': 'assistant',
         'message': llmResponse?['response'] ??
@@ -169,8 +216,53 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       });
       _needsScroll = true;
       _isThinking = false;
+      _inputEnabled = true;
     });
+
+    // Save responses to Firestore
+    _saveResponsesToFirestore();
   }
+
+  void _saveResponsesToFirestore() {
+  // Track user input during the interaction
+  String? userInput;
+  
+  // Find the most recent user input from chatMessages
+  for (var message in chatMessages.reversed) {
+    if (message['sender'] == 'user') {
+      userInput = message['message'];
+      break;
+    }
+  }
+
+  // Only save if both responses are available
+  if (_pendingAsrResponse != null || _pendingLlmResponse != null || userInput != null) {
+    FirebaseFirestore.instance.collection('responses').add({
+      'ocrText': _ocrText,
+      'selectedField': _selectedFieldName,
+      'userInput': userInput,
+      'asrResponse': _pendingAsrResponse,
+      'llmResponse': _pendingLlmResponse?['response'],
+      'inputType': _pendingAsrResponse != null ? 'audio' : 'text',
+      'timestamp': FieldValue.serverTimestamp(),
+      'deviceInfo': {
+        'platform': Platform.isIOS ? 'iOS' : 'Android',
+        'userName': _userName,
+      }
+    });
+
+    // Optional: Save to local database
+    _dbHelper.saveLlmResponse(jsonEncode({
+      'ocrText': _ocrText,
+      'userInput': userInput,
+      'llmResponse': _pendingLlmResponse,
+    }));
+
+    // Reset pending responses
+    _pendingAsrResponse = null;
+    _pendingLlmResponse = null;
+  }
+}
 
   @override
   void didChangeDependencies() {
@@ -233,32 +325,35 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   }
 
   Future<void> _sendDataToApi(Map<String, dynamic> box) async {
+  setState(() {
+    _needsScroll = true;
+    _isThinking = true;
+  });
+
+  final ocrResponse = await _apiRepository.sendOCRRequest(
+    imagePath: imagePath!,
+    box: box,
+  );
+
+  if (ocrResponse != null) {
+    Provider.of<ApiResponseProvider>(context, listen: false)
+        .setOcrResponse(jsonEncode(ocrResponse));
+    _ocrText = ocrResponse['extracted_text'];
+
     setState(() {
-      _needsScroll = true;
-      _isThinking = true;
-    });
-
-    final ocrResponse = await _apiRepository.sendOCRRequest(
-      imagePath: imagePath!,
-      box: box,
-    );
-
-    if (ocrResponse != null) {
-      Provider.of<ApiResponseProvider>(context, listen: false)
-          .setOcrResponse(jsonEncode(ocrResponse));
-      _ocrText = ocrResponse['extracted_text'];
-
-      setState(() {
-        chatMessages.add({
-          'sender': 'assistant',
-          'message':
-              'Field ${box['class']} selected. The detected text is: $_ocrText',
-        });
-        _isThinking = false;
-        _scrollToBottom();
+      chatMessages.add({
+        'sender': 'assistant',
+        'message':
+            'Field ${box['class']} selected. The detected text is: $_ocrText',
       });
-    }
+      _isThinking = false;
+      _scrollToBottom();
+      
+      // This will ensure the instruction text shows "Ask/type a question" immediately after OCR
+      _inputEnabled = true;
+    });
   }
+}
 
   void _maximizeDraggableSheet() {
     _dragController.animateTo(
@@ -275,67 +370,112 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       curve: Curves.easeOut,
     );
   }
+Widget _buildInstructionBanner() {
+  String instructionText;
+  bool showCompletionBanner = false;
 
-  Widget _buildCompletionBanner() {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedBox = null;
-          _selectedFieldName = null;
-          _inputEnabled = false;
-          _showBottomSheet = false;
-          _isFieldLocked = false;
-        });
-        _minimizeDraggableSheet();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+   if (_selectedFieldName == null) {
+    // Initial state: No field selected
+    instructionText = 'Select a field to begin';
+  } else if (_ocrText == null) {
+    // Field selected, waiting for OCR text
+    instructionText = 'Reading text from $_selectedFieldName...';
+  } else if (_ocrText != null && _inputEnabled && chatMessages.isEmpty) {
+    // OCR text received, explicitly waiting for user input
+    instructionText = 'Ask/type a question about $_selectedFieldName';
+  } else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
+    // LLM response received, ready to go back
+    instructionText = 'Tap here to go back';
+    showCompletionBanner = true;
+  } else if (_isThinking) {
+    // Generic processing state
+    instructionText = 'Processing...';
+  } else {
+    // Fallback state during chat interaction
+    instructionText = 'Ask about $_selectedFieldName';
+  }
+
+  return GestureDetector(
+    onTap: showCompletionBanner
+        ? () {
+            setState(() {
+              
+              selectedBox = null;
+              _selectedFieldName = null;
+              _inputEnabled = false;
+              _showBottomSheet = false;
+              _isFieldLocked = false;
+              chatMessages.clear();
+              _ocrText = null;
+            });
+            _minimizeDraggableSheet();
+          }
+        : null,
+    child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          vertical: 16.0,
+          horizontal: 20.0,
+        ),
         decoration: BoxDecoration(
-          color: kPrimaryLightColor,
-          border: Border(
-            top: BorderSide(
-              color: kPrimaryColor.withOpacity(0.2),
-              width: 1,
+          color: _isThinking
+              ? Colors.orange[50]
+              : showCompletionBanner
+                  ? Colors.green[50]
+                  : kPrimaryLightColor,
+          borderRadius: BorderRadius.circular(8.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              offset: const Offset(0, 2),
+              blurRadius: 4,
             ),
-          ),
+          ],
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.check_circle_outline,
-              color: kPrimaryColor,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Tap here to complete queries for $_selectedFieldName and select another field',
-                style: const TextStyle(
-                  color: kPrimaryDarkColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+            if (_isThinking)
+              Padding(
+                padding: const EdgeInsets.only(right: 12.0),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Colors.orange[700],
+                  ),
                 ),
               ),
+            Flexible(
+              child: Text(
+                instructionText,
+                style: TextStyle(
+                  color: _isThinking
+                      ? Colors.orange[800]
+                      : showCompletionBanner
+                          ? Colors.green[800]
+                          : kPrimaryDarkColor,
+                  fontSize: 16,
+                  height: 1.4,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: kPrimaryColor,
-              size: 16,
-            ),
+            if (showCompletionBanner)
+              Padding(
+                padding: const EdgeInsets.only(left: 12.0),
+                child: Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.green[600],
+                  size: 24,
+                ),
+              ),
           ],
         ),
       ),
     );
-  }
-
-  String _getInstructionText() {
-    if (_isThinking) {
-      return 'Processing...';
-    } else if (_selectedFieldName != null && _inputEnabled) {
-      return 'Type in your query for $_selectedFieldName or use voice.';
-    } else {
-      return 'Please select a field to enquire.';
-    }
   }
 
   @override
@@ -369,164 +509,134 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
             Column(
               children: [
                 // Instruction Banner - Now directly under AppBar
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12.0,
-                    horizontal: 16.0,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _isThinking ? Colors.orange[50] : kPrimaryLightColor,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        offset: const Offset(0, 2),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (_isThinking)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: kPrimaryColor,
-                            ),
-                          ),
-                        ),
-                      Flexible(
-                        child: Text(
-                          _getInstructionText(),
-                          style: TextStyle(
-                            color: _isThinking
-                                ? Colors.orange[800]
-                                : kPrimaryDarkColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                
                 // Image Viewer
                 Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    alignment: Alignment.center,
-                    child: InteractiveViewer(
-                      panEnabled: true,
-                      minScale: 0.5,
-                      maxScale: 4.0,
-                      child: Stack(
-                        children: [
-                          if (imagePath != null)
-                            Center(
-                                child: Image.file(File(imagePath!),
-                                    fit: BoxFit.fitWidth)),
-                          if (boundingBoxes != null)
-                            BoundingBoxOverlay(
-                              imagePath: imagePath!,
-                              boundingBoxes: boundingBoxes!,
-                              selectedBox: selectedBox,
-                              previouslySelectedBoxes: previouslySelectedBoxes,
-                              onBoundingBoxTap: _onBoundingBoxTap,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
+  child: FittedBox(
+    fit: _showBottomSheet ? BoxFit.contain : BoxFit.fitWidth,
+    alignment: Alignment.topCenter,
+    child: InteractiveViewer(
+      panEnabled: true,
+      minScale: 0.5,
+      maxScale: 4.0,
+      child: Stack(
+        children: [
+          if (imagePath != null)
+            Center( 
+              child: Image.file(
+                File(imagePath!),
+                fit: _showBottomSheet ? BoxFit.fitWidth : BoxFit.fitHeight,
+                width: _showBottomSheet
+                    ? MediaQuery.of(context).size.width
+                    : null,
+                height: _showBottomSheet
+                    ? MediaQuery.of(context).size.height * 0.5
+                    : MediaQuery.of(context).size.height,
+              ),
+            ),
+          if (boundingBoxes != null)
+            BoundingBoxOverlay(
+              imagePath: imagePath!,
+              boundingBoxes: boundingBoxes!,
+              selectedBox: selectedBox,
+              previouslySelectedBoxes: previouslySelectedBoxes,
+              onBoundingBoxTap: _onBoundingBoxTap,
+            ),
+        ],
+      ),
+    ),
+  ),
+),
               ],
             ),
             // Bottom Sheet
             if (_showBottomSheet)
               DraggableScrollableSheet(
-                controller: _dragController,
-                initialChildSize: 0.9,
-                minChildSize: 0.2,
-                maxChildSize: 0.9,
-                builder: (context, scrollController) {
-                  _scrollController = scrollController;
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          spreadRadius: 0,
-                          blurRadius: 10,
-                          offset: const Offset(0, -2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 5,
-                          margin: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2.5),
-                          ),
-                        ),
-                        Expanded(
-                          child: ChatSection(
-                            scrollController: scrollController,
-                            chatMessages: chatMessages,
-                            isThinking: _isThinking,
-                            userName: _userName,
-                            onPlayAudio: playAudio,
-                          ),
-                        ),
-                        if (_selectedFieldName != null)
-                          _buildCompletionBanner(),
-                        ChatInput(
-                          messageController: _messageController,
-                          inputEnabled: _inputEnabled,
-                          isRecording: isRecording,
-                          dragController: _dragController,
-                          recordingIndicator: _buildRecordingIndicator(),
-                          microphoneButton:
-                              !isRecording && _messageController.text.isEmpty
-                                  ? _buildMicrophoneButton()
-                                  : null,
-                          onSendPressed: () {
-                            if (_messageController.text.isEmpty) return;
-                            if (_ocrText?.isEmpty ?? true) {
-                              Common.showErrorMessage(
-                                  context, "Please select a field");
-                              return;
-                            }
-                            setState(() {
-                              chatMessages.add({
-                                'sender': 'user',
-                                'message': _messageController.text,
-                              });
-                              _needsScroll = true;
-                            });
-                            _sendToLLMApi(_messageController.text);
-                            _messageController.clear();
-                          },
-                          slidingOffset: _slidingOffset,
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+  controller: _dragController,
+  initialChildSize: 0.9,
+  minChildSize: 0.4,
+  maxChildSize: 0.9,
+  builder: (context, scrollController) {
+    _scrollController = scrollController;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            spreadRadius: 0,
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 40,
+            height: 5,
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2.5),
+            ),
+          ),
+          
+          Expanded(
+            child: ChatSection(
+              scrollController: scrollController,
+              chatMessages: chatMessages,
+              isThinking: _isThinking,
+              userName: _userName,
+              onPlayAudio: playAudio,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: _buildInstructionBanner(),
+          ),
+          ChatInput(
+            messageController: _messageController,
+            
+            inputEnabled: _inputEnabled && !_isThinking, // Disable if processing
+            isRecording: isRecording,
+            dragController: _dragController,
+            recordingIndicator: _buildRecordingIndicator(),
+            microphoneButton: _messageController.text.isEmpty && !_isThinking
+    ? _buildMicrophoneButton()
+    : null,
+            onSendPressed: () {
+              if (!_inputEnabled) return; 
+              FocusScope.of(context).unfocus();
+              if (_messageController.text.isEmpty) return;
+              if (_ocrText?.isEmpty ?? true) {
+                Common.showErrorMessage(context, "Please select a field");
+                return;
+              }
+              setState(() {
+                chatMessages.add({
+                  'sender': 'user',
+                  'message': _messageController.text,
+                  'inputType': 'text'
+                });
+                _needsScroll = true;
+              });
+               _sendToLLMApi(_messageController.text);
+  _messageController.clear();
+  
+  
+},
+            slidingOffset: _slidingOffset,
+          ),
+        ],
+      ),
+    );
+  },
+)
           ],
         ),
       );

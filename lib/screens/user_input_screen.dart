@@ -1,7 +1,8 @@
-import 'package:formbot/helpers/database_helper.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserInputScreen extends StatefulWidget {
   const UserInputScreen({super.key});
@@ -15,8 +16,6 @@ class _UserInputScreenState extends State<UserInputScreen>
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  late final String _userName = '';
-  final DatabaseHelper _dbHelper = DatabaseHelper();
   bool _isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -57,13 +56,39 @@ class _UserInputScreenState extends State<UserInputScreen>
     super.dispose();
   }
 
+  Future<void> _saveUserToFirebase(String username, String email) async {
+    try {
+      // Get the current timestamp
+      final timestamp = FieldValue.serverTimestamp();
+
+      // Save to Firestore
+      await FirebaseFirestore.instance.collection('users').add({
+        'username': username,
+        'mail_ID': email,
+        'created_at': timestamp,
+      });
+    } catch (e) {
+      print('Error saving user to Firebase: $e');
+      rethrow;
+    }
+  }
+
   Future<void> _submit() async {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() => _isLoading = true);
       try {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('userName', _nameController.text);
-        await _dbHelper.saveUserInfo(_nameController.text);
+        
+        // Get username and email
+        final username = _nameController.text.trim();
+        final email = _emailController.text.trim();
+
+        // Save to SharedPreferences
+        await prefs.setString('userName', username);
+
+        // Save to Firebase
+        await _saveUserToFirebase(username, email);
+
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
