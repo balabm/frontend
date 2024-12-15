@@ -1,17 +1,20 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:formbot/providers/authprovider.dart';
+import 'package:formbot/screens/widgets/apirepository.dart';
+import 'package:formbot/screens/widgets/audio_handler.dart';
+import 'package:formbot/screens/widgets/bounding_box_overlay.dart';
+import 'package:formbot/screens/widgets/chat_input.dart';
+import 'package:formbot/screens/widgets/chat_section.dart';
+import 'package:formbot/screens/widgets/common.dart';
+import 'package:formbot/screens/widgets/microphone_button.dart';
+import 'package:formbot/screens/widgets/recording_indicator.dart';
+import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:formbot/helpers/database_helper.dart';
-import 'package:formbot/screens/widgets/chat_input.dart';
-import 'package:formbot/screens/widgets/common.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'widgets/index.dart';
-import 'widgets/audio_handler.dart';
-import 'widgets/apirepository.dart';
-import 'widgets/common.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FieldEditScreen extends StatefulWidget {
   const FieldEditScreen({super.key});
@@ -21,13 +24,14 @@ class FieldEditScreen extends StatefulWidget {
 
 class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   final _apiRepository = ApiRepository();
-  final _dbHelper = DatabaseHelper();
   final _messageController = TextEditingController();
   final _dragController = DraggableScrollableController();
   late ScrollController _scrollController;
+  late AuthProvider _authProvider;
   // New properties for tracking responses
   String? _pendingAsrResponse;
   Map<String, dynamic>? _pendingLlmResponse;
+  var user;
 
   String? imagePath, _selectedFieldName, _ocrText;
   List<dynamic>? boundingBoxes;
@@ -48,13 +52,17 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     super.initState();
     Permission.microphone.request();
     initializeAudio();
+    _authProvider = Provider.of<AuthProvider>(context, listen: false);
     _loadUserName();
-  }
+  } 
 
   Future<void> _loadUserName() async {
     if (!mounted) return;
-    final prefs = await SharedPreferences.getInstance();
-    setState(() => _userName = prefs.getString('userName') ?? 'You');
+    final uid = _authProvider.user?.uid;
+    if (uid != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      setState(() => _userName = doc['userName'] ?? 'You');
+    }
   }
 
   @override
@@ -224,45 +232,41 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   }
 
   void _saveResponsesToFirestore() {
-  // Track user input during the interaction
-  String? userInput;
-  
-  // Find the most recent user input from chatMessages
-  for (var message in chatMessages.reversed) {
-    if (message['sender'] == 'user') {
-      userInput = message['message'];
-      break;
+    final uid = _authProvider.user?.uid;
+    if (uid == null) return;
+
+    // Track user input during the interaction
+    String? userInput;
+    
+    // Find the most recent user input from chatMessages
+    for (var message in chatMessages.reversed) {
+      if (message['sender'] == 'user') {
+        userInput = message['message'];
+        break;
+      }
+    }
+
+    // Only save if both responses are available
+    if (_pendingAsrResponse != null || _pendingLlmResponse != null || userInput != null) {
+      FirebaseFirestore.instance.collection('user_interactions').doc(uid).set({
+        'ocrText': _ocrText,
+        'selectedField': _selectedFieldName,
+        'userInput': userInput,
+        'asrResponse': _pendingAsrResponse,
+        'llmResponse': _pendingLlmResponse?['response'],
+        'inputType': _pendingAsrResponse != null ? 'audio' : 'text',
+        'timestamp': FieldValue.serverTimestamp(),
+        'deviceInfo': {
+          'platform': Platform.isIOS ? 'iOS' : 'Android',
+          'userName': _userName,
+        }
+      }, SetOptions(merge: true));
+
+      // Reset pending responses
+      _pendingAsrResponse = null;
+      _pendingLlmResponse = null;
     }
   }
-
-  // Only save if both responses are available
-  if (_pendingAsrResponse != null || _pendingLlmResponse != null || userInput != null) {
-    FirebaseFirestore.instance.collection('responses').add({
-      'ocrText': _ocrText,
-      'selectedField': _selectedFieldName,
-      'userInput': userInput,
-      'asrResponse': _pendingAsrResponse,
-      'llmResponse': _pendingLlmResponse?['response'],
-      'inputType': _pendingAsrResponse != null ? 'audio' : 'text',
-      'timestamp': FieldValue.serverTimestamp(),
-      'deviceInfo': {
-        'platform': Platform.isIOS ? 'iOS' : 'Android',
-        'userName': _userName,
-      }
-    });
-
-    // Optional: Save to local database
-    _dbHelper.saveLlmResponse(jsonEncode({
-      'ocrText': _ocrText,
-      'userInput': userInput,
-      'llmResponse': _pendingLlmResponse,
-    }));
-
-    // Reset pending responses
-    _pendingAsrResponse = null;
-    _pendingLlmResponse = null;
-  }
-}
 
   @override
   void didChangeDependencies() {
@@ -271,8 +275,6 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     imagePath = args['imagePath'];
     boundingBoxes = args['bounding_boxes'];
-    // chatMessages.add(
-    //     {'sender': 'assistant', 'message': 'Please select a field to edit.'});
   }
 
   void _scrollToBottom() => setState(() {
@@ -325,35 +327,35 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   }
 
   Future<void> _sendDataToApi(Map<String, dynamic> box) async {
-  setState(() {
-    _needsScroll = true;
-    _isThinking = true;
-  });
-
-  final ocrResponse = await _apiRepository.sendOCRRequest(
-    imagePath: imagePath!,
-    box: box,
-  );
-
-  if (ocrResponse != null) {
-    Provider.of<ApiResponseProvider>(context, listen: false)
-        .setOcrResponse(jsonEncode(ocrResponse));
-    _ocrText = ocrResponse['extracted_text'];
-
     setState(() {
-      chatMessages.add({
-        'sender': 'assistant',
-        'message':
-            'Field ${box['class']} selected. The detected text is: $_ocrText',
-      });
-      _isThinking = false;
-      _scrollToBottom();
-      
-      // This will ensure the instruction text shows "Ask/type a question" immediately after OCR
-      _inputEnabled = true;
+      _needsScroll = true;
+      _isThinking = true;
     });
+
+    final ocrResponse = await _apiRepository.sendOCRRequest(
+      imagePath: imagePath!,
+      box: box,
+    );
+
+    if (ocrResponse != null) {
+      Provider.of<ApiResponseProvider>(context, listen: false)
+          .setOcrResponse(jsonEncode(ocrResponse));
+      _ocrText = ocrResponse['extracted_text'];
+
+      setState(() {
+        chatMessages.add({
+          'sender': 'assistant',
+          'message':
+              'Field ${box['class']} selected. The detected text is: $_ocrText',
+        });
+        _isThinking = false;
+        _scrollToBottom();
+        
+        // This will ensure the instruction text shows "Ask/type a question" immediately after OCR
+        _inputEnabled = true;
+      });
+    }
   }
-}
 
   void _maximizeDraggableSheet() {
     _dragController.animateTo(
@@ -370,188 +372,188 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       curve: Curves.easeOut,
     );
   }
-Widget _buildInstructionBanner() {
-  String instructionText;
-  bool showCompletionBanner = false;
 
-   if (_selectedFieldName == null) {
-    // Initial state: No field selected
-    instructionText = 'Select a field to begin';
-  } else if (_ocrText == null) {
-    // Field selected, waiting for OCR text
-    instructionText = 'Reading text from $_selectedFieldName...';
-  } else if (_ocrText != null && _inputEnabled && chatMessages.isEmpty) {
-    // OCR text received, explicitly waiting for user input
-    instructionText = 'Ask/type a question about $_selectedFieldName';
-  } else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
-    // LLM response received, ready to go back
-    instructionText = 'Tap here to go back';
-    showCompletionBanner = true;
-  } else if (_isThinking) {
-    // Generic processing state
-    instructionText = 'Processing...';
-  } else {
-    // Fallback state during chat interaction
-    instructionText = 'Ask about $_selectedFieldName';
-  }
+  Widget _buildInstructionBanner() {
+    String instructionText;
+    bool showCompletionBanner = false;
 
-  return GestureDetector(
-    onTap: showCompletionBanner
-        ? () {
-            setState(() {
-              
-              selectedBox = null;
-              _selectedFieldName = null;
-              _inputEnabled = false;
-              _showBottomSheet = false;
-              _isFieldLocked = false;
-              chatMessages.clear();
-              _ocrText = null;
-            });
-            _minimizeDraggableSheet();
-          }
-        : null,
-    child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          vertical: 16.0,
-          horizontal: 20.0,
-        ),
-        decoration: BoxDecoration(
-          color: _isThinking
-              ? Colors.orange[50]
-              : showCompletionBanner
-                  ? Colors.green[50]
-                  : kPrimaryLightColor,
-          borderRadius: BorderRadius.circular(8.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              offset: const Offset(0, 2),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (_isThinking)
-              Padding(
-                padding: const EdgeInsets.only(right: 12.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Colors.orange[700],
+    if (_selectedFieldName == null) {
+      // Initial state: No field selected
+      instructionText = 'Select a field to begin';
+    } else if (_ocrText == null) {
+      // Field selected, waiting for OCR text
+      instructionText = 'Reading text from $_selectedFieldName...';
+    } else if (_ocrText != null && _inputEnabled && chatMessages.isEmpty) {
+      // OCR text received, explicitly waiting for user input
+      instructionText = 'Ask/type a question about $_selectedFieldName';
+    } else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
+      // LLM response received, ready to go back
+      instructionText = 'Tap here to go back';
+      showCompletionBanner = true;
+    } else if (_isThinking) {
+      // Generic processing state
+      instructionText = 'Processing...';
+    } else {
+      // Fallback state during chat interaction
+      instructionText = 'Ask about $_selectedFieldName';
+    }
+
+    return GestureDetector(
+      onTap: showCompletionBanner
+          ? () {
+              setState(() {
+                selectedBox = null;
+                _selectedFieldName = null;
+                _inputEnabled = false;
+                _showBottomSheet = false;
+                _isFieldLocked = false;
+                chatMessages.clear();
+                _ocrText = null;
+              });
+              _minimizeDraggableSheet();
+            }
+          : null,
+      child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            vertical: 16.0,
+            horizontal: 20.0,
+          ),
+          decoration: BoxDecoration(
+            color: _isThinking
+                ? Colors.orange[50]
+                : showCompletionBanner
+                    ? Colors.green[50]
+                    : kPrimaryLightColor,
+            borderRadius: BorderRadius.circular(8.0),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                offset: const Offset(0, 2),
+                blurRadius: 4,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (_isThinking)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.orange[700],
+                    ),
                   ),
                 ),
-              ),
-            Flexible(
-              child: Text(
-                instructionText,
-                style: TextStyle(
-                  color: _isThinking
-                      ? Colors.orange[800]
-                      : showCompletionBanner
-                          ? Colors.green[800]
-                          : kPrimaryDarkColor,
-                  fontSize: 16,
-                  height: 1.4,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            if (showCompletionBanner)
-              Padding(
-                padding: const EdgeInsets.only(left: 12.0),
-                child: Icon(
-                  Icons.check_circle_outline,
-                  color: Colors.green[600],
-                  size: 24,
+              Flexible(
+                child: Text(
+                  instructionText,
+                  style: TextStyle(
+                    color: _isThinking
+                        ? Colors.orange[800]
+                        : showCompletionBanner
+                            ? Colors.green[800]
+                            : kPrimaryDarkColor,
+                    fontSize: 16,
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          iconTheme: const IconThemeData(color: Colors.white),
-          backgroundColor: kPrimaryColor,
-          elevation: 0,
-          actions: [
-            TextButton.icon(
-              onPressed: () {
-                Navigator.pushNamed(context, '/camera');
-              },
-              icon: const Icon(Icons.camera_alt, color: Colors.white),
-              label: const Text(
-                'Upload Image',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-          title: const Text(
-            '',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
+              if (showCompletionBanner)
+                Padding(
+                  padding: const EdgeInsets.only(left: 12.0),
+                  child: Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green[600],
+                    size: 24,
+                  ),
+                ),
+            ],
           ),
         ),
-        body: Stack(
-          children: [
-            Column(
-              children: [
-                // Instruction Banner - Now directly under AppBar
-                
-                // Image Viewer
-                Expanded(
-  child: FittedBox(
-    fit: _showBottomSheet ? BoxFit.contain : BoxFit.fitWidth,
-    alignment: Alignment.topCenter,
-    child: InteractiveViewer(
-      panEnabled: true,
-      minScale: 0.5,
-      maxScale: 4.0,
-      child: Stack(
-        children: [
-          if (imagePath != null)
-            Center( 
-              child: Image.file(
-                File(imagePath!),
-                fit: _showBottomSheet ? BoxFit.fitWidth : BoxFit.fitHeight,
-                width: _showBottomSheet
-                    ? MediaQuery.of(context).size.width
-                    : null,
-                height: _showBottomSheet
-                    ? MediaQuery.of(context).size.height * 0.5
-                    : MediaQuery.of(context).size.height,
+      );
+    }
+
+    @override
+    Widget build(BuildContext context) => Scaffold(
+          appBar: AppBar(
+            iconTheme: const IconThemeData(color: Colors.white),
+            backgroundColor: kPrimaryColor,
+            elevation: 0,
+            actions: [
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/camera');
+                },
+                icon: const Icon(Icons.camera_alt, color: Colors.white),
+                label: const Text(
+                  'Upload Image',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+            title: const Text(
+              '',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          if (boundingBoxes != null)
-            BoundingBoxOverlay(
-              imagePath: imagePath!,
-              boundingBoxes: boundingBoxes!,
-              selectedBox: selectedBox,
-              previouslySelectedBoxes: previouslySelectedBoxes,
-              onBoundingBoxTap: _onBoundingBoxTap,
-            ),
-        ],
+          ),
+          body: Stack(
+            children: [
+              Column(
+                children: [
+                  // Instruction Banner - Now directly under AppBar
+                  
+                  // Image Viewer
+                  Expanded(
+    child: FittedBox(
+      fit: _showBottomSheet ? BoxFit.contain : BoxFit.fitWidth,
+      alignment: Alignment.topCenter,
+      child: InteractiveViewer(
+        panEnabled: true,
+        minScale: 0.5,
+        maxScale: 4.0,
+        child: Stack(
+          children: [
+            if (imagePath != null)
+              Center( 
+                child: Image.file(
+                  File(imagePath!),
+                  fit: _showBottomSheet ? BoxFit.fitWidth : BoxFit.fitHeight,
+                  width: _showBottomSheet
+                      ? MediaQuery.of(context).size.width
+                      : null,
+                  height: _showBottomSheet
+                      ? MediaQuery.of(context).size.height * 0.5
+                      : MediaQuery.of(context).size.height,
+                ),
+              ),
+            if (boundingBoxes != null)
+              BoundingBoxOverlay(
+                imagePath: imagePath!,
+                boundingBoxes: boundingBoxes!,
+                selectedBox: selectedBox,
+                previouslySelectedBoxes: previouslySelectedBoxes,
+                onBoundingBoxTap: _onBoundingBoxTap,
+              ),
+          ],
+        ),
       ),
     ),
   ),
-),
-              ],
-            ),
-            // Bottom Sheet
-            if (_showBottomSheet)
-              DraggableScrollableSheet(
+                ],
+              ),
+              // Bottom Sheet
+              if (_showBottomSheet)
+                DraggableScrollableSheet(
   controller: _dragController,
   initialChildSize: 0.9,
   minChildSize: 0.4,
@@ -637,7 +639,7 @@ Widget _buildInstructionBanner() {
     );
   },
 )
-          ],
-        ),
-      );
+            ],
+          ),
+        );
 }

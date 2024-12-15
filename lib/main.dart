@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:formbot/providers/authprovider.dart';
+import 'package:formbot/providers/firebaseprovider.dart';
 import 'package:formbot/screens/widgets/camerascreen.dart';
 import 'package:formbot/screens/widgets/common.dart';
 import 'package:provider/provider.dart'; // Import this to use MultiProvider
@@ -14,13 +16,14 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ApiResponseProvider()),
+        ChangeNotifierProvider(create: (_) => FirebaseProvider()),
       ],
       child: const MyApp(),
     ),
   );
 }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 

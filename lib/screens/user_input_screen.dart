@@ -1,8 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:formbot/providers/authprovider.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class UserInputScreen extends StatefulWidget {
   const UserInputScreen({super.key});
@@ -13,17 +17,18 @@ class UserInputScreen extends StatefulWidget {
 
 class _UserInputScreenState extends State<UserInputScreen>
     with SingleTickerProviderStateMixin {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  late AuthProvider _authprovider =  Provider.of<AuthProvider>(context, listen: false);
 
   @override
   void initState() {
     super.initState();
+    // WidgetsBinding.instance
+    // .addPostFrameCallback((_) =>  _authprovider = Provider.of<AuthProvider>(context, listen: false));
+    //
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -51,64 +56,10 @@ class _UserInputScreenState extends State<UserInputScreen>
   @override
   void dispose() {
     _animationController.dispose();
-    _nameController.dispose();
-    _emailController.dispose();
     super.dispose();
   }
 
-  Future<void> _saveUserToFirebase(String username, String email) async {
-    try {
-      // Get the current timestamp
-      final timestamp = FieldValue.serverTimestamp();
 
-      // Save to Firestore
-      await FirebaseFirestore.instance.collection('users').add({
-        'username': username,
-        'mail_ID': email,
-        'created_at': timestamp,
-      });
-    } catch (e) {
-      print('Error saving user to Firebase: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> _submit() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      setState(() => _isLoading = true);
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        
-        // Get username and email
-        final username = _nameController.text.trim();
-        final email = _emailController.text.trim();
-
-        // Save to SharedPreferences
-        await prefs.setString('userName', username);
-
-        // Save to Firebase
-        await _saveUserToFirebase(username, email);
-
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${e.toString()}'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,82 +89,70 @@ class _UserInputScreenState extends State<UserInputScreen>
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(24.0),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Hero(
-                              tag: 'welcome_text',
-                              child: Material(
-                                color: Colors.transparent,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Welcome!',
-                                      style: TextStyle(
-                                        color: Colors.teal,
-                                        fontSize: 36,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1.5,
-                                      ),
-                                    ),
-                                    SizedBox(height: 8),
-                                    Text(
-                                      'Please enter your details to proceed.',
-                                      style: TextStyle(
-                                        color: Colors.black54,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w400,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          const Hero(
+                            tag: 'welcome_text',
+                            child: Material(
+                              color: Colors.transparent,
+                              child: Text(
+                                'Welcome!',
+                                style: TextStyle(
+                                  color: Colors.teal,
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.5,
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 40),
-                            _buildTextField(_nameController, 'Name', false),
-                            const SizedBox(height: 20),
-                            _buildTextField(_emailController, 'Email', true),
-                            const SizedBox(height: 40),
-                            SizedBox(
-                              width: double.infinity,
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                height: 56,
-                                child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _submit,
-                                  style: ElevatedButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    backgroundColor: Colors.teal,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    elevation: 2,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Sign in with Google to get started.',
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 40),
+                          SizedBox(
+                            width: double.infinity,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              height: 56,
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _authprovider.googleSignIn(context),
+                                style: ElevatedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.teal,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
-                                  child: _isLoading
-                                      ? const SizedBox(
-                                          height: 24,
-                                          width: 24,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Text(
-                                          'Get Started',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
+                                  elevation: 2,
                                 ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        height: 24,
+                                        width: 24,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Sign in with Google',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -222,93 +161,6 @@ class _UserInputScreenState extends State<UserInputScreen>
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(
-      TextEditingController controller, String label, bool isEmail) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            offset: const Offset(0, 4),
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
-        style: const TextStyle(
-          fontSize: 16,
-          color: Color(0xFF2D3748),
-        ),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(
-            color: Color(0xFF718096),
-            fontWeight: FontWeight.w500,
-            fontSize: 16,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(
-              color: Colors.grey.shade200,
-              width: 1,
-            ),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(
-              color: Colors.grey.shade200,
-              width: 1,
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(
-              color: Color(0xFF0b3c66),
-              width: 2,
-            ),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(
-              color: Colors.red.shade300,
-              width: 1,
-            ),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(
-              color: Colors.red.shade300,
-              width: 2,
-            ),
-          ),
-          filled: true,
-          fillColor: Colors.grey.shade50,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          prefixIcon: Icon(
-            isEmail ? Icons.email_outlined : Icons.person_outline,
-            color: const Color(0xFF718096),
-          ),
-        ),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter $label';
-          }
-          if (isEmail &&
-              !RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-                  .hasMatch(value)) {
-            return 'Please enter a valid email address';
-          }
-          return null;
-        },
       ),
     );
   }
