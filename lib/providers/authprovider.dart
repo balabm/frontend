@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -13,7 +14,7 @@ class AuthProvider with ChangeNotifier {
   User? _user;
   User? get user => _user;
 
-    googleSignIn(BuildContext context) async {
+  Future<void> googleSignIn(BuildContext context) async {
     _setLoading(true);
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
@@ -61,16 +62,19 @@ class AuthProvider with ChangeNotifier {
     _user = null;
     notifyListeners();
   }
-
-  Future<void> _saveUserToFirebase(String name, String email, String uid) async {
-    // Add your logic to save user data to Firebase Firestore or Realtime Database
-    // Example:
-    // await FirebaseFirestore.instance.collection('users').doc(uid).set({
-    //   'name': name,
-    //   'email': email,
-    //   'uid': uid,
-    // });
+Future<void> _saveUserToFirebase(String name, String email, String uid) async {
+  try {
+    await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      'userName': name,
+      'email': email,
+      'uid': uid,
+      'createdAt': FieldValue.serverTimestamp(),
+      'lastLogin': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  } catch (e) {
+    print('Error saving user data: $e');
   }
+}
 
   void _setLoading(bool value) {
     _isLoading = value;

@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/userInput', // Set UserInputScreen as the initial route
       routes: {
-        '/userInput': (context) => const UserInputScreen(),
+        '/userInput': (context) => UserInputScreen(),
         '/home': (context) => const HomeScreen(),
         '/image_processing': (context) => const ImageProcessingScreen(),
         '/field_edit_screen': (context) => const FieldEditScreen(),

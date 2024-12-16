@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:formbot/helpers/database_helper.dart';
 import 'package:flutter/material.dart';
+import 'package:formbot/providers/authprovider.dart';
+import 'package:formbot/providers/firebaseprovider.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_cropper/image_cropper.dart';
 // Import the FieldEditScreen class
@@ -10,6 +12,7 @@ import 'package:mime/mime.dart'; // For MIME type lookup
 //import 'package:path/path.dart'; // For file paths
 import 'package:http_parser/http_parser.dart'; // For MediaType
 import 'package:path/path.dart' as p;
+import 'package:provider/provider.dart';
 
 String? originalFileName;
 
@@ -136,18 +139,32 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
         var responseData = await response.stream.bytesToString();
         var decodedResponse = jsonDecode(responseData);
 
-        if (response.statusCode == 400) {
-          _showErrorSnackBar(
-              decodedResponse['message'] ?? 'Error processing image');
-        } else if (response.statusCode == 200) {
+        if (response.statusCode == 200) {
+          final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          
+          // Create new form and get formId
+          final formId = await firebaseProvider.saveFormWithDetails(
+            uid: authProvider.user!.uid,
+            imagePath: imagePath!,
+            boundingBoxes: decodedResponse['bounding_boxes'],
+            selectedField: '', // Initial empty field
+            ocrText: '', // Initial empty OCR
+            chatMessages: [], // Initial empty messages
+          );
+
           await Navigator.pushNamed(
             context,
             '/field_edit_screen',
             arguments: {
               'imagePath': imagePath!,
               'bounding_boxes': decodedResponse['bounding_boxes'],
+              'formId': formId, // Pass formId to FieldEditScreen
             },
           );
+        } else if (response.statusCode == 400) {
+          _showErrorSnackBar(
+              decodedResponse['message'] ?? 'Error processing image');
         } else {
           _showErrorSnackBar(
               'Network error or server error. Please try again later.');

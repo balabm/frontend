@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:formbot/providers/authprovider.dart';
+import 'package:formbot/providers/firebaseprovider.dart';
 import 'package:formbot/screens/widgets/apirepository.dart';
 import 'package:formbot/screens/widgets/audio_handler.dart';
 import 'package:formbot/screens/widgets/bounding_box_overlay.dart';
@@ -15,6 +16,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'package:path/path.dart' as path; // Add this import
+
 
 class FieldEditScreen extends StatefulWidget {
   const FieldEditScreen({super.key});
@@ -32,6 +35,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   String? _pendingAsrResponse;
   Map<String, dynamic>? _pendingLlmResponse;
   var user;
+  String? formId;
 
   String? imagePath, _selectedFieldName, _ocrText;
   List<dynamic>? boundingBoxes;
@@ -231,42 +235,71 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     _saveResponsesToFirestore();
   }
 
-  void _saveResponsesToFirestore() {
-    final uid = _authProvider.user?.uid;
-    if (uid == null) return;
+// In FieldEditScreen.dart
 
-    // Track user input during the interaction
-    String? userInput;
-    
-    // Find the most recent user input from chatMessages
-    for (var message in chatMessages.reversed) {
-      if (message['sender'] == 'user') {
-        userInput = message['message'];
-        break;
-      }
-    }
+Future<void> _saveResponsesToFirestore() async {
+  final uid = _authProvider.user?.uid;
+  if (uid == null) return;
 
-    // Only save if both responses are available
-    if (_pendingAsrResponse != null || _pendingLlmResponse != null || userInput != null) {
-      FirebaseFirestore.instance.collection('user_interactions').doc(uid).set({
-        'ocrText': _ocrText,
-        'selectedField': _selectedFieldName,
-        'userInput': userInput,
-        'asrResponse': _pendingAsrResponse,
-        'llmResponse': _pendingLlmResponse?['response'],
-        'inputType': _pendingAsrResponse != null ? 'audio' : 'text',
-        'timestamp': FieldValue.serverTimestamp(),
-        'deviceInfo': {
-          'platform': Platform.isIOS ? 'iOS' : 'Android',
-          'userName': _userName,
-        }
-      }, SetOptions(merge: true));
+  try {
+    final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
 
-      // Reset pending responses
-      _pendingAsrResponse = null;
-      _pendingLlmResponse = null;
+    await firebaseProvider.saveFormWithDetails(
+      uid: uid,
+      imagePath: imagePath!,
+      selectedField: _selectedFieldName ?? 'unnamed_field',
+      ocrText: _ocrText ?? '',
+      chatMessages: chatMessages,
+      boundingBoxes: boundingBoxes ?? [],
+    );
+
+    // Reset pending responses
+    _pendingAsrResponse = null;
+    _pendingLlmResponse = null;
+
+  } catch (e) {
+    print('Error saving to Firestore: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error saving form data: $e')),
+    );
+  }
+}
+
+// Helper method to find last user input
+String? _findLastUserInput() {
+  for (var message in chatMessages.reversed) {
+    if (message['sender'] == 'user') {
+      return message['message'];
     }
   }
+  return null;
+}
+
+// Add method to retrieve user's interaction history
+Future<List<Map<String, dynamic>>> getInteractionHistory() async {
+  final uid = _authProvider.user?.uid;
+  if (uid == null) return [];
+
+  try {
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('interactions')
+        .orderBy('timestamp', descending: true)
+        .limit(50) // Adjust limit as needed
+        .get();
+
+    return querySnapshot.docs
+        .map((doc) => {
+              'id': doc.id,
+              ...doc.data(),
+            })
+        .toList();
+  } catch (e) {
+    print('Error fetching interaction history: $e');
+    return [];
+  }
+}
 
   @override
   void didChangeDependencies() {
