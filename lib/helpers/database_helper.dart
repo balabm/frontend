@@ -1,3 +1,6 @@
+// This file is no longer used since all data is stored in Firestore.
+// You could safely delete or fully comment out the following if local DB is not needed.
+// ...existing code removed or commented out...
 import 'package:formbot/models/models.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';

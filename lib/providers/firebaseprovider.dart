@@ -187,18 +187,21 @@ class FirebaseProvider with ChangeNotifier {
       final formData = formDoc.data()!;
       formData['id'] = formId; // Ensure ID is included
 
-      List<Map<String, dynamic>> interactions = [];
-
-      final interactionsSnapshot = await formDoc.reference
+      // Load single 'interactionLog' doc
+      final interactionDoc = await formDoc.reference
           .collection('interactions')
-          .orderBy('timestamp', descending: false)
+          .doc('interactionLog')
           .get();
 
-      for (var doc in interactionsSnapshot.docs) {
-        interactions.add(doc.data() as Map<String, dynamic>);
+      if (interactionDoc.exists) {
+        formData['interactions'] = [
+          {
+            'messages': interactionDoc.data()?['messages'] ?? [],
+          }
+        ];
+      } else {
+        formData['interactions'] = [];
       }
-
-      formData['interactions'] = interactions;
 
       return formData;
     } catch (e) {
@@ -217,12 +220,12 @@ class FirebaseProvider with ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-      // Create form document reference
+      final fileName = path.basename(imagePath).replaceAll('.', '_'); 
       final formRef = _firestore
           .collection('users')
           .doc(uid)
           .collection('forms')
-          .doc(); // Auto-generated ID
+          .doc(fileName); // Use file name as formId
 
       // Convert image to base64
       final File imageFile = File(imagePath);
@@ -231,7 +234,7 @@ class FirebaseProvider with ChangeNotifier {
 
       // Save main form document
       await formRef.set({
-        'id': formRef.id, // Store ID in document
+        'id': fileName,
         'timestamp': FieldValue.serverTimestamp(),
         'lastInteractionAt': FieldValue.serverTimestamp(),
         'imageBase64': base64Image,
@@ -241,15 +244,15 @@ class FirebaseProvider with ChangeNotifier {
           'name': selectedField,
           'ocrText': ocrText,
         },
-      });
+      }, SetOptions(merge: true));
 
-      // Add interactions to 'interactions' collection
-      await _addInteraction(
-        formRef: formRef,
-        selectedField: selectedField,
-        ocrText: ocrText,
-        chatMessages: chatMessages,
-      );
+      // Instead of separate docs, store all messages in a single 'interactionLog' doc
+      final interactionDoc = formRef.collection('interactions').doc('interactionLog');
+      await interactionDoc.set({
+        'timestamp': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      await _appendMessages(interactionDoc, chatMessages, selectedField, ocrText);
 
       notifyListeners();
 
@@ -287,11 +290,11 @@ class FirebaseProvider with ChangeNotifier {
       });
 
       // Add new interaction
-      await _addInteraction(
-        formRef: formRef,
-        selectedField: selectedField,
-        ocrText: ocrText,
-        chatMessages: chatMessages,
+      await _appendMessages(
+        formRef.collection('interactions').doc('interactionLog'),
+        chatMessages,
+        selectedField,
+        ocrText,
       );
 
       notifyListeners();
@@ -303,28 +306,33 @@ class FirebaseProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _addInteraction({
-    required DocumentReference formRef,
-    required String selectedField,
-    required String ocrText,
-    required List<Map<String, dynamic>> chatMessages,
-  }) async {
-    final interactionRef = formRef.collection('interactions').doc();
-    
-    await interactionRef.set({
-      'timestamp': FieldValue.serverTimestamp(),
-      'selectedField': {
-        'name': selectedField,
-        'ocrText': ocrText,
-      },
-      'messages': chatMessages.map((msg) => {
+  Future<void> _appendMessages(
+      DocumentReference interactionDoc,
+      List<Map<String, dynamic>> chatMessages,
+      String selectedField,
+      String ocrText) async {
+    final List<Map<String, dynamic>> mappedMessages = [];
+
+    for (var msg in chatMessages) {
+      String? base64Audio;
+      if (msg['isAudioMessage'] == true && msg['audioPath'] != null) {
+        final fileBytes = await File(msg['audioPath']).readAsBytes();
+        base64Audio = base64Encode(fileBytes);
+      }
+
+      mappedMessages.add({
         'timestamp': DateTime.now().toIso8601String(),
         'sender': msg['sender'],
-        'message': msg['message'],
-        'inputType': msg['inputType'] ?? 'text',
-        'asrResponse': msg['asrResponse'],
-        'llmResponse': msg['llmResponse'],
-      }).toList(),
+        'content': msg['message'],
+        'contentType': msg['isAudioMessage'] == true ? 'audio' : 'text',
+        'base64Audio': base64Audio,
+        'fieldName': selectedField,
+        'ocrContext': ocrText,
+      });
+    }
+
+    await interactionDoc.update({
+      'messages': FieldValue.arrayUnion(mappedMessages),
     });
   }
 
@@ -339,23 +347,18 @@ class FirebaseProvider with ChangeNotifier {
 
       return await Future.wait(querySnapshot.docs.map((doc) async {
         final formData = doc.data();
-        final interactionsSnapshot = await doc.reference
+        final interactionDoc = await doc.reference
             .collection('interactions')
-            .orderBy('timestamp', descending: true)
+            .doc('interactionLog')
             .get();
 
-        final interactions = interactionsSnapshot.docs
-            .map((interaction) => {
-                  ...interaction.data(),
-                  'messages': (interaction.data()['messages'] as List<dynamic>)
-                      .map((msg) => {
-                            ...msg,
-                            'timestamp':
-                                msg['timestamp'], // Already string timestamp
-                          })
-                      .toList(),
-                })
-            .toList();
+        final interactions = interactionDoc.exists
+            ? [
+                {
+                  'messages': interactionDoc.data()?['messages'] ?? [],
+                }
+              ]
+            : [];
 
         return {
           'id': doc.id,

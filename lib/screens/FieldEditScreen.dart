@@ -246,7 +246,7 @@ Future<void> _saveResponsesToFirestore() async {
 
     await firebaseProvider.saveFormWithDetails(
       uid: uid,
-      imagePath: imagePath!,
+      imagePath: imagePath!, // doc ID will be derived from file name
       selectedField: _selectedFieldName ?? 'unnamed_field',
       ocrText: _ocrText ?? '',
       chatMessages: chatMessages,
@@ -304,10 +304,33 @@ Future<List<Map<String, dynamic>>> getInteractionHistory() async {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     imagePath = args['imagePath'];
     boundingBoxes = args['bounding_boxes'];
+
+    // Attempt to load existing interactions if they exist
+    final fileName = path.basename(imagePath!).replaceAll('.', '_');
+    _loadExistingFormData(fileName);
+  }
+
+  Future<void> _loadExistingFormData(String formId) async {
+    final uid = _authProvider.user?.uid;
+    if (uid == null) return;
+
+    final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+    final existingForm = await firebaseProvider.getFormWithInteractions(uid, formId);
+    if (existingForm != null) {
+      setState(() {
+        boundingBoxes = existingForm['boundingBoxes'] ?? [];
+        // Flatten all interactions' messages into chatMessages:
+        final allInteractions = existingForm['interactions'] as List<dynamic>;
+        chatMessages.clear();
+        for (var interaction in allInteractions) {
+          final messages = interaction['messages'] ?? [];
+          messages.forEach((m) => chatMessages.add(Map<String, dynamic>.from(m)));
+        }
+      });
+    }
   }
 
   void _scrollToBottom() => setState(() {
