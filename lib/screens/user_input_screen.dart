@@ -102,7 +102,7 @@ class _UserInputScreenState extends State<UserInputScreen> with SingleTickerProv
       ),
     );
   }
-// Replace _buildGoogleSignInButton() with:
+
 Widget _buildGoogleSignInButton() {
   return GoogleSignInButton(
     isLoading: _isLoading,

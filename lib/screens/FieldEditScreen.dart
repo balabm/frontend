@@ -29,7 +29,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   final _apiRepository = ApiRepository();
   final _messageController = TextEditingController();
   final _dragController = DraggableScrollableController();
-  late ScrollController _scrollController;
+  ScrollController _scrollController = ScrollController();
   late AuthProvider _authProvider;
   // New properties for tracking responses
   String? _pendingAsrResponse;
@@ -50,6 +50,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       _isThinking = false,
       _showBottomSheet = false,
       _isFieldLocked = false;
+  // Add loading state
+  bool _isLoadingData = true;
 
   @override
   void initState() {
@@ -235,8 +237,6 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     _saveResponsesToFirestore();
   }
 
-// In FieldEditScreen.dart
-
 Future<void> _saveResponsesToFirestore() async {
   final uid = _authProvider.user?.uid;
   if (uid == null) return;
@@ -304,32 +304,109 @@ Future<List<Map<String, dynamic>>> getInteractionHistory() async {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    imagePath = args['imagePath'];
-    boundingBoxes = args['bounding_boxes'];
+    
+    // Safely get arguments with null check
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args == null) {
+      print('No arguments provided to FieldEditScreen');
+      return;
+    }
 
-    // Attempt to load existing interactions if they exist
-    final fileName = path.basename(imagePath!).replaceAll('.', '_');
-    _loadExistingFormData(fileName);
+    // Parse arguments with type check
+    if (args is Map<String, dynamic>) {
+      imagePath = args['imagePath'];
+      boundingBoxes = args['bounding_boxes'] ?? args['boundingBoxes']; // Try both possible keys
+      formId = args['formId'];
+
+      if (imagePath != null) {
+        // Clean up filename to match database format
+        final fileName = path.basename(imagePath!)
+            .replaceAll('.', '_')
+            .replaceAll('_png_png', '_png'); // Fix double extension
+        print('Loading form data for: $fileName');
+        _loadExistingFormData(fileName);
+      } else {
+        print('No imagePath provided in arguments');
+      }
+    } else {
+      print('Invalid arguments type provided to FieldEditScreen');
+    }
+  }
+
+  // Add method to convert base64 to audio file
+  Future<String?> _base64ToAudioFile(String base64Audio) async {
+    try {
+      final bytes = base64Decode(base64Audio);
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.wav');
+      await file.writeAsBytes(bytes);
+      return file.path;
+    } catch (e) {
+      print('Error converting base64 to audio: $e');
+      return null;
+    }
   }
 
   Future<void> _loadExistingFormData(String formId) async {
+    setState(() => _isLoadingData = true);
     final uid = _authProvider.user?.uid;
-    if (uid == null) return;
+    if (uid == null) {
+      print('No user ID available');
+      return;
+    }
 
-    final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
-    final existingForm = await firebaseProvider.getFormWithInteractions(uid, formId);
-    if (existingForm != null) {
-      setState(() {
-        boundingBoxes = existingForm['boundingBoxes'] ?? [];
-        // Flatten all interactions' messages into chatMessages:
-        final allInteractions = existingForm['interactions'] as List<dynamic>;
-        chatMessages.clear();
-        for (var interaction in allInteractions) {
-          final messages = interaction['messages'] ?? [];
-          messages.forEach((m) => chatMessages.add(Map<String, dynamic>.from(m)));
+    try {
+      print('Attempting to load form data for uid: $uid, formId: $formId');
+      final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+      final existingForm = await firebaseProvider.getFormWithInteractions(uid, formId);
+      
+      if (existingForm != null) {
+        print('Found existing form data');
+        if (mounted) {
+          // Process messages and restore audio files
+          final allInteractions = existingForm['interactions'] as List<dynamic>;
+          chatMessages.clear();
+          
+          for (var interaction in allInteractions) {
+            final messages = interaction['messages'] ?? [];
+            for (var m in messages) {
+              final messageData = Map<String, dynamic>.from(m);
+              if (messageData['contentType'] == 'audio' && messageData['base64Audio'] != null) {
+                // Convert base64 audio to file
+                final audioPath = await _base64ToAudioFile(messageData['base64Audio']);
+                if (audioPath != null) {
+                  messageData['audioPath'] = audioPath;
+                  messageData['isAudioMessage'] = true;
+                }
+              }
+              chatMessages.add(messageData);
+            }
+          }
+
+          setState(() {
+            boundingBoxes = existingForm['boundingBoxes'] ?? [];
+            final currentField = existingForm['currentSelectedField'] as Map<String, dynamic>?;
+            if (currentField != null) {
+              _selectedFieldName = currentField['name'];
+              _ocrText = currentField['ocrText'];
+            }
+            
+            print('Loaded ${chatMessages.length} messages');
+            if (chatMessages.isNotEmpty) {
+              _showBottomSheet = true;
+              _inputEnabled = true;
+            }
+          });
         }
-      });
+      } else {
+        print('No existing form data found for formId: $formId');
+      }
+    } catch (e) {
+      print('Error loading existing form data: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingData = false);
+      }
     }
   }
 
@@ -562,7 +639,13 @@ Future<List<Map<String, dynamic>>> getInteractionHistory() async {
               ),
             ),
           ),
-          body: Stack(
+          body: _isLoadingData
+      ? const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
+          ),
+        )
+      : Stack(
             children: [
               Column(
                 children: [

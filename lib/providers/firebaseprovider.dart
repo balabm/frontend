@@ -175,6 +175,7 @@ class FirebaseProvider with ChangeNotifier {
   Future<Map<String, dynamic>?> getFormWithInteractions(
       String uid, String formId) async {
     try {
+      print('Fetching form: $formId for user: $uid');
       final formDoc = await _firestore
           .collection('users')
           .doc(uid)
@@ -182,27 +183,39 @@ class FirebaseProvider with ChangeNotifier {
           .doc(formId)
           .get();
 
-      if (!formDoc.exists) return null;
+      if (!formDoc.exists) {
+        print('Form document does not exist');
+        return null;
+      }
 
       final formData = formDoc.data()!;
-      formData['id'] = formId; // Ensure ID is included
+      formData['id'] = formId;
 
-      // Load single 'interactionLog' doc
       final interactionDoc = await formDoc.reference
           .collection('interactions')
           .doc('interactionLog')
           .get();
 
+      print('Loading interaction data...');
       if (interactionDoc.exists) {
-        formData['interactions'] = [
-          {
-            'messages': interactionDoc.data()?['messages'] ?? [],
+        // Ensure messages have correct content mapping
+        final messages = (interactionDoc.data()?['messages'] ?? []).map((m) {
+          if (m is Map) {
+            return {
+              ...m,
+              'message': m['content'] ?? m['message'],
+              'isAudioMessage': m['contentType'] == 'audio',
+            };
           }
-        ];
+          return m;
+        }).toList();
+
+        formData['interactions'] = [{'messages': messages}];
       } else {
         formData['interactions'] = [];
       }
 
+      print('Successfully loaded form data with ${formData['interactions']?[0]?['messages']?.length ?? 0} messages');
       return formData;
     } catch (e) {
       print('Error loading form with interactions: $e');
@@ -220,13 +233,19 @@ class FirebaseProvider with ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-      final fileName = path.basename(imagePath).replaceAll('.', '_'); 
+      // Clean up filename to match database format
+      final fileName = path.basename(imagePath)
+          .replaceAll('.', '_')
+          .replaceAll('_png_png', '_png'); // Fix double extension
+      
       final formRef = _firestore
           .collection('users')
           .doc(uid)
           .collection('forms')
-          .doc(fileName); // Use file name as formId
+          .doc(fileName);
 
+      print('Saving form with ID: $fileName');
+      
       // Convert image to base64
       final File imageFile = File(imagePath);
       final List<int> imageBytes = await imageFile.readAsBytes();
@@ -256,6 +275,7 @@ class FirebaseProvider with ChangeNotifier {
 
       notifyListeners();
 
+      print('Saved form data: ${formRef.id}');
       return formRef.id; // Return the form ID
     } catch (e) {
       print('Error saving form data: $e');
@@ -298,6 +318,7 @@ class FirebaseProvider with ChangeNotifier {
       );
 
       notifyListeners();
+      print('Added interaction to form: $formId');
     } catch (e) {
       print('Error adding interaction: $e');
       throw Exception('Failed to add interaction');
@@ -334,6 +355,7 @@ class FirebaseProvider with ChangeNotifier {
     await interactionDoc.update({
       'messages': FieldValue.arrayUnion(mappedMessages),
     });
+    print('Appended messages: $mappedMessages');
   }
 
   Future<List<Map<String, dynamic>>> getUserForms(String uid) async {
@@ -373,6 +395,23 @@ class FirebaseProvider with ChangeNotifier {
       }));
     } catch (e) {
       print('Error fetching user forms: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getSubmittedForms() async {
+    try {
+      final querySnapshot = await _firestore.collectionGroup('forms').get();
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'formName': data['fileName'] ?? 'Unnamed Form',
+          'formId': doc.id,
+          'imageBase64': data['imageBase64'] ?? '',
+        };
+      }).toList();
+    } catch (e) {
+      print('Error fetching submitted forms: $e');
       return [];
     }
   }

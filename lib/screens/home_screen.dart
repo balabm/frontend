@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:formbot/providers/firebaseprovider.dart';
 import 'package:formbot/screens/widgets/common.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,7 +18,7 @@ class _HomeScreenState extends State<HomeScreen>
   late final AnimationController _animationController;
   late final Animation<double> _scaleAnimation;
 
-  List<Map<String, String>> _submittedForms = [];
+  List<Map<String, dynamic>> _submittedForms = [];
   List<String> _capturedImages = [];
   String _userName = '';
   bool _isLoading = true;
@@ -75,12 +77,10 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _loadSubmittedForms() async {
-    final prefs = await SharedPreferences.getInstance();
-    final forms = prefs.getStringList('submittedForms') ?? [];
+    final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+    final forms = await firebaseProvider.getSubmittedForms();
     if (mounted) {
-      setState(() => _submittedForms = forms
-          .map((form) => Map<String, String>.from(jsonDecode(form)))
-          .toList());
+      setState(() => _submittedForms = forms);
     }
   }
 
@@ -141,10 +141,8 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           onChanged: (query) => setState(() {
             final lowercaseQuery = query.toLowerCase();
-            _capturedImages = _capturedImages
-                .where((image) => image
-                    .split('/')
-                    .last
+            _submittedForms = _submittedForms
+                .where((form) => form['formName']!
                     .toLowerCase()
                     .contains(lowercaseQuery))
                 .toList();
@@ -176,62 +174,50 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       );
 
-  Widget _buildImageTile(String imagePath) {
-    final fileName = imagePath.split('/').last;
+  Widget _buildFormTile(Map<String, dynamic> form) {
+    final formName = form['formName'] ?? 'Unnamed Form';
+    final formId = form['formId'];
+    final imageBase64 = form['imageBase64'];
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         decoration: _boxDecoration,
         child: ListTile(
           contentPadding: const EdgeInsets.all(12),
-          leading: Hero(
-            tag: imagePath,
-            child: _buildImageThumbnail(imagePath),
-          ),
+          leading: Icon(Icons.description, color: Colors.teal),
           title: Text(
-            fileName,
+            formName,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: () => _deleteImage(imagePath),
-          ),
-          onTap: () => Navigator.pushNamed(
-            context,
-            '/image_processing',
-            arguments: imagePath,
-          ),
+          onTap: () {
+            // Save base64 image to temporary file and get path
+            final tempDir = Directory.systemTemp;
+            final tempFile = File('${tempDir.path}/$formId.png');
+            tempFile.writeAsBytesSync(base64Decode(imageBase64));
+            
+            Navigator.pushNamed(
+              context,
+              '/field_edit_screen',
+              arguments: {
+                'imagePath': tempFile.path,
+                'formId': formId,
+                // Additional arguments will be loaded from Firebase
+              },
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildImageThumbnail(String imagePath) => Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Image.file(File(imagePath), fit: BoxFit.cover),
-        ),
-      );
-
-  Widget _buildImageList() => _capturedImages.isNotEmpty
+  Widget _buildFormList() => _submittedForms.isNotEmpty
       ? AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
           child: ListView.builder(
-            key: ValueKey(_capturedImages.length),
-            itemCount: _capturedImages.length,
-            itemBuilder: (_, index) => _buildImageTile(_capturedImages[index]),
+            key: ValueKey(_submittedForms.length),
+            itemCount: _submittedForms.length,
+            itemBuilder: (_, index) => _buildFormTile(_submittedForms[index]),
           ),
         )
       : _buildEmptyState();
@@ -286,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen>
                       children: [
                         _buildSearchBar(),
                         const SizedBox(height: 20),
-                        Expanded(child: _buildImageList()),
+                        Expanded(child: _buildFormList()),
                       ],
                     ),
                   ),
