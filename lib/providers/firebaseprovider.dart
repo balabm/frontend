@@ -114,56 +114,42 @@ class FirebaseProvider with ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-      // Create form document reference
       final formRef = _firestore
           .collection('users')
           .doc(uid)
           .collection('forms')
-          .doc(); // Auto-generated ID
-
-      // Convert image to base64
-      final File imageFile = File(imagePath);
-      final List<int> imageBytes = await imageFile.readAsBytes();
-      final String base64Image = base64Encode(imageBytes);
+          .doc(fileName);
 
       // Save main form document
       await formRef.set({
-        'timestamp': FieldValue.serverTimestamp(),
-        'imageBase64': base64Image,
-        'fileName': path.basename(fileName),
-        'status': 'active',
-        'metadata': {
-          'processedAt': FieldValue.serverTimestamp(),
-          'lastUpdated': FieldValue.serverTimestamp(),
-          'boundingBoxes': boundingBoxes,
-        }
+        'timestamp': DateTime.now().toIso8601String(),
+        'lastInteractionAt': DateTime.now().toIso8601String(),
+        'fileName': fileName,
+        'boundingBoxes':
+            boundingBoxes.map((box) => Map<String, dynamic>.from(box)).toList(),
+        'currentSelectedField': Map<String, dynamic>.from(selectedFields),
+      }, SetOptions(merge: true));
+
+      // Save chat messages
+      final interactionDoc =
+          formRef.collection('interactions').doc('interactionLog');
+
+      final messages = chatMessages
+          .map((msg) => {
+                'sender': msg['sender'],
+                'message': msg['message'],
+                'isAudioMessage': msg['isAudioMessage'] ?? false,
+                'audioBase64': msg['audioBase64'],
+                'timestamp': DateTime.now().toIso8601String(),
+              })
+          .toList();
+
+      await interactionDoc.set({
+        'timestamp': DateTime.now().toIso8601String(),
+        'messages': messages,
       });
 
-      // Save fields and interactions as subcollections
-      for (var field in selectedFields.entries) {
-        final fieldRef = formRef.collection('fields').doc(field.key);
-        await fieldRef.set({
-          'fieldName': field.key,
-          'ocrText': field.value['ocrText'],
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-
-        // Save related interactions
-        final relevantMessages =
-            chatMessages.where((msg) => msg['fieldName'] == field.key).toList();
-
-        for (var message in relevantMessages) {
-          await fieldRef.collection('interactions').add({
-            'timestamp': FieldValue.serverTimestamp(),
-            'sender': message['sender'],
-            'inputType': message['inputType'] ?? 'text',
-            'asrResponse': message['asrResponse'],
-            'llmResponse': message['message'],
-          });
-        }
-      }
-
-      notifyListeners();
+      print('Successfully saved ${messages.length} messages');
     } catch (e) {
       print('Error saving form data: $e');
       throw Exception('Failed to save form data');
@@ -210,12 +196,15 @@ class FirebaseProvider with ChangeNotifier {
           return m;
         }).toList();
 
-        formData['interactions'] = [{'messages': messages}];
+        formData['interactions'] = [
+          {'messages': messages}
+        ];
       } else {
         formData['interactions'] = [];
       }
 
-      print('Successfully loaded form data with ${formData['interactions']?[0]?['messages']?.length ?? 0} messages');
+      print(
+          'Successfully loaded form data with ${formData['interactions']?[0]?['messages']?.length ?? 0} messages');
       return formData;
     } catch (e) {
       print('Error loading form with interactions: $e');
@@ -234,10 +223,11 @@ class FirebaseProvider with ChangeNotifier {
     _setLoading(true);
     try {
       // Clean up filename to match database format
-      final fileName = path.basename(imagePath)
+      final fileName = path
+          .basename(imagePath)
           .replaceAll('.', '_')
           .replaceAll('_png_png', '_png'); // Fix double extension
-      
+
       final formRef = _firestore
           .collection('users')
           .doc(uid)
@@ -245,7 +235,7 @@ class FirebaseProvider with ChangeNotifier {
           .doc(fileName);
 
       print('Saving form with ID: $fileName');
-      
+
       // Convert image to base64
       final File imageFile = File(imagePath);
       final List<int> imageBytes = await imageFile.readAsBytes();
@@ -266,12 +256,14 @@ class FirebaseProvider with ChangeNotifier {
       }, SetOptions(merge: true));
 
       // Instead of separate docs, store all messages in a single 'interactionLog' doc
-      final interactionDoc = formRef.collection('interactions').doc('interactionLog');
+      final interactionDoc =
+          formRef.collection('interactions').doc('interactionLog');
       await interactionDoc.set({
         'timestamp': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      await _appendMessages(interactionDoc, chatMessages, selectedField, ocrText);
+      await _appendMessages(
+          interactionDoc, chatMessages, selectedField, ocrText);
 
       notifyListeners();
 

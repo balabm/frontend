@@ -83,22 +83,21 @@ class _ChatInputState extends State<ChatInput> {
                       ),
                       enabled: true,
                       onTap: () {
-                        widget.dragController.animateTo(1,
+                        if (!widget.dragController.isAttached) return;
+
+                        // Prevent multiple calls
+                        if (widget.dragController.size < 1) {
+                          widget.dragController.animateTo(
+                            1.0,
                             duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeOut);
+                            curve: Curves.easeOut,
+                          );
+                        }
+
                         if (!widget.inputEnabled) {
                           Common.showErrorMessage(context,
                               "Please wait for the previous message to finish processing.");
                         }
-                      },
-                      onChanged: (text) {
-                        setState(() {
-                          if (!widget.inputEnabled) {
-                            Common.showErrorMessage(context,
-                                "Please wait for the previous message to finish processing.");
-                            widget.messageController.clear();
-                          }
-                        });
                       },
                     ),
                   ),
