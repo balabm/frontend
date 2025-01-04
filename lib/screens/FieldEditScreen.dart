@@ -367,6 +367,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     }
   }
 
+// In FieldEditScreen class
   Future<void> _loadExistingFormData(String formId) async {
     if (_isLoadingFormData) return;
 
@@ -391,15 +392,18 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
           await firebaseProvider.getFormWithInteractions(uid, formId);
 
       if (existingForm != null && mounted) {
+        // Set original image path for API calls
+        imagePath = existingForm['imagePath'] ?? imagePath;
+
         setState(() {
-          // Properly cast bounding boxes
+          // Load bounding boxes
           boundingBoxes = (existingForm['boundingBoxes'] as List<dynamic>?)
                   ?.map((box) {
                 return Map<String, dynamic>.from(box as Map<dynamic, dynamic>);
               }).toList() ??
               [];
 
-          // Cast current field data
+          // Load current field data
           if (existingForm['currentSelectedField'] != null) {
             final currentField = Map<String, dynamic>.from(
                 existingForm['currentSelectedField'] as Map<dynamic, dynamic>);
@@ -407,7 +411,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
             _ocrText = currentField['ocrText']?.toString();
           }
 
-          // Cast and load chat messages
+          // Load chat messages
           chatMessages.clear();
           if (existingForm['interactions'] != null &&
               (existingForm['interactions'] as List).isNotEmpty) {
@@ -425,11 +429,13 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
           _isFieldLocked = chatMessages.isNotEmpty;
         });
 
+        // Update formId with original filename for API calls
+        formId = existingForm['originalFileName'] ?? formId;
+
         print('Successfully loaded ${chatMessages.length} messages');
       }
     } catch (e) {
       print('Error loading form data: $e');
-      print(e.toString());
     } finally {
       if (mounted) {
         setState(() {
