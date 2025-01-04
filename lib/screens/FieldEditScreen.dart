@@ -392,37 +392,44 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
 
       if (existingForm != null && mounted) {
         setState(() {
-          // Cast and load bounding boxes
-          boundingBoxes = List<Map<String, dynamic>>.from(
-              (existingForm['boundingBoxes'] ?? [])
-                  .map((box) => Map<String, dynamic>.from(box)));
+          // Properly cast bounding boxes
+          boundingBoxes = (existingForm['boundingBoxes'] as List<dynamic>?)
+                  ?.map((box) {
+                return Map<String, dynamic>.from(box as Map<dynamic, dynamic>);
+              }).toList() ??
+              [];
 
-          // Load current field data with proper casting
-          final currentField = existingForm['currentSelectedField'] != null
-              ? Map<String, dynamic>.from(existingForm['currentSelectedField'])
-              : null;
-
-          if (currentField != null) {
+          // Cast current field data
+          if (existingForm['currentSelectedField'] != null) {
+            final currentField = Map<String, dynamic>.from(
+                existingForm['currentSelectedField'] as Map<dynamic, dynamic>);
             _selectedFieldName = currentField['name']?.toString();
             _ocrText = currentField['ocrText']?.toString();
           }
 
-          // Load chat messages with proper casting
+          // Cast and load chat messages
           chatMessages.clear();
-          final interactions = existingForm['interactions'] ?? [];
-          if (interactions.isNotEmpty) {
-            final messages = (interactions[0]['messages'] ?? []) as List;
-            chatMessages
-                .addAll(messages.map((msg) => Map<String, dynamic>.from(msg)));
+          if (existingForm['interactions'] != null &&
+              (existingForm['interactions'] as List).isNotEmpty) {
+            final interaction = existingForm['interactions'][0];
+            final messages = (interaction['messages'] as List?)?.map((msg) {
+                  return Map<String, dynamic>.from(
+                      msg as Map<dynamic, dynamic>);
+                }).toList() ??
+                [];
+            chatMessages.addAll(messages);
           }
 
           _showBottomSheet = chatMessages.isNotEmpty;
-          _inputEnabled = chatMessages.isNotEmpty;
+          _inputEnabled = true;
           _isFieldLocked = chatMessages.isNotEmpty;
         });
+
+        print('Successfully loaded ${chatMessages.length} messages');
       }
     } catch (e) {
       print('Error loading form data: $e');
+      print(e.toString());
     } finally {
       if (mounted) {
         setState(() {
@@ -458,18 +465,18 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       return; // Prevent interaction while processing
     }
 
-    if (_isFieldLocked) {
-      setState(() {
-        chatMessages.add({
-          'sender': 'assistant',
-          'message':
-              'Please complete your queries for $_selectedFieldName first before selecting another field.',
-        });
-        _needsScroll = true;
-      });
-      _scrollToBottom();
-      return;
-    }
+    // if (_isFieldLocked) {
+    //   setState(() {
+    //     chatMessages.add({
+    //       'sender': 'assistant',
+    //       'message':
+    //           'Please complete your queries for $_selectedFieldName first before selecting another field.',
+    //     });
+    //     _needsScroll = true;
+    //   });
+    //   _scrollToBottom();
+    //   return;
+    // }
 
     setState(() {
       _inputEnabled = true;

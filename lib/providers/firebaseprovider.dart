@@ -174,7 +174,7 @@ class FirebaseProvider with ChangeNotifier {
         return null;
       }
 
-      final formData = formDoc.data()!;
+      final formData = Map<String, dynamic>.from(formDoc.data()!);
       formData['id'] = formId;
 
       final interactionDoc = await formDoc.reference
@@ -184,16 +184,16 @@ class FirebaseProvider with ChangeNotifier {
 
       print('Loading interaction data...');
       if (interactionDoc.exists) {
-        // Ensure messages have correct content mapping
-        final messages = (interactionDoc.data()?['messages'] ?? []).map((m) {
+        final messages =
+            ((interactionDoc.data()?['messages'] ?? []) as List).map((m) {
           if (m is Map) {
             return {
-              ...m,
+              ...Map<String, dynamic>.from(m as Map<dynamic, dynamic>),
               'message': m['content'] ?? m['message'],
               'isAudioMessage': m['contentType'] == 'audio',
             };
           }
-          return m;
+          return <String, dynamic>{};
         }).toList();
 
         formData['interactions'] = [

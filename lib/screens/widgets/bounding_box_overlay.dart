@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 
-class BoundingBoxOverlay extends StatelessWidget {
+class BoundingBoxOverlay extends StatefulWidget {
   final String imagePath;
   final List<dynamic> boundingBoxes;
   final Map<String, dynamic>? selectedBox;
@@ -18,40 +19,85 @@ class BoundingBoxOverlay extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<BoundingBoxOverlay> createState() => _BoundingBoxOverlayState();
+}
+
+class _BoundingBoxOverlayState extends State<BoundingBoxOverlay> {
+  double? scaleX;
+  double? scaleY;
+  bool isImageLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  Future<void> _loadImage() async {
+    final imageFile = File(widget.imagePath);
+    final image = Image.file(imageFile);
+    final completer = Completer<void>();
+
+    image.image.resolve(const ImageConfiguration()).addListener(
+          ImageStreamListener((info, _) {
+            if (mounted) {
+              setState(() {
+                isImageLoaded = true;
+              });
+            }
+            completer.complete();
+          }, onError: (error, stackTrace) {
+            print('Error loading image: $error');
+            completer.completeError(error);
+          }),
+        );
+
+    await completer.future;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Positioned.fill(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final imageFile = File(imagePath);
+          final imageFile = File(widget.imagePath);
           final image = Image.file(
             imageFile,
             height: MediaQuery.of(context).size.height,
           );
-          final ImageStream stream =
-              image.image.resolve(const ImageConfiguration());
-          late double scaleX;
-          late double scaleY;
 
-          stream.addListener(ImageStreamListener((info, _) {
-            final double imageWidth = info.image.width.toDouble();
-            final double imageHeight = info.image.height.toDouble();
+          // Initialize scales when image is loaded
+          if (isImageLoaded) {
+            image.image.resolve(const ImageConfiguration()).addListener(
+              ImageStreamListener((info, _) {
+                final double imageWidth = info.image.width.toDouble();
+                final double imageHeight = info.image.height.toDouble();
 
-            scaleX = constraints.maxWidth / imageWidth;
-            scaleY = constraints.maxHeight / imageHeight;
-          }));
+                scaleX = constraints.maxWidth / imageWidth;
+                scaleY = constraints.maxHeight / imageHeight;
+              }),
+            );
+          }
+
+          if (!isImageLoaded || scaleX == null || scaleY == null) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
 
           return Stack(
-            children: boundingBoxes.map((box) {
+            children: widget.boundingBoxes.map((box) {
               final scaledX =
-                  box['x_center'] * scaleX - (box['width'] * scaleX / 2);
+                  box['x_center'] * scaleX! - (box['width'] * scaleX! / 2);
               final scaledY =
-                  box['y_center'] * scaleY - (box['height'] * scaleY / 2);
-              final scaledWidth = box['width'] * scaleX;
-              final scaledHeight = box['height'] * scaleY;
+                  box['y_center'] * scaleY! - (box['height'] * scaleY! / 2);
+              final scaledWidth = box['width'] * scaleX!;
+              final scaledHeight = box['height'] * scaleY!;
               final fieldType = box['class'];
 
-              final isCurrentlySelected = selectedBox == box;
-              final wasEverSelected = previouslySelectedBoxes.contains(box);
+              final isCurrentlySelected = widget.selectedBox == box;
+              final wasEverSelected =
+                  widget.previouslySelectedBoxes.contains(box);
 
               final borderColor = isCurrentlySelected
                   ? Colors.blue
@@ -66,7 +112,7 @@ class BoundingBoxOverlay extends StatelessWidget {
                 width: scaledWidth,
                 height: scaledHeight,
                 child: GestureDetector(
-                  onTap: () => onBoundingBoxTap(box),
+                  onTap: () => widget.onBoundingBoxTap(box),
                   child: Container(
                     decoration: BoxDecoration(
                       border: Border.all(
