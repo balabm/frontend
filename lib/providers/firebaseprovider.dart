@@ -104,6 +104,7 @@ class FirebaseProvider with ChangeNotifier {
     }
   }
 
+// In FirebaseProvider class
   Future<void> saveFormWithInteractions({
     required String uid,
     required String imagePath,
@@ -120,20 +121,23 @@ class FirebaseProvider with ChangeNotifier {
           .collection('forms')
           .doc(fileName);
 
-      // Save main form document
+      // Store both original and sanitized filenames
+      final originalFileName = path.basename(imagePath);
+      final sanitizedFileName = fileName;
+
       await formRef.set({
         'timestamp': DateTime.now().toIso8601String(),
         'lastInteractionAt': DateTime.now().toIso8601String(),
-        'fileName': fileName,
+        'fileName': sanitizedFileName,
+        'originalFileName': originalFileName,
+        'imagePath': imagePath,
         'boundingBoxes':
             boundingBoxes.map((box) => Map<String, dynamic>.from(box)).toList(),
         'currentSelectedField': Map<String, dynamic>.from(selectedFields),
       }, SetOptions(merge: true));
 
-      // Save chat messages
       final interactionDoc =
           formRef.collection('interactions').doc('interactionLog');
-
       final messages = chatMessages
           .map((msg) => {
                 'sender': msg['sender'],
