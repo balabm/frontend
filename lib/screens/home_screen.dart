@@ -251,6 +251,10 @@ class _HomeScreenState extends State<HomeScreen>
               icon: const Icon(Icons.refresh, color: Colors.white),
               onPressed: _loadData,
             ),
+            IconButton(
+              icon: const Icon(Icons.settings, color: Colors.white),
+              onPressed: () => Navigator.pushNamed(context, '/settings'),
+            ),
           ],
         ),
         body: _isLoading

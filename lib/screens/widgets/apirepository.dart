@@ -2,16 +2,20 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiRepository {
-  static const String _baseUrl = 'http://150.230.166.29';
+  Future<String> get baseUrl async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('api_endpoint') ?? 'http://150.230.166.29/abc_test/';
+  }
 
   // Audio API calls
   Future<String?> sendAudioToApi(File zipFile) async {
     try {
       var request = http.MultipartRequest(
         'POST', 
-        Uri.parse('$_baseUrl/asr/upload-audio-zip/')
+        Uri.parse('${await baseUrl}/asr/upload-audio-zip/')
       );
 
       request.files.add(await http.MultipartFile.fromPath(
@@ -36,7 +40,7 @@ class ApiRepository {
 
   // LLM API calls
   Future<Map<String, dynamic>?> sendToLLMApi(String formEntry, {String? voiceQuery}) async {
-    final uri = Uri.parse('$_baseUrl/llm//get_llm_response');
+    final uri = Uri.parse('${await baseUrl}/llm/get_llm_response');
     try {
       final response = await http.post(
         uri,
@@ -64,7 +68,7 @@ class ApiRepository {
     required String imagePath,
     required Map<String, dynamic> box,
   }) async {
-    final uri = Uri.parse('$_baseUrl/ocr/cv/ocr');
+    final uri = Uri.parse('${await baseUrl}/ocr/cv/ocr');
     var request = http.MultipartRequest('POST', uri);
 
     var file = File(imagePath);

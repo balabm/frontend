@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:formbot/providers/authprovider.dart';
 import 'package:formbot/providers/firebaseprovider.dart';
+import 'package:formbot/screens/settings_screen.dart';
 import 'package:formbot/screens/widgets/camerascreen.dart';
 import 'package:formbot/screens/widgets/common.dart';
 import 'package:provider/provider.dart'; // Import this to use MultiProvider
@@ -43,6 +44,7 @@ class MyApp extends StatelessWidget {
         '/image_processing': (context) => const ImageProcessingScreen(),
         '/field_edit_screen': (context) => const FieldEditScreen(),
         '/camera': (context) => const CameraScreen(),
+        '/settings': (context) => const SettingsScreen(),
       },
     );
   }
