@@ -64,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen>
         _loadSubmittedForms(),
         _loadUserName(),
         _loadCapturedImages(),
+        _loadApiUrls(), // Add this line
       ]);
       _animationController.forward();
     } catch (e) {
@@ -95,6 +96,15 @@ class _HomeScreenState extends State<HomeScreen>
     final prefs = await SharedPreferences.getInstance();
     if (mounted)
       setState(() => _userName = prefs.getString('userName') ?? 'User');
+  }
+
+  Future<void> _loadApiUrls() async {
+    final prefs = await SharedPreferences.getInstance();
+    final boundingBoxUrl = prefs.getString('bounding_box_url') ?? 'http://150.230.166.29/abc_test/cv/form-detection-with-box/';
+    final ocrTextUrl = prefs.getString('ocr_text_url') ?? 'http://150.230.166.29/abc_test/ocr/cv/ocr';
+    final asrUrl = prefs.getString('asr_url') ?? 'http://150.230.166.29/abc_test/asr/upload-audio-zip/';
+    final llmUrl = prefs.getString('llm_url') ?? 'http://150.230.166.29/abc_test/llm/get_llm_response';
+    // Use the URLs as needed
   }
 
   Future<void> _deleteImage(String imagePath) async {

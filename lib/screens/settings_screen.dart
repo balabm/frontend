@@ -10,21 +10,29 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _apiEndpointController;
+  late TextEditingController _boundingBoxUrlController;
+  late TextEditingController _ocrTextUrlController;
+  late TextEditingController _asrUrlController;
+  late TextEditingController _llmUrlController;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _apiEndpointController = TextEditingController();
+    _boundingBoxUrlController = TextEditingController();
+    _ocrTextUrlController = TextEditingController();
+    _asrUrlController = TextEditingController();
+    _llmUrlController = TextEditingController();
     _loadSettings();
   }
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _apiEndpointController.text = prefs.getString('api_endpoint') ?? 
-          'http://150.230.166.29/abc_test/';
+      _boundingBoxUrlController.text = prefs.getString('bounding_box_url') ?? '';
+      _ocrTextUrlController.text = prefs.getString('ocr_text_url') ?? '';
+      _asrUrlController.text = prefs.getString('asr_url') ?? '';
+      _llmUrlController.text = prefs.getString('llm_url') ?? '';
     });
   }
 
@@ -34,7 +42,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _isSaving = true);
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('api_endpoint', _apiEndpointController.text);
+      await prefs.setString('bounding_box_url', _boundingBoxUrlController.text);
+      await prefs.setString('ocr_text_url', _ocrTextUrlController.text);
+      await prefs.setString('asr_url', _asrUrlController.text);
+      await prefs.setString('llm_url', _llmUrlController.text);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Settings saved successfully')),
@@ -67,23 +78,88 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextFormField(
-                controller: _apiEndpointController,
+                controller: _boundingBoxUrlController,
                 decoration: const InputDecoration(
-                  labelText: 'API Endpoint',
-                  hintText: 'Enter the API endpoint URL',
+                  labelText: 'Bounding Box URL',
+                  hintText: 'Enter the Bounding Box URL',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter an API endpoint';
-                  }
-                  try {
-                    final uri = Uri.parse(value);
-                    if (!uri.isAbsolute) {
+                  if (value != null && value.isNotEmpty) {
+                    try {
+                      final uri = Uri.parse(value);
+                      if (!uri.isAbsolute) {
+                        return 'Please enter a valid URL';
+                      }
+                    } catch (e) {
                       return 'Please enter a valid URL';
                     }
-                  } catch (e) {
-                    return 'Please enter a valid URL';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _ocrTextUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'OCR Text URL',
+                  hintText: 'Enter the OCR Text URL',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    try {
+                      final uri = Uri.parse(value);
+                      if (!uri.isAbsolute) {
+                        return 'Please enter a valid URL';
+                      }
+                    } catch (e) {
+                      return 'Please enter a valid URL';
+                    }
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _asrUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'ASR URL',
+                  hintText: 'Enter the ASR URL',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    try {
+                      final uri = Uri.parse(value);
+                      if (!uri.isAbsolute) {
+                        return 'Please enter a valid URL';
+                      }
+                    } catch (e) {
+                      return 'Please enter a valid URL';
+                    }
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _llmUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'LLM URL',
+                  hintText: 'Enter the LLM URL',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    try {
+                      final uri = Uri.parse(value);
+                      if (!uri.isAbsolute) {
+                        return 'Please enter a valid URL';
+                      }
+                    } catch (e) {
+                      return 'Please enter a valid URL';
+                    }
                   }
                   return null;
                 },
@@ -111,7 +187,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
-    _apiEndpointController.dispose();
+    _boundingBoxUrlController.dispose();
+    _ocrTextUrlController.dispose();
+    _asrUrlController.dispose();
+    _llmUrlController.dispose();
     super.dispose();
   }
 }

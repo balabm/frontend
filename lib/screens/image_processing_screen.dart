@@ -13,6 +13,7 @@ import 'package:mime/mime.dart'; // For MIME type lookup
 import 'package:http_parser/http_parser.dart'; // For MediaType
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 String? originalFileName;
 
@@ -118,8 +119,16 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
       });
 
       String fileName = p.basename(imagePath!);
-      var url = Uri.parse(
-          'http://150.230.166.29/abc_test//cv/form-detection-with-box/');
+      final prefs = await SharedPreferences.getInstance();
+      final boundingBoxUrl = prefs.getString('bounding_box_url');
+      if (boundingBoxUrl == null || boundingBoxUrl.isEmpty) {
+        _showErrorSnackBar('Bounding Box URL is not set in settings.');
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      var url = Uri.parse(boundingBoxUrl);
 
       try {
         _dbHelper.saveUploadedImage(imagePath!);
