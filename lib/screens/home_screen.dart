@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:formbot/helpers/firebase_handler.dart';
 import 'package:formbot/providers/firebaseprovider.dart';
+import 'package:formbot/providers/authprovider.dart'; // Import AuthProvider
 import 'package:formbot/screens/widgets/common.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -107,18 +109,20 @@ class _HomeScreenState extends State<HomeScreen>
     // Use the URLs as needed
   }
 
-  Future<void> _deleteImage(String imagePath) async {
+  Future<void> _deleteForm(String formId) async {
     try {
       setState(() => _isLoading = true);
-      final prefs = await SharedPreferences.getInstance();
-      final file = File(imagePath);
-      if (await file.exists()) await file.delete();
-
-      setState(() => _capturedImages.remove(imagePath));
-      await prefs.setStringList('capturedImages', _capturedImages);
-      Common.showMessage(context, 'Image deleted successfully');
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final uid = authProvider.user?.uid;
+      if (uid == null) {
+        throw Exception('User not logged in');
+      }
+      final firebaseHandler = FirebaseHandler(); // Create an instance of FirebaseHandler
+      await firebaseHandler.deleteForm(uid, formId); // Delete form from Firebase
+      setState(() => _submittedForms.removeWhere((form) => form['formId'] == formId));
+      Common.showMessage(context, 'Form deleted successfully');
     } catch (e) {
-      Common.showMessage(context, 'Error deleting image: ${e.toString()}',
+      Common.showMessage(context, 'Error deleting form: ${e.toString()}',
           isError: true);
     } finally {
       if (mounted) {
@@ -152,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen>
           onChanged: (query) => setState(() {
             final lowercaseQuery = query.toLowerCase();
             _submittedForms = _submittedForms
-                .where((form) => form['formName']!
+                .where((form) => form['formName']
                     .toLowerCase()
                     .contains(lowercaseQuery))
                 .toList();
@@ -195,10 +199,41 @@ class _HomeScreenState extends State<HomeScreen>
         decoration: _boxDecoration,
         child: ListTile(
           contentPadding: const EdgeInsets.all(12),
-          leading: Icon(Icons.description, color: Colors.teal),
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.memory(
+              base64Decode(imageBase64),
+              width: 60,
+              height: 60,
+              fit: BoxFit.cover,
+            ),
+          ),
           title: Text(
             formName,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
+          trailing: PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'delete') {
+                _deleteForm(formId);
+              }
+            },
+            icon: Icon(Icons.more_vert, color: Colors.teal),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                value: 'delete',
+                child: ListTile(
+                  leading: Icon(Icons.delete, color: Colors.red),
+                  title: Text('Delete', style: TextStyle(color: Colors.black)),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
+                  horizontalTitleGap: 16.0, 
+                ),
+              ),
+            ],
+            color: Colors.white,
           ),
           onTap: () {
             // Save base64 image to temporary file and get path

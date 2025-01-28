@@ -60,6 +60,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     initializeAudio();
     _authProvider = Provider.of<AuthProvider>(context, listen: false);
     _loadUserName();
+
   } 
 
   Future<void> _loadUserName() async {
@@ -301,36 +302,45 @@ Future<List<Map<String, dynamic>>> getInteractionHistory() async {
   }
 }
 
+bool isloaded = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
-    // Safely get arguments with null check
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args == null) {
-      print('No arguments provided to FieldEditScreen');
-      return;
-    }
-
-    // Parse arguments with type check
-    if (args is Map<String, dynamic>) {
-      imagePath = args['imagePath'];
-      boundingBoxes = args['bounding_boxes'] ?? args['boundingBoxes']; // Try both possible keys
-      formId = args['formId'];
-
-      if (imagePath != null) {
-        // Clean up filename to match database format
-        final fileName = path.basename(imagePath!)
-            .replaceAll('.', '_')
-            .replaceAll('_png_png', '_png'); // Fix double extension
-        print('Loading form data for: $fileName');
-        _loadExistingFormData(fileName);
-      } else {
-        print('No imagePath provided in arguments');
+    if(!isloaded) {
+      // Safely get arguments with null check
+      final args = ModalRoute
+          .of(context)
+          ?.settings
+          .arguments;
+      if (args == null) {
+        print('No arguments provided to FieldEditScreen');
+        return;
       }
-    } else {
-      print('Invalid arguments type provided to FieldEditScreen');
+
+      // Parse arguments with type check
+      if (args is Map<String, dynamic>) {
+        imagePath = args['imagePath'];
+        boundingBoxes = args['bounding_boxes'] ??
+            args['boundingBoxes']; // Try both possible keys
+        formId = args['formId'];
+
+        if (imagePath != null) {
+          // Clean up filename to match database format
+          final fileName = path.basename(imagePath!)
+              .replaceAll('.', '_')
+              .replaceAll('_png_png', '_png'); // Fix double extension
+          print('Loading form data for: $fileName');
+          _loadExistingFormData(fileName);
+        } else {
+          print('No imagePath provided in arguments');
+        }
+      } else {
+        print('Invalid arguments type provided to FieldEditScreen');
+      }
+      isloaded = true;
     }
+
   }
 
   // Add method to convert base64 to audio file
@@ -505,113 +515,183 @@ Future<List<Map<String, dynamic>>> getInteractionHistory() async {
       curve: Curves.easeOut,
     );
   }
+Widget _buildInstructionBanner() {
+  String instructionText;
+  bool showCompletionBanner = false;
+  bool isInteractive = false;
+  IconData? leadingIcon;
+  List<BoxShadow> customShadows = [];
+  double bannerScale = 1.0;
 
-  Widget _buildInstructionBanner() {
-    String instructionText;
-    bool showCompletionBanner = false;
+  if (_selectedFieldName == null) {
+    instructionText = 'Tap to select a field';
+    leadingIcon = Icons.touch_app;
+    isInteractive = true;
+  } else if (_ocrText == null) {
+    instructionText = 'Scanning $_selectedFieldName...';
+    leadingIcon = Icons.scanner;
+  } else if (_ocrText != null && _inputEnabled && chatMessages.isEmpty) {
+    instructionText = 'Tap to ask or type a question';
+    leadingIcon = Icons.question_answer;
+    isInteractive = true;
+  } else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
+    instructionText = 'Tap to complete & return';
+    showCompletionBanner = true;
+    leadingIcon = Icons.arrow_back;
+    isInteractive = true;
+  } else if (_isThinking) {
+    instructionText = 'Analyzing content...';
+    leadingIcon = Icons.psychology;
+  } else {
+    instructionText = 'Ask about $_selectedFieldName';
+    leadingIcon = Icons.chat;
+    isInteractive = true;
+  }
 
-    if (_selectedFieldName == null) {
-      // Initial state: No field selected
-      instructionText = 'Select a field to begin';
-    } else if (_ocrText == null) {
-      // Field selected, waiting for OCR text
-      instructionText = 'Reading text from $_selectedFieldName...';
-    } else if (_ocrText != null && _inputEnabled && chatMessages.isEmpty) {
-      // OCR text received, explicitly waiting for user input
-      instructionText = 'Ask/type a question about $_selectedFieldName';
-    } else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
-      // LLM response received, ready to go back
-      instructionText = 'Tap here to go back';
-      showCompletionBanner = true;
-    } else if (_isThinking) {
-      // Generic processing state
-      instructionText = 'Processing...';
-    } else {
-      // Fallback state during chat interaction
-      instructionText = 'Ask about $_selectedFieldName';
-    }
-
-    return GestureDetector(
+  return TweenAnimationBuilder<double>(
+    tween: Tween(begin: 0.95, end: 1.0),
+    duration: const Duration(milliseconds: 200),
+    builder: (context, value, child) {
+      return Transform.scale(
+        scale: value,
+        child: child,
+      );
+    },
+    child: GestureDetector(
+      onTapDown: (_) => setState(() => bannerScale = 0.97),
+      onTapUp: (_) => setState(() => bannerScale = 1.0),
+      onTapCancel: () => setState(() => bannerScale = 1.0),
       onTap: showCompletionBanner
           ? () {
-              setState(() {
-                selectedBox = null;
-                _selectedFieldName = null;
-                _inputEnabled = false;
-                _showBottomSheet = false;
-                _isFieldLocked = false;
-                chatMessages.clear();
-                _ocrText = null;
-              });
+              // Existing reset logic
               _minimizeDraggableSheet();
             }
-          : null,
-      child: Container(
+          : isInteractive
+              ? () {
+                  // Handle different interactive states
+                  if (_selectedFieldName == null) {
+                    // Trigger field selection
+                  } else if (_inputEnabled && chatMessages.isEmpty) {
+                    // Focus on input field
+                  }
+                }
+              : null,
+      child: AnimatedScale(
+        scale: bannerScale,
+        duration: const Duration(milliseconds: 150),
+        child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            vertical: 16.0,
-            horizontal: 20.0,
-          ),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: _isThinking
-                ? Colors.orange[50]
-                : showCompletionBanner
-                    ? Colors.green[50]
-                    : kPrimaryLightColor,
-            borderRadius: BorderRadius.circular(8.0),
+            gradient: LinearGradient(
+              colors: _isThinking
+                  ? [Colors.amber.shade50, Colors.orange.shade100]
+                  : showCompletionBanner
+                      ? [Colors.teal.shade50, Colors.cyan.shade100]
+                      : [kPrimaryLightColor, kPrimaryLightColor.withOpacity(0.9)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _isThinking
+                  ? Colors.amber.shade200
+                  : showCompletionBanner
+                      ? Colors.teal.shade200
+                      : Colors.blue.shade100,
+              width: 1.5,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                offset: const Offset(0, 2),
-                blurRadius: 4,
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
+              if (isInteractive)
+                BoxShadow(
+                  color: kPrimaryDarkColor.withOpacity(0.2),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
             ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              if (leadingIcon != null)
+                TweenAnimationBuilder(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 400),
+                  builder: (context, value, child) {
+                    return Opacity(
+                      opacity: value,
+                      child: Transform.scale(
+                        scale: value,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Icon(
+                    leadingIcon,
+                    color: _isThinking
+                        ? Colors.amber.shade700
+                        : showCompletionBanner
+                            ? Colors.teal.shade700
+                            : kPrimaryDarkColor,
+                    size: 24,
+                  ),
+                ),
+              if (leadingIcon != null) const SizedBox(width: 12),
+              Flexible(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Text(
+                    instructionText,
+                    key: ValueKey(instructionText),
+                    style: TextStyle(
+                      color: _isThinking
+                          ? Colors.amber.shade800
+                          : showCompletionBanner
+                              ? Colors.teal.shade800
+                              : kPrimaryDarkColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.2,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
               if (_isThinking)
                 Padding(
-                  padding: const EdgeInsets.only(right: 12.0),
+                  padding: const EdgeInsets.only(left: 12),
                   child: SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: 24,
+                    height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      color: Colors.orange[700],
+                      color: Colors.amber.shade700,
                     ),
                   ),
                 ),
-              Flexible(
-                child: Text(
-                  instructionText,
-                  style: TextStyle(
-                    color: _isThinking
-                        ? Colors.orange[800]
-                        : showCompletionBanner
-                            ? Colors.green[800]
-                            : kPrimaryDarkColor,
-                    fontSize: 16,
-                    height: 1.4,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
               if (showCompletionBanner)
                 Padding(
-                  padding: const EdgeInsets.only(left: 12.0),
+                  padding: const EdgeInsets.only(left: 12),
                   child: Icon(
-                    Icons.check_circle_outline,
-                    color: Colors.green[600],
+                    Icons.check_circle,
+                    color: Colors.teal.shade700,
                     size: 24,
                   ),
                 ),
             ],
           ),
         ),
-      );
-    }
+      ),
+    ),
+  );
+}
 
     @override
     Widget build(BuildContext context) => Scaffold(

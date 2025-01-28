@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:formbot/screens/widgets/chat_bubble.dart';
+import 'chat_bubble.dart';
 
 class ChatSection extends StatelessWidget {
   final ScrollController scrollController;
@@ -41,6 +41,7 @@ class ChatSection extends StatelessWidget {
             message: '...',
             isUser: false,
             isThinking: true,
+            timestamp: '',
           );
         }
 
@@ -49,6 +50,7 @@ class ChatSection extends StatelessWidget {
         final messageContent = message['message'] ?? message['content'] ?? '';
         final isAudioMessage = message['isAudioMessage'] == true || message['contentType'] == 'audio';
         final audioPath = message['audioPath'];
+        final timestamp = message['timestamp'] ?? '';
 
         return ChatBubble(
           message: isAudioMessage 
@@ -58,6 +60,7 @@ class ChatSection extends StatelessWidget {
           isThinking: false,
           isAudioMessage: isAudioMessage,
           audioPath: audioPath,
+          timestamp: timestamp,
           onPlayAudio: isAudioMessage && audioPath != null 
             ? () => onPlayAudio(audioPath)
             : null,

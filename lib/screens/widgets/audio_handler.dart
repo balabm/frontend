@@ -45,7 +45,7 @@ mixin AudioHandler<T extends StatefulWidget> on State<T> {
   Future<void> startRecording() async {
     try {
       Directory tempDir = await getTemporaryDirectory();
-      recordedFilePath = path.join(tempDir.path, 'recorded_audio.wav');
+      recordedFilePath = path.join(tempDir.path, 'recorded_audio_${DateTime.now().millisecondsSinceEpoch}.wav');
 
       await audioRecorder!.startRecorder(
         toFile: recordedFilePath,
@@ -136,7 +136,7 @@ mixin AudioHandler<T extends StatefulWidget> on State<T> {
 
   Future<String> zipRecordedAudio() async {
     Directory tempDir = await getTemporaryDirectory();
-    String zipFilePath = path.join(tempDir.path, 'audio_zip.zip');
+    String zipFilePath = path.join(tempDir.path, 'audio_zip_${DateTime.now().millisecondsSinceEpoch}.zip');
 
     final zipEncoder = ZipFileEncoder();
     zipEncoder.create(zipFilePath);

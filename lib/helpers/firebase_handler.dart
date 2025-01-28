@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirebaseHandler {
@@ -84,5 +83,19 @@ class FirebaseHandler {
         .doc('mainInteraction');
 
     await interactionRef.delete();
+  }
+
+  /// Delete a form document and its interactions
+  Future<void> deleteForm(String uid, String formId) async {
+    final formRef = _firestore.collection('users').doc(uid).collection('forms').doc(formId);
+
+    // Delete interactions subcollection
+    final interactions = await formRef.collection('interactions').get();
+    for (var doc in interactions.docs) {
+      await doc.reference.delete();
+    }
+
+    // Delete the form document
+    await formRef.delete();
   }
 }

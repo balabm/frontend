@@ -70,115 +70,117 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _boundingBoxUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'Bounding Box URL',
-                  hintText: 'Enter the Bounding Box URL',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    try {
-                      final uri = Uri.parse(value);
-                      if (!uri.isAbsolute) {
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  controller: _boundingBoxUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'Bounding Box URL',
+                    hintText: 'Enter the Bounding Box URL',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      try {
+                        final uri = Uri.parse(value);
+                        if (!uri.isAbsolute) {
+                          return 'Please enter a valid URL';
+                        }
+                      } catch (e) {
                         return 'Please enter a valid URL';
                       }
-                    } catch (e) {
-                      return 'Please enter a valid URL';
                     }
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _ocrTextUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'OCR Text URL',
-                  hintText: 'Enter the OCR Text URL',
-                  border: OutlineInputBorder(),
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    try {
-                      final uri = Uri.parse(value);
-                      if (!uri.isAbsolute) {
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _ocrTextUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'OCR Text URL',
+                    hintText: 'Enter the OCR Text URL',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      try {
+                        final uri = Uri.parse(value);
+                        if (!uri.isAbsolute) {
+                          return 'Please enter a valid URL';
+                        }
+                      } catch (e) {
                         return 'Please enter a valid URL';
                       }
-                    } catch (e) {
-                      return 'Please enter a valid URL';
                     }
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _asrUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'ASR URL',
-                  hintText: 'Enter the ASR URL',
-                  border: OutlineInputBorder(),
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    try {
-                      final uri = Uri.parse(value);
-                      if (!uri.isAbsolute) {
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _asrUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'ASR URL',
+                    hintText: 'Enter the ASR URL',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      try {
+                        final uri = Uri.parse(value);
+                        if (!uri.isAbsolute) {
+                          return 'Please enter a valid URL';
+                        }
+                      } catch (e) {
                         return 'Please enter a valid URL';
                       }
-                    } catch (e) {
-                      return 'Please enter a valid URL';
                     }
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _llmUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'LLM URL',
-                  hintText: 'Enter the LLM URL',
-                  border: OutlineInputBorder(),
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    try {
-                      final uri = Uri.parse(value);
-                      if (!uri.isAbsolute) {
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _llmUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'LLM URL',
+                    hintText: 'Enter the LLM URL',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      try {
+                        final uri = Uri.parse(value);
+                        if (!uri.isAbsolute) {
+                          return 'Please enter a valid URL';
+                        }
+                      } catch (e) {
                         return 'Please enter a valid URL';
                       }
-                    } catch (e) {
-                      return 'Please enter a valid URL';
                     }
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _isSaving ? null : _saveSettings,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                    return null;
+                  },
                 ),
-                child: _isSaving
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Save Settings',
-                        style: TextStyle(color: Colors.white),
-                      ),
-              ),
-            ],
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _isSaving ? null : _saveSettings,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: _isSaving
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'Save Settings',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

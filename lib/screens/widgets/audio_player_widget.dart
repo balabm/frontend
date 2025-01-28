@@ -4,10 +4,15 @@ import 'package:flutter_sound/flutter_sound.dart';
 
 class AudioPlayerWidget extends StatefulWidget {
   final String audioPath;
+  final String? asrResponse;
   final Function(String)? onPlayAudio;
 
-  const AudioPlayerWidget(
-      {super.key, required this.audioPath, this.onPlayAudio});
+  const AudioPlayerWidget({
+    super.key,
+    required this.audioPath,
+    this.asrResponse,
+    this.onPlayAudio,
+  });
 
   @override
   _AudioPlayerWidgetState createState() => _AudioPlayerWidgetState();
@@ -19,8 +24,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
   double _playbackProgress = 0.0;
   late AnimationController _progressController;
   Duration _audioDuration = Duration.zero;
+  Duration _currentPosition = Duration.zero;
   FlutterSoundPlayer? _audioPlayer;
-  final Duration _currentPosition = Duration.zero;
+  bool _isDragging = false;
+  double _dragValue = 0.0;
 
   @override
   void initState() {
@@ -123,55 +130,70 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: _togglePlayback,
-            child: CircleAvatar(
-              radius: 28,
-              backgroundColor: Colors.teal,
-              child: Icon(
-                _isPlaying ? Icons.pause : Icons.play_arrow,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                LinearProgressIndicator(
-                  value: _playbackProgress,
-                  backgroundColor: Colors.grey[300],
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(Color(0xFF0b3c66)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: _togglePlayback,
+                child: CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Colors.teal,
+                  child: Icon(
+                    _isPlaying ? Icons.pause : Icons.play_arrow,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _formatDuration(_currentPosition),
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
+                    LinearProgressIndicator(
+                      value: _playbackProgress,
+                      backgroundColor: Colors.grey[300],
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(Color(0xFF0b3c66)),
                     ),
-                    Text(
-                      _formatDuration(_audioDuration),
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _formatDuration(_currentPosition),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          _formatDuration(_audioDuration),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          if (widget.asrResponse != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              widget.asrResponse!,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 14,
+              ),
+            ),
+          ],
         ],
       ),
     );
