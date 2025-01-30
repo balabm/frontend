@@ -31,11 +31,18 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
   final DatabaseHelper _dbHelper = DatabaseHelper();
   bool _isLoading = false;
   late AnimationController _fadeController;
+  SharedPreferences? _prefs; // Remove 'late' keyword
   late Animation<double> _fadeAnimation;
+
+  Future<void> setPrefs() async {
+    _prefs = await SharedPreferences.getInstance();
+  }
 
   @override
   void initState() {
     super.initState();
+    setPrefs(); // Call setPrefs in initState
+    
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -119,8 +126,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
       });
 
       String fileName = p.basename(imagePath!);
-      final prefs = await SharedPreferences.getInstance();
-      final boundingBoxUrl = prefs.getString('bounding_box_url');
+      final boundingBoxUrl = _prefs?.getString('bounding_box_url');
       if (boundingBoxUrl == null || boundingBoxUrl.isEmpty) {
         _showErrorSnackBar('Bounding Box URL is not set in settings.');
         setState(() {
@@ -220,13 +226,13 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
         elevation: 0,
         backgroundColor: Colors.teal,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Process Image',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        // title: const Text(
+        //   'Process Image',
+        //   style: TextStyle(
+        //     color: Colors.white,
+        //     fontWeight: FontWeight.bold,
+        //   ),
+        // ),
       ),
       body: Container(
         color: Colors.grey[50],

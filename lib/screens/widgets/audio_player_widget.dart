@@ -153,11 +153,24 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    LinearProgressIndicator(
-                      value: _playbackProgress,
-                      backgroundColor: Colors.grey[300],
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(Color(0xFF0b3c66)),
+                    Slider(
+                      value: _isDragging ? _dragValue : _playbackProgress,
+                      onChanged: (value) {
+                        setState(() {
+                          _isDragging = true;
+                          _dragValue = value;
+                        });
+                      },
+                      onChangeEnd: (value) {
+                        setState(() {
+                          _isDragging = false;
+                          _playbackProgress = value;
+                          final duration = (_audioDuration.inMilliseconds * value).round();
+                          _audioPlayer?.seekToPlayer(Duration(milliseconds: duration));
+                        });
+                      },
+                      activeColor: Colors.teal,
+                      inactiveColor: Colors.teal.withOpacity(0.3),
                     ),
                     const SizedBox(height: 8),
                     Row(

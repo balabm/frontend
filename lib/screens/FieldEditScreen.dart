@@ -99,9 +99,10 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   }
 
   Widget _buildMicrophoneButton() => MicrophoneButton(
-      enabled: !_isThinking, // Completely disable microphone button during processing
+      enabled: !_isThinking , // Completely disable microphone button during processing
       isLongPressing: _isLongPressing,
       onLongPressStart: (_) {
+        
         setState(() {
           _isLongPressing = true;
           _slidingOffset = 0; // Reset sliding offset when starting
@@ -187,8 +188,11 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
         'sender': 'user',
         'message': 'Audio message • $transcribedText',
         'audioPath': recordedFilePath,
+        'asrResponse': transcribedText,
         'isAudioMessage': true,
       });
+        
+        _needsScroll = true;
       _inputEnabled = true;
     });
 
@@ -204,6 +208,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
           'message': 'Please select a field to extract text first.',
         });
         _needsScroll = true;
+        
+        _scrollToBottom();
       });
       return;
     }
@@ -232,8 +238,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       _needsScroll = true;
       _isThinking = false;
       _inputEnabled = true;
+        _scrollToBottom();
     });
-
     // Save responses to Firestore
     _saveResponsesToFirestore();
   }
@@ -492,6 +498,7 @@ bool isloaded = false;
               'Field ${box['class']} selected. The detected text is: $_ocrText',
         });
         _isThinking = false;
+        _needsScroll = true;
         _scrollToBottom();
         
         // This will ensure the instruction text shows "Ask/type a question" immediately after OCR

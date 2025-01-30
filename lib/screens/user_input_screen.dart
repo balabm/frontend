@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:formbot/providers/authprovider.dart';
 import 'package:formbot/screens/widgets/googlesigninbutton.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UserInputScreen extends StatefulWidget {
   @override
@@ -15,9 +16,19 @@ class _UserInputScreenState extends State<UserInputScreen> with SingleTickerProv
   late Animation<Offset> _slideAnimation;
   late AuthProvider _authProvider;
 
+  Future<void> setPrefs() async {
+    final _prefs = await SharedPreferences.getInstance();
+     _prefs.setString('bounding_box_url', 'http://150.230.166.29/abc_test//cv/form-detection-with-box/');
+    _prefs.setString('ocr_text_url', 'http://150.230.166.29/ocr/cv/ocr');
+    _prefs.setString('asr_url', 'http://150.230.166.29/asr/upload-audio-zip/');
+    _prefs.setString('llm_url', 'http://150.230.166.29/llm//get_llm_response'); //update the URL
+   
+    }
+  
   @override
   void initState() {
     super.initState();
+    setPrefs();
     _authProvider = Provider.of<AuthProvider>(context, listen: false);
     _animationController = AnimationController(
       vsync: this,

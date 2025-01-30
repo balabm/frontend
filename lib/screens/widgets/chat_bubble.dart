@@ -12,7 +12,7 @@ class ChatBubble extends StatelessWidget {
   final String timestamp;
   final VoidCallback? onPlayAudio;
 
-  const ChatBubble({
+   ChatBubble({
     Key? key,
     required this.message,
     required this.isUser,

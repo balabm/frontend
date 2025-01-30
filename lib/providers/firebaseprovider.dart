@@ -346,6 +346,8 @@ class FirebaseProvider with ChangeNotifier {
         'fieldName': selectedField,
         'ocrContext': ocrText,
       });
+
+      print('Mapped message: ${mappedMessages.first.toString()}');
     }
 
     await interactionDoc.update({

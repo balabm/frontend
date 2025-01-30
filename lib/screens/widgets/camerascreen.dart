@@ -56,18 +56,12 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _saveImage(String path) async {
-    // Get the application's document directory
     final directory = await getApplicationDocumentsDirectory();
-
-    // Define a unique path for the image file based on the current timestamp
     final imagePath =
         '${directory.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.jpg';
-
-    // Copy the image file to the new location
     final imageFile = File(path);
     await imageFile.copy(imagePath);
 
-    // Save the image path to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     List<String> capturedImages = prefs.getStringList('capturedImages') ?? [];
     capturedImages.add(imagePath);
@@ -102,67 +96,114 @@ class _CameraScreenState extends State<CameraScreen> {
     }
 
     return Scaffold(
-      body: SafeArea(child: Stack(
+      backgroundColor: Colors.black,
+      body: Stack(
         children: [
           Center(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.only(top: 85.0),
               child: CameraPreview(_controller!),
             ),
           ),
+       
           Positioned(
-            top: 16,
-            right: 16,
-            child: IconButton(
-              icon: Icon(
-                isFlashOn ? Icons.flash_on : Icons.flash_off,
-                color: Colors.black,
-              ),
-              onPressed: _toggleFlash,
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 16,
-            child: IconButton(
-              icon: const Icon(Icons.switch_camera, color: Colors.black),
-              onPressed: _switchCamera,
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.photo_library, color: Colors.black),
-              onPressed: _pickImage,
-            ),
-          ),
-          Positioned(
-            bottom: 0,
+            top: 40,
             left: 0,
             right: 0,
-            child: Center(
-              child: IconButton(
-                icon: const Icon(Icons.camera, color: Colors.black, size: 48),
-                onPressed: () async {
-                  if (_controller == null || !_controller!.value.isInitialized)
-                    return;
-
-                  try {
-                    final image = await _controller!.takePicture();
-                    await _saveImage(image.path);
-                    if (!mounted) return;
-                    Navigator.pushNamed(context, '/image_processing',
-                        arguments: image.path);
-                  } catch (e) {
-                    print('Error taking picture: $e');
-                  }
-                },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      isFlashOn ? Icons.flash_on : Icons.flash_off,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    onPressed: _toggleFlash,
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.refresh,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    onPressed: _switchCamera,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Container(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+               padding:  EdgeInsets.only(left: MediaQuery.of(context).size.width * 0.2),
+                      
+                      width: 60,
+                      height: 60,
+                      // decoration: BoxDecoration(
+                      //   border: Border.all(color: Colors.white, width: 2),
+                      //   borderRadius: BorderRadius.circular(12),
+                      // ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: const Icon(
+                          Icons.photo_library,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () async {
+                      if (_controller == null || !_controller!.value.isInitialized)
+                        return;
+      
+                      try {
+                        final image = await _controller!.takePicture();
+                        await _saveImage(image.path);
+                        if (!mounted) return;
+                        Navigator.pushNamed(
+                          context,
+                          '/image_processing',
+                          arguments: image.path,
+                        );
+                      } catch (e) {
+                        print('Error taking picture: $e');
+                      }
+                    },
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white, width: 3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Container(
+                        margin: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 60, height: 60),
+                ],
               ),
             ),
           ),
         ],
-      ),
       ),
     );
   }

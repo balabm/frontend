@@ -102,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _loadApiUrls() async {
     final prefs = await SharedPreferences.getInstance();
-    final boundingBoxUrl = prefs.getString('bounding_box_url') ?? 'http://150.230.166.29/abc_test/cv/form-detection-with-box/';
+    final boundingBoxUrl = prefs.getString('S') ?? 'http://150.230.166.29/abc_test//cv/form-detection-with-box/';
     final ocrTextUrl = prefs.getString('ocr_text_url') ?? 'http://150.230.166.29/abc_test/ocr/cv/ocr';
     final asrUrl = prefs.getString('asr_url') ?? 'http://150.230.166.29/abc_test/asr/upload-audio-zip/';
     final llmUrl = prefs.getString('llm_url') ?? 'http://150.230.166.29/abc_test/llm/get_llm_response';
@@ -256,16 +256,31 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  // Widget _buildFormList() => _submittedForms.isNotEmpty
+  //     ? AnimatedSwitcher(
+  //         duration: const Duration(milliseconds: 300),
+  //         child: ListView.builder(
+  //           key: ValueKey(_submittedForms.length),
+  //           itemCount: _submittedForms.length,
+  //           itemBuilder: (_, index) => _buildFormTile(_submittedForms[index]),
+  //         ),
+  //       )
+  //     : _buildEmptyState();
+
   Widget _buildFormList() => _submittedForms.isNotEmpty
-      ? AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
+    ? AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: Scrollbar(
+          thumbVisibility: true, // Ensures the scrollbar is always visible when scrolling
           child: ListView.builder(
             key: ValueKey(_submittedForms.length),
             itemCount: _submittedForms.length,
             itemBuilder: (_, index) => _buildFormTile(_submittedForms[index]),
           ),
-        )
-      : _buildEmptyState();
+        ),
+      )
+    : _buildEmptyState();
+
 
   @override
   Widget build(BuildContext context) => Scaffold(
