@@ -140,30 +140,14 @@ class _CameraScreenState extends State<CameraScreen> {
             left: 0,
             right: 0,
             child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-               padding:  EdgeInsets.only(left: MediaQuery.of(context).size.width * 0.2),
-                      
-                      width: 60,
-                      height: 60,
-                      // decoration: BoxDecoration(
-                      //   border: Border.all(color: Colors.white, width: 2),
-                      //   borderRadius: BorderRadius.circular(12),
-                      // ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: const Icon(
-                          Icons.photo_library,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // Empty space on the left
+                  const SizedBox(width: 60, height: 60),
+                  
+                  // Capture Button in center
                   GestureDetector(
                     onTap: () async {
                       if (_controller == null || !_controller!.value.isInitialized)
@@ -198,7 +182,20 @@ class _CameraScreenState extends State<CameraScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 60, height: 60),
+                  
+                  // Photo Library button on the right
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      child: const Icon(
+                        Icons.photo_library,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

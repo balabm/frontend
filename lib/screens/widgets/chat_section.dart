@@ -37,7 +37,7 @@ class ChatSection extends StatelessWidget {
       itemCount: chatMessages.length + (isThinking ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == chatMessages.length) {
-          return const ChatBubble(
+          return  ChatBubble(
             message: '...',
             isUser: false,
             isThinking: true,
@@ -47,11 +47,25 @@ class ChatSection extends StatelessWidget {
 
         final message = chatMessages[index];
         final isUser = message['sender'] == 'user';
-        final messageContent = message['message'] ?? message['content'] ?? '';
+        final messageContent = message['message'] ?? message['content'] ?? message['asrResponse'] ?? '';
         final isAudioMessage = message['isAudioMessage'] == true || message['contentType'] == 'audio';
         final audioPath = message['audioPath'];
         final timestamp = message['timestamp'] ?? '';
-
+        if (isAudioMessage) {
+           return ChatBubble(
+            message: message['asrResponse'] ?? 'Voice message',
+          asrResponse: message['asrResponse'],
+          isUser: isUser,
+          isThinking: false,
+          isAudioMessage: isAudioMessage,
+          audioPath: audioPath,
+          timestamp: timestamp,
+          
+          onPlayAudio: isAudioMessage && audioPath != null 
+            ? () => onPlayAudio(audioPath)
+            : null,
+        );
+        }
         return ChatBubble(
           message: isAudioMessage 
               ? 'Voice message'
@@ -61,6 +75,7 @@ class ChatSection extends StatelessWidget {
           isAudioMessage: isAudioMessage,
           audioPath: audioPath,
           timestamp: timestamp,
+          
           onPlayAudio: isAudioMessage && audioPath != null 
             ? () => onPlayAudio(audioPath)
             : null,

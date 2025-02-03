@@ -290,18 +290,18 @@ class _HomeScreenState extends State<HomeScreen>
           backgroundColor: Colors.teal,
           title: Row(
             children: [
-              Hero(
-                tag: 'profile_icon',
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child:
-                      const Icon(Icons.person, color: Colors.white, size: 24),
-                ),
-              ),
+              // Hero(
+              //   tag: 'profile_icon',
+              //   child: Container(
+              //     padding: const EdgeInsets.all(8),
+              //     decoration: BoxDecoration(
+              //       color: Colors.white.withOpacity(0.2),
+              //       shape: BoxShape.circle,
+              //     ),
+              //     child:
+              //         const Icon(Icons.person, color: Colors.white, size: 24),
+              //   ),
+              // ),
               const SizedBox(width: 12),
               Text('Hi ${_userName.toUpperCase()}', style: _textStyle),
             ],

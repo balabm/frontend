@@ -525,34 +525,27 @@ bool isloaded = false;
 Widget _buildInstructionBanner() {
   String instructionText;
   bool showCompletionBanner = false;
-  bool isInteractive = false;
   IconData? leadingIcon;
-  List<BoxShadow> customShadows = [];
-  double bannerScale = 1.0;
 
   if (_selectedFieldName == null) {
     instructionText = 'Tap to select a field';
-    leadingIcon = Icons.touch_app;
-    isInteractive = true;
+    //leadingIcon = Icons.touch_app;
   } else if (_ocrText == null) {
     instructionText = 'Scanning $_selectedFieldName...';
-    leadingIcon = Icons.scanner;
+    //leadingIcon = Icons.scanner;
   } else if (_ocrText != null && _inputEnabled && chatMessages.isEmpty) {
     instructionText = 'Tap to ask or type a question';
-    leadingIcon = Icons.question_answer;
-    isInteractive = true;
+    //leadingIcon = Icons.question_answer;
   } else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
-    instructionText = 'Tap to complete & return';
+    instructionText = 'Tap to select another filed';
     showCompletionBanner = true;
-    leadingIcon = Icons.arrow_back;
-    isInteractive = true;
+    //leadingIcon = Icons.arrow_back;
   } else if (_isThinking) {
     instructionText = 'Analyzing content...';
-    leadingIcon = Icons.psychology;
+    //leadingIcon = Icons.psychology;
   } else {
-    instructionText = 'Ask about $_selectedFieldName';
+    instructionText = 'Ask about selected field';
     leadingIcon = Icons.chat;
-    isInteractive = true;
   }
 
   return TweenAnimationBuilder<double>(
@@ -565,43 +558,18 @@ Widget _buildInstructionBanner() {
       );
     },
     child: GestureDetector(
-      onTapDown: (_) => setState(() => bannerScale = 0.97),
-      onTapUp: (_) => setState(() => bannerScale = 1.0),
-      onTapCancel: () => setState(() => bannerScale = 1.0),
       onTap: showCompletionBanner
           ? () {
-              // Existing reset logic
               _minimizeDraggableSheet();
             }
-          : isInteractive
-              ? () {
-                  // Handle different interactive states
-                  if (_selectedFieldName == null) {
-                    // Trigger field selection
-                  } else if (_inputEnabled && chatMessages.isEmpty) {
-                    // Focus on input field
-                  }
-                }
-              : null,
-      child: AnimatedScale(
-        scale: bannerScale,
-        duration: const Duration(milliseconds: 150),
-        child: Container(
-          width: double.infinity,
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: _isThinking
-                  ? [Colors.amber.shade50, Colors.orange.shade100]
-                  : showCompletionBanner
-                      ? [Colors.teal.shade50, Colors.cyan.shade100]
-                      : [kPrimaryLightColor, kPrimaryLightColor.withOpacity(0.9)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
+          : null,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(
               color: _isThinking
                   ? Colors.amber.shade200
                   : showCompletionBanner
@@ -609,91 +577,78 @@ Widget _buildInstructionBanner() {
                       : Colors.blue.shade100,
               width: 1.5,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-              if (isInteractive)
-                BoxShadow(
-                  color: kPrimaryDarkColor.withOpacity(0.2),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                ),
-            ],
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (leadingIcon != null)
-                TweenAnimationBuilder(
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  duration: const Duration(milliseconds: 400),
-                  builder: (context, value, child) {
-                    return Opacity(
-                      opacity: value,
-                      child: Transform.scale(
-                        scale: value,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: Icon(
-                    leadingIcon,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (leadingIcon != null)
+              TweenAnimationBuilder(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 400),
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.scale(
+                      scale: value,
+                      child: child,
+                    ),
+                  );
+                },
+                child: Icon(
+                  leadingIcon,
+                  color: _isThinking
+                      ? Colors.amber.shade700
+                      : showCompletionBanner
+                          ? Colors.teal.shade700
+                          : Colors.black,
+                  size: 24,
+                ),
+              ),
+            if (leadingIcon != null) const SizedBox(width: 12),
+            Flexible(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  instructionText,
+                  key: ValueKey(instructionText),
+                  style: TextStyle(
                     color: _isThinking
-                        ? Colors.amber.shade700
+                        ? Colors.amber.shade800
                         : showCompletionBanner
-                            ? Colors.teal.shade700
-                            : kPrimaryDarkColor,
-                    size: 24,
+                            ? Colors.teal.shade800
+                            : Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                    height: 1.4,
                   ),
+                  textAlign: TextAlign.center,
                 ),
-              if (leadingIcon != null) const SizedBox(width: 12),
-              Flexible(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: Text(
-                    instructionText,
-                    key: ValueKey(instructionText),
-                    style: TextStyle(
-                      color: _isThinking
-                          ? Colors.amber.shade800
-                          : showCompletionBanner
-                              ? Colors.teal.shade800
-                              : kPrimaryDarkColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.2,
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
+              ),
+            ),
+            if (_isThinking)
+              Padding(
+                padding: const EdgeInsets.only(left: 12),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Colors.amber.shade700,
                   ),
                 ),
               ),
-              if (_isThinking)
-                Padding(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: Colors.amber.shade700,
-                    ),
-                  ),
+            if (showCompletionBanner)
+              Padding(
+                padding: const EdgeInsets.only(left: 12),
+                child: Icon(
+                  Icons.check_circle,
+                  color: Colors.teal.shade700,
+                  size: 24,
                 ),
-              if (showCompletionBanner)
-                Padding(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: Icon(
-                    Icons.check_circle,
-                    color: Colors.teal.shade700,
-                    size: 24,
-                  ),
-                ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     ),
@@ -804,6 +759,7 @@ Widget _buildInstructionBanner() {
       ),
       child: Column(
         children: [
+         
           Container(
             width: 40,
             height: 5,
@@ -823,7 +779,7 @@ Widget _buildInstructionBanner() {
               onPlayAudio: playAudio,
             ),
           ),
-          Padding(
+           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: _buildInstructionBanner(),
           ),

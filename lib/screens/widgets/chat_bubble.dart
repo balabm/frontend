@@ -40,6 +40,22 @@ class ChatBubble extends StatelessWidget {
             mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              //   if (!isUser) ...[
+              //   CircleAvatar(
+              //     radius: 16,
+              //     backgroundColor: Colors.grey[300],
+              //     child: ClipOval(
+              //       child: Image.asset(
+              //         'assets/FB_logo.JPG', // Replace with your asset image path
+              //         fit: BoxFit.cover,
+              //         width: 52,
+              //         height: 52,
+              //       ),
+              //     ),
+              //   ),
+              //   const SizedBox(width: 8),
+              // ],
+
               if (!isUser) ...[
                 CircleAvatar(
                   radius: 16,
@@ -92,11 +108,11 @@ class ChatBubble extends StatelessWidget {
               ),
               if (isUser) ...[
                 const SizedBox(width: 8),
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Colors.teal[200],
-                  child: Icon(Icons.person, color: Colors.teal[700]),
-                ),
+                // CircleAvatar(
+                //   radius: 16,
+                //   backgroundColor: Colors.teal[200],
+                //   child: Icon(Icons.person, color: Colors.teal[700]),
+                // ),
               ],
             ],
           ),

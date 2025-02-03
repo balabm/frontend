@@ -308,7 +308,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
                       children: [
                         const CircularProgressIndicator(
                           valueColor:
-                              AlwaysStoppedAnimation<Color>(Color(0xFF0b3c66)),
+                              AlwaysStoppedAnimation<Color>(Colors.teal),
                         ),
                         const SizedBox(height: 16),
                         Container(
@@ -316,17 +316,17 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
                             horizontal: 24,
                             vertical: 12,
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          child: const Text(
-                            'Processing image...',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                          // decoration: BoxDecoration(
+                          //   color: Colors.white,
+                          //   borderRadius: BorderRadius.circular(25),
+                          // ),
+                          // child: const Text(
+                          //   'Processing image...',
+                          //   style: TextStyle(
+                          //     fontSize: 16,
+                          //     fontWeight: FontWeight.w500,
+                          //   ),
+                          // ),
                         ),
                       ],
                     ),

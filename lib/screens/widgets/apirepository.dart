@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiRepository {
   Future<String> get boundingBoxUrl async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('bounding_box_url') ?? 'http://150.230.166.29/abc_test//cv/form-detection-with-box/';
+    return prefs.getString('bounding_box_url') ?? 'http://192.168.62.227:8000/cv/form-detection-with-box/';
   }
 
   Future<String> get ocrTextUrl async {
