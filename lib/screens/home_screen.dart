@@ -28,13 +28,7 @@ class _HomeScreenState extends State<HomeScreen>
   final _boxDecoration = BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.circular(16),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withOpacity(0.05),
-        blurRadius: 10,
-        offset: const Offset(0, 4),
-      ),
-    ],
+    border: Border.all(style: BorderStyle.none),
   );
 
   final _textStyle = const TextStyle(
@@ -102,10 +96,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _loadApiUrls() async {
     final prefs = await SharedPreferences.getInstance();
-    final boundingBoxUrl = prefs.getString('S') ?? 'http://150.230.166.29/abc_test//cv/form-detection-with-box/';
-    final ocrTextUrl = prefs.getString('ocr_text_url') ?? 'http://150.230.166.29/abc_test/ocr/cv/ocr';
-    final asrUrl = prefs.getString('asr_url') ?? 'http://150.230.166.29/abc_test/asr/upload-audio-zip/';
-    final llmUrl = prefs.getString('llm_url') ?? 'http://150.230.166.29/abc_test/llm/get_llm_response';
+    final boundingBoxUrl = prefs.getString('bounding_box_url') ?? 'http://192.168.62.227:8000/cv/form-detection-with-box/';
+    final ocrTextUrl = prefs.getString('ocr_text_url') ?? 'http://192.168.62.227:8080/cv/ocr';
+    final asrUrl = prefs.getString('asr_url') ?? 'http://192.168.62.227:8001/upload-audio-zip/';
+    final llmUrl = prefs.getString('llm_url') ?? 'http://192.168.62.227:8021/get_llm_response';
     // Use the URLs as needed
   }
 
@@ -181,7 +175,10 @@ class _HomeScreenState extends State<HomeScreen>
             ),
             Text(
               'Tap the button below to start capturing',
-              style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[400],
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -256,17 +253,6 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // Widget _buildFormList() => _submittedForms.isNotEmpty
-  //     ? AnimatedSwitcher(
-  //         duration: const Duration(milliseconds: 300),
-  //         child: ListView.builder(
-  //           key: ValueKey(_submittedForms.length),
-  //           itemCount: _submittedForms.length,
-  //           itemBuilder: (_, index) => _buildFormTile(_submittedForms[index]),
-  //         ),
-  //       )
-  //     : _buildEmptyState();
-
   Widget _buildFormList() => _submittedForms.isNotEmpty
     ? AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
@@ -280,7 +266,6 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       )
     : _buildEmptyState();
-
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -345,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen>
         floatingActionButton: Padding(
           padding: const EdgeInsets.only(bottom: 20.0),
           child: FloatingActionButton.extended(
-            onPressed: () => Navigator.pushNamed(context, '/camera'),
+            onPressed: () => Navigator.pushNamed(context, '/form_selection'),
             icon: const Icon(Icons.add_a_photo, color: Colors.white),
             label: const Text('New Capture',
                 style: TextStyle(

@@ -12,17 +12,17 @@ class ApiRepository {
 
   Future<String> get ocrTextUrl async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('ocr_text_url') ?? 'http://150.230.166.29/ocr/cv/ocr';
+    return prefs.getString('ocr_text_url') ?? 'http://192.168.62.227:8080/cv/ocr';
   }
 
   Future<String> get asrUrl async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('asr_url') ?? 'http://150.230.166.29/abc_test/get_llm_response';
+    return prefs.getString('asr_url') ?? 'http://192.168.62.227:8001/upload-audio-zip/';
   }
 
   Future<String> get llmUrl async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('llm_url') ?? 'http://150.230.166.29/llm//get_llm_response';
+    return prefs.getString('llm_url') ?? 'http://192.168.62.227:8021/get_llm_response';
   }
 
   // Audio API calls
@@ -54,7 +54,7 @@ class ApiRepository {
   }
 
   // LLM API calls
-  Future<Map<String, dynamic>?> sendToLLMApi(String formEntry, {String? voiceQuery}) async {
+  Future<Map<String, dynamic>?> sendToLLMApi(String formEntry, String schemeName, {String? voiceQuery}) async {
     final uri = Uri.parse(await llmUrl);
     try {
       final response = await http.post(
@@ -63,6 +63,7 @@ class ApiRepository {
         body: jsonEncode({
           'form_entry': formEntry,
           'voice_query': voiceQuery ?? '',
+          'scheme_name': schemeName,
         }),
       );
 
@@ -95,6 +96,7 @@ class ApiRepository {
     request.files.add(await http.MultipartFile.fromPath(
       'file',
       file.path,
+      filename: file.path.split('/').last,
       contentType: MediaType('image', 'png'),
     ));
 

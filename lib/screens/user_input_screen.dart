@@ -18,10 +18,10 @@ class _UserInputScreenState extends State<UserInputScreen> with SingleTickerProv
 
   Future<void> setPrefs() async {
     final _prefs = await SharedPreferences.getInstance();
-     _prefs.setString('bounding_box_url', 'http://150.230.166.29/abc_test//cv/form-detection-with-box/');
-    _prefs.setString('ocr_text_url', 'http://150.230.166.29/ocr/cv/ocr');
-    _prefs.setString('asr_url', 'http://150.230.166.29/asr/upload-audio-zip/');
-    _prefs.setString('llm_url', 'http://150.230.166.29/llm//get_llm_response'); //update the URL
+     _prefs.setString('bounding_box_url', 'http://192.168.62.227:8000/cv/form-detection-with-box/');
+    _prefs.setString('ocr_text_url', 'http://192.168.62.227:8080/cv/ocr');
+    _prefs.setString('asr_url', 'http://192.168.62.227:8001/upload-audio-zip/');
+    _prefs.setString('llm_url', 'http://192.168.62.227:8021/get_llm_response'); //update the URL
    
     }
   

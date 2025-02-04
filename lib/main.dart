@@ -9,6 +9,7 @@ import 'screens/user_input_screen.dart'; // Ensure this import is correct
 import 'screens/home_screen.dart';
 import 'screens/image_processing_screen.dart';
 import 'screens/FieldEditScreen.dart';
+import 'screens/form_selection_screen.dart'; // Import FormSelectionScreen
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
@@ -25,6 +26,7 @@ void main() async {
     ),
   );
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -45,6 +47,7 @@ class MyApp extends StatelessWidget {
         '/field_edit_screen': (context) => const FieldEditScreen(),
         '/camera': (context) => const CameraScreen(),
         '/settings': (context) => const SettingsScreen(),
+        '/form_selection': (context) => const FormSelectionScreen(), // Add this line
       },
     );
   }

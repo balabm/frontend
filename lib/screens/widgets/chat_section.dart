@@ -33,7 +33,7 @@ class ChatSection extends StatelessWidget {
 
     return ListView.builder(
       controller: scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 0.0),
       itemCount: chatMessages.length + (isThinking ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == chatMessages.length) {

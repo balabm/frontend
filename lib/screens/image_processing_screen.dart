@@ -27,6 +27,8 @@ class ImageProcessingScreen extends StatefulWidget {
 class _ImageProcessingScreenState extends State<ImageProcessingScreen>
     with SingleTickerProviderStateMixin {
   String? imagePath;
+   String? selectedForm;
+  
   img.Image? image;
   final DatabaseHelper _dbHelper = DatabaseHelper();
   bool _isLoading = false;
@@ -37,6 +39,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
   Future<void> setPrefs() async {
     _prefs = await SharedPreferences.getInstance();
   }
+  
 
   @override
   void initState() {
@@ -58,15 +61,29 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
     super.dispose();
   }
 
+  // @override
+  // void didChangeDependencies() {
+  //   super.didChangeDependencies();
+  //   imagePath = ModalRoute.of(context)!.settings.arguments as String?;
+    
+  //   if (imagePath != null) {
+  //     originalFileName = p.basename(imagePath!); // Store the original filename
+  //     _loadImage();
+  //   }
+  // }
+
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    imagePath = ModalRoute.of(context)!.settings.arguments as String?;
-    if (imagePath != null) {
-      originalFileName = p.basename(imagePath!); // Store the original filename
-      _loadImage();
-    }
+void didChangeDependencies() {
+  super.didChangeDependencies();
+  final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+  imagePath = args?['imagePath'];
+  selectedForm = args?['selectedForm'];
+  
+  if (imagePath != null) {
+    originalFileName = p.basename(imagePath!); // Store the original filename
+    _loadImage();
   }
+}
 
   Future<void> _loadImage() async {
     final File file = File(imagePath!);
@@ -175,6 +192,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
               'imagePath': imagePath!,
               'bounding_boxes': decodedResponse['bounding_boxes'],
               'formId': formId, // Pass formId to FieldEditScreen
+              'selectedForm': selectedForm,
             },
           );
         } else if (response.statusCode == 400) {

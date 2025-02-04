@@ -36,6 +36,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   Map<String, dynamic>? _pendingLlmResponse;
   var user;
   String? formId;
+  String? selectedForm; //line to store the selected form
 
   String? imagePath, _selectedFieldName, _ocrText;
   List<dynamic>? boundingBoxes;
@@ -200,6 +201,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     await _sendToLLMApi(asrResponse, isAudioQuery: true);
   }
 
+  
+
   Future<void> _sendToLLMApi(String query, {bool isAudioQuery = false}) async {
     if (_ocrText?.isEmpty ?? true) {
       setState(() {
@@ -221,8 +224,11 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       _inputEnabled = false;
     });
 
+    print('Sending to LLM API with scheme_name: $selectedForm');
+
     final llmResponse = await _apiRepository.sendToLLMApi(
       _ocrText!,
+      selectedForm ?? 'Unknown Scheme', // Pass the selected form as scheme_name
       voiceQuery: isAudioQuery ? query : null,
     );
 
@@ -243,6 +249,50 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     // Save responses to Firestore
     _saveResponsesToFirestore();
   }
+
+  // Future<void> _sendToLLMApi(String query, {bool isAudioQuery = false}) async {
+  //   if (_ocrText?.isEmpty ?? true) {
+  //     setState(() {
+  //       chatMessages.add({
+  //         'sender': 'assistant',
+  //         'message': 'Please select a field to extract text first.',
+  //       });
+  //       _needsScroll = true;
+        
+  //       _scrollToBottom();
+  //     });
+  //     return;
+  //   }
+
+  //   setState(() {
+  //     _needsScroll = true;
+  //     _isThinking = true;
+  //     _isFieldLocked = false;
+  //     _inputEnabled = false;
+  //   });
+
+  //   final llmResponse = await _apiRepository.sendToLLMApi(
+  //     _ocrText!,
+  //     voiceQuery: isAudioQuery ? query : null,
+  //   );
+
+  //   setState(() {
+  //     // Store LLM response temporarily
+  //     _pendingLlmResponse = llmResponse;
+
+  //     chatMessages.add({
+  //       'sender': 'assistant',
+  //       'message': llmResponse?['response'] ??
+  //           'Failed to get response. Please try again.',
+  //     });
+  //     _needsScroll = true;
+  //     _isThinking = false;
+  //     _inputEnabled = true;
+  //       _scrollToBottom();
+  //   });
+  //   // Save responses to Firestore
+  //   _saveResponsesToFirestore();
+  // }
 
 Future<void> _saveResponsesToFirestore() async {
   final uid = _authProvider.user?.uid;
@@ -310,32 +360,28 @@ Future<List<Map<String, dynamic>>> getInteractionHistory() async {
 
 bool isloaded = false;
 
+  
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if(!isloaded) {
-      // Safely get arguments with null check
-      final args = ModalRoute
-          .of(context)
-          ?.settings
-          .arguments;
+    if (!isloaded) {
+      final args = ModalRoute.of(context)?.settings.arguments;
       if (args == null) {
         print('No arguments provided to FieldEditScreen');
         return;
       }
 
-      // Parse arguments with type check
       if (args is Map<String, dynamic>) {
+        print('Arguments passed to FieldEditScreen: $args');
         imagePath = args['imagePath'];
-        boundingBoxes = args['bounding_boxes'] ??
-            args['boundingBoxes']; // Try both possible keys
+        boundingBoxes = args['bounding_boxes'] ?? args['boundingBoxes'];
         formId = args['formId'];
-
+        selectedForm = args['selectedForm']; // Retrieve the selected form
+      
         if (imagePath != null) {
-          // Clean up filename to match database format
           final fileName = path.basename(imagePath!)
               .replaceAll('.', '_')
-              .replaceAll('_png_png', '_png'); // Fix double extension
+              .replaceAll('_png_png', '_png');
           print('Loading form data for: $fileName');
           _loadExistingFormData(fileName);
         } else {
@@ -346,8 +392,8 @@ bool isloaded = false;
       }
       isloaded = true;
     }
-
   }
+
 
   // Add method to convert base64 to audio file
   Future<String?> _base64ToAudioFile(String base64Audio) async {
@@ -454,7 +500,8 @@ bool isloaded = false;
         chatMessages.add({
           'sender': 'assistant',
           'message':
-              'Please complete your queries for $_selectedFieldName first before selecting another field.',
+              //'Please complete your queries for $_selectedFieldName first before selecting another field.',
+              'Please complete your queries before selecting another field.'
         });
         _needsScroll = true;
       });
@@ -495,7 +542,8 @@ bool isloaded = false;
         chatMessages.add({
           'sender': 'assistant',
           'message':
-              'Field ${box['class']} selected. The detected text is: $_ocrText',
+              //'Field ${box['class']} selected. The detected text is: $_ocrText',
+              '$_ocrText',
         });
         _isThinking = false;
         _needsScroll = true;
@@ -537,7 +585,7 @@ Widget _buildInstructionBanner() {
     instructionText = 'Tap to ask or type a question';
     //leadingIcon = Icons.question_answer;
   } else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
-    instructionText = 'Tap to select another filed';
+    instructionText = 'Tap to select another field';
     showCompletionBanner = true;
     //leadingIcon = Icons.arrow_back;
   } else if (_isThinking) {
@@ -545,7 +593,7 @@ Widget _buildInstructionBanner() {
     //leadingIcon = Icons.psychology;
   } else {
     instructionText = 'Ask about selected field';
-    leadingIcon = Icons.chat;
+    //leadingIcon = Icons.chat;
   }
 
   return TweenAnimationBuilder<double>(
@@ -639,15 +687,15 @@ Widget _buildInstructionBanner() {
                   ),
                 ),
               ),
-            if (showCompletionBanner)
-              Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: Icon(
-                  Icons.check_circle,
-                  color: Colors.teal.shade700,
-                  size: 24,
-                ),
-              ),
+            // if (showCompletionBanner)
+            //   Padding(
+            //     padding: const EdgeInsets.only(left: 12),
+            //     child: Icon(
+            //       Icons.check_circle,
+            //       color: Colors.teal.shade700,
+            //       size: 24,
+            //     ),
+            //   ),
           ],
         ),
       ),

@@ -31,7 +31,7 @@ class ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      padding:  const EdgeInsets.symmetric(vertical: 0, horizontal: 4),
       child: Column(
         crossAxisAlignment:
             isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -40,33 +40,34 @@ class ChatBubble extends StatelessWidget {
             mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              //   if (!isUser) ...[
+                if (!isUser) ...[
+                 Container(
+                  padding: EdgeInsets.only(right: 10),
+                   child: ClipRRect(
+                    child: CircleAvatar(
+                     child: Image.asset(
+                          'assets/5.png', // Replace with your asset image path
+                          fit: BoxFit.cover,
+                          width: 120,
+                          height: 120,
+                        ),
+                   ),
+                   ),
+                 )
+              
+              ],
+
+              // if (!isUser) ...[
               //   CircleAvatar(
               //     radius: 16,
               //     backgroundColor: Colors.grey[300],
-              //     child: ClipOval(
-              //       child: Image.asset(
-              //         'assets/FB_logo.JPG', // Replace with your asset image path
-              //         fit: BoxFit.cover,
-              //         width: 52,
-              //         height: 52,
-              //       ),
-              //     ),
+              //     child: Icon(Icons.person, color: Colors.grey[700]),
               //   ),
               //   const SizedBox(width: 8),
               // ],
-
-              if (!isUser) ...[
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Colors.grey[300],
-                  child: Icon(Icons.person, color: Colors.grey[700]),
-                ),
-                const SizedBox(width: 8),
-              ],
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   decoration: BoxDecoration(
                     color: isUser ? Colors.teal[100] : Colors.grey[200],
                     borderRadius: BorderRadius.only(
@@ -89,7 +90,7 @@ class ChatBubble extends StatelessWidget {
                             asrResponse!,
                             style: const TextStyle(
                               color: Colors.black87,
-                              fontSize: 14,
+                              fontSize: 13,
                             ),
                           ),
                         ],
@@ -98,7 +99,7 @@ class ChatBubble extends StatelessWidget {
                           message,
                           style: TextStyle(
                             color: isUser ? Colors.teal[900] : Colors.black87,
-                            fontSize: 16,
+                            fontSize: 13,
                           ),
                         ),
                       ],
@@ -120,8 +121,8 @@ class ChatBubble extends StatelessWidget {
           Text(
             _getCurrentTimestamp(),
             style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
+              color: const Color.fromRGBO(117, 117, 117, 1),
+              fontSize: 8,
             ),
           ),
         ],

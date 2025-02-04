@@ -18,12 +18,32 @@ class _CameraScreenState extends State<CameraScreen> {
   int selectedCameraIndex = 0;
   bool isFlashOn = false;
   final ImagePicker _picker = ImagePicker();
+  String? selectedForm; // State variable to store selectedForm
 
-  @override
+ 
+
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _initializeCamera();
+  // }
+   @override
   void initState() {
     super.initState();
+    // Retrieve arguments immediately in initState
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      setState(() {
+        selectedForm = args?['selectedForm'];
+      });
+      print("Selected Form in CameraScreen: $selectedForm");
+    });
     _initializeCamera();
   }
+
+
+
+  
 
   Future<void> _initializeCamera() async {
     cameras = await availableCameras();
@@ -74,7 +94,10 @@ class _CameraScreenState extends State<CameraScreen> {
       if (pickedFile != null) {
         if (!mounted) return;
         Navigator.pushNamed(context, '/image_processing',
-            arguments: pickedFile.path);
+            arguments: {
+              'imagePath': pickedFile.path,
+              'selectedForm': selectedForm, // Pass selectedForm
+            });
       }
     } catch (e) {
       print('Error picking image: $e');
@@ -87,121 +110,219 @@ class _CameraScreenState extends State<CameraScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_controller == null || !_controller!.value.isInitialized) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+//   @override
+//   Widget build(BuildContext context) {
+//     if (_controller == null || !_controller!.value.isInitialized) {
+//       return const Scaffold(
+//         body: Center(child: CircularProgressIndicator()),
+//       );
+//     }
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 85.0),
-              child: CameraPreview(_controller!),
-            ),
-          ),
+//     return Scaffold(
+//       backgroundColor: Colors.black,
+//       body: Stack(
+//         children: [
+//           Center(
+//             child: Padding(
+//               padding: const EdgeInsets.only(top: 85.0),
+//               child: CameraPreview(_controller!),
+//             ),
+//           ),
        
-          Positioned(
-            top: 40,
-            left: 0,
-            right: 0,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      isFlashOn ? Icons.flash_on : Icons.flash_off,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    onPressed: _toggleFlash,
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.refresh,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    onPressed: _switchCamera,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 30,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Empty space on the left
-                  const SizedBox(width: 60, height: 60),
+//           Positioned(
+//             top: 40,
+//             left: 0,
+//             right: 0,
+//             child: Padding(
+//               padding: const EdgeInsets.symmetric(horizontal: 16),
+//               child: Row(
+//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                 children: [
+//                   IconButton(
+//                     icon: Icon(
+//                       isFlashOn ? Icons.flash_on : Icons.flash_off,
+//                       color: Colors.white,
+//                       size: 28,
+//                     ),
+//                     onPressed: _toggleFlash,
+//                   ),
+//                   IconButton(
+//                     icon: const Icon(
+//                       Icons.refresh,
+//                       color: Colors.white,
+//                       size: 28,
+//                     ),
+//                     onPressed: _switchCamera,
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//           Positioned(
+//             bottom: 30,
+//             left: 0,
+//             right: 0,
+//             child: Container(
+//               padding: const EdgeInsets.symmetric(horizontal: 24),
+//               child: Row(
+//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                 children: [
+//                   // Empty space on the left
+//                   const SizedBox(width: 60, height: 60),
                   
-                  // Capture Button in center
-                  GestureDetector(
-                    onTap: () async {
-                      if (_controller == null || !_controller!.value.isInitialized)
-                        return;
+//                   // Capture Button in center
+//                   GestureDetector(          
+//                     onTap: () async {
+//                       if (_controller == null || !_controller!.value.isInitialized)
+//                         return;
       
-                      try {
-                        final image = await _controller!.takePicture();
-                        await _saveImage(image.path);
-                        if (!mounted) return;
-                        Navigator.pushNamed(
-                          context,
-                          '/image_processing',
-                          arguments: image.path,
-                        );
-                      } catch (e) {
-                        print('Error taking picture: $e');
-                      }
-                    },
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white, width: 3),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Container(
-                        margin: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ),
+//                       try {
+//                         final image = await _controller!.takePicture();
+//                         await _saveImage(image.path);
+//                         if (!mounted) return;
+//                         Navigator.pushNamed(
+//                           context,
+//                           '/image_processing',
+//                           arguments: image.path,
+//                         );
+//                       } catch (e) {
+//                         print('Error taking picture: $e');
+//                       }
+//                     },
+//                     child: Container(
+//                       width: 80,
+//                       height: 80,
+//                       decoration: BoxDecoration(
+//                         border: Border.all(color: Colors.white, width: 3),
+//                         shape: BoxShape.circle,
+//                       ),
+//                       child: Container(
+//                         margin: const EdgeInsets.all(3),
+//                         decoration: const BoxDecoration(
+//                           color: Colors.white,
+//                           shape: BoxShape.circle,
+//                         ),
+//                       ),
+//                     ),
+//                   ),
                   
-                  // Photo Library button on the right
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      child: const Icon(
-                        Icons.photo_library,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+//                   // Photo Library button on the right
+//                   GestureDetector(
+//                     onTap: _pickImage,
+//                     child: Container(
+//                       width: 60,
+//                       height: 60,
+//                       child: const Icon(
+//                         Icons.photo_library,
+//                         color: Colors.white,
+//                         size: 28,
+//                       ),
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+@override
+Widget build(BuildContext context) {
+  // final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+  // final selectedForm = args?['selectedForm']; // Retrieve selected form
+  // //print("Captured Image Path: ${image.path}");
+  //   print("Selected Form in CameraScreen: $selectedForm"); // Print the selected form
+
+  if (_controller == null || !_controller!.value.isInitialized) {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final selectedForm = args?['selectedForm']; // Retrieve selected form
+    print("Selected Form in camera screennnnnnnnnnnnnnnnnnnnnnnnnnnnnn: $selectedForm"); // Print the selected form
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
     );
   }
+
+  return Scaffold(
+    backgroundColor: Colors.black,
+    body: Stack(
+      children: [
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 85.0),
+            child: CameraPreview(_controller!),
+          ),
+        ),
+        Positioned(
+          bottom: 30,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SizedBox(width: 60, height: 60),
+                
+                GestureDetector(          
+                  onTap: () async {
+                    if (_controller == null || !_controller!.value.isInitialized) return;
+    
+                    try {
+                      final image = await _controller!.takePicture();
+                      await _saveImage(image.path);
+                      if (!mounted) return;
+
+                      print("Selected Form before navigating to FieldEditScreen: $selectedForm"); // Print the selected form
+
+                      Navigator.pushNamed(
+                        context,
+                        '/field_edit_screen',
+                        arguments: {
+                          'imagePath': image.path,
+                          'selectedForm': selectedForm, // Pass selectedForm
+                        },
+                        
+                      );
+                    } catch (e) {
+                      print('Error taking picture: $e');
+                    }
+                  },
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white, width: 3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Container(
+                      margin: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    child: const Icon(
+                      Icons.photo_library,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }
