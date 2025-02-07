@@ -342,9 +342,17 @@ class _FormSelectionScreenState extends State<FormSelectionScreen> {
   ];
 
   String? selectedForm;
+ Future<bool> _onWillPop() async {
+    // Navigate to the home page
+    Navigator.pushNamed(context, '/home');
+    return false; // Returning false prevents the default pop behavior
+}
+
 @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
       backgroundColor: Colors.white, // Set background to white
       appBar: AppBar(
         title: const Text(
@@ -409,7 +417,7 @@ class _FormSelectionScreenState extends State<FormSelectionScreen> {
                         fillColor: Colors.white,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, 
-                          vertical: 8,
+                          vertical: 10,
                         ),
                         prefixIcon: Icon(
                           Icons.assignment,
@@ -495,6 +503,7 @@ class _FormSelectionScreenState extends State<FormSelectionScreen> {
             ),
           );
         },
+      ),
       ),
     );
   }

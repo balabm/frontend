@@ -83,7 +83,10 @@ class ChatBubble extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (isAudioMessage && audioPath != null) ...[
-                        AudioPlayerWidget(audioPath: audioPath!),
+                        GestureDetector(
+                          onTap: onPlayAudio,
+                          child: AudioPlayerWidget(audioPath: audioPath!),
+                        ),
                         if (asrResponse != null) ...[
                           const SizedBox(height: 8),
                           Text(

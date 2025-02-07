@@ -60,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen>
         _loadSubmittedForms(),
         _loadUserName(),
         _loadCapturedImages(),
-        _loadApiUrls(), // Add this line
+        // _loadApiUrls(), // Add this line
       ]);
       _animationController.forward();
     } catch (e) {
@@ -100,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen>
     final ocrTextUrl = prefs.getString('ocr_text_url') ?? 'http://192.168.62.227:8080/cv/ocr';
     final asrUrl = prefs.getString('asr_url') ?? 'http://192.168.62.227:8001/upload-audio-zip/';
     final llmUrl = prefs.getString('llm_url') ?? 'http://192.168.62.227:8021/get_llm_response';
-    // Use the URLs as needed
+    // Use the URLs as neededR
   }
 
   Future<void> _deleteForm(String formId) async {
@@ -235,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen>
           onTap: () {
             // Save base64 image to temporary file and get path
             final tempDir = Directory.systemTemp;
-            final tempFile = File('${tempDir.path}/$formId.png');
+            final tempFile = File('${tempDir.path}/$formId');
             tempFile.writeAsBytesSync(base64Decode(imageBase64));
             
             Navigator.pushNamed(
@@ -266,13 +266,24 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       )
     : _buildEmptyState();
+ Future<bool> _onWillPop() async {
+    // Navigate to the home page
+    Navigator.pushNamed(context, '/userInput');
+    return false; // Returning false prevents the default pop behavior
+}
 
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: Colors.grey[100],
+@override
+Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(        backgroundColor: Colors.grey[100],
         appBar: AppBar(
           elevation: 0,
           backgroundColor: Colors.teal,
+          automaticallyImplyLeading: false, // Remove the back arrow icon
+
+          iconTheme: const IconThemeData(color: Colors.white), // Set back arrow color to white
+
           title: Row(
             children: [
               // Hero(
@@ -338,5 +349,7 @@ class _HomeScreenState extends State<HomeScreen>
             backgroundColor: Colors.teal,
           ),
         ),
+      ),
       );
 }
+    }

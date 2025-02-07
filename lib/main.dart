@@ -48,6 +48,7 @@ class MyApp extends StatelessWidget {
         '/camera': (context) => const CameraScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/form_selection': (context) => const FormSelectionScreen(), // Add this line
+        
       },
     );
   }

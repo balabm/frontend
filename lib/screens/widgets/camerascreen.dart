@@ -278,7 +278,8 @@ Widget build(BuildContext context) {
 
                       Navigator.pushNamed(
                         context,
-                        '/field_edit_screen',
+                        '/image_processing',
+                        //'/field_edit_screen',
                         arguments: {
                           'imagePath': image.path,
                           'selectedForm': selectedForm, // Pass selectedForm

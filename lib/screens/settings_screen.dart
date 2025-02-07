@@ -29,10 +29,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _boundingBoxUrlController.text = prefs.getString('bounding_box_url') ?? '';
-      _ocrTextUrlController.text = prefs.getString('ocr_text_url') ?? '';
-      _asrUrlController.text = prefs.getString('asr_url') ?? '';
-      _llmUrlController.text = prefs.getString('llm_url') ?? '';
+      _boundingBoxUrlController.text = prefs.getString('bounding_box_url') ?? 'http://192.168.62.227:8000/cv/form-detection-with-box/';
+      _ocrTextUrlController.text = prefs.getString('ocr_text_url') ?? 'http://192.168.62.227:8080/cv/ocr';
+      _asrUrlController.text = prefs.getString('asr_url') ?? 'http://192.168.62.227:8001/upload-audio-zip/';
+      _llmUrlController.text = prefs.getString('llm_url') ?? 'http://192.168.62.227:8021/get_llm_response';
     });
   }
 
@@ -46,6 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await prefs.setString('ocr_text_url', _ocrTextUrlController.text);
       await prefs.setString('asr_url', _asrUrlController.text);
       await prefs.setString('llm_url', _llmUrlController.text);
+      await prefs.setString('urlupdated','true');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Settings saved successfully')),

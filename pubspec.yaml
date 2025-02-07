@@ -43,6 +43,8 @@ dependencies:
   http: ^1.2.2
   http_parser: ^4.0.1  # Add this line
   image_cropper: ^8.0.1
+  flutter_secure_storage: ^4.2.1  # Corrected version
+  
   shared_preferences: ^2.2.3
 
   image_picker: ^0.8.6
