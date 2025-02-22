@@ -29,10 +29,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _boundingBoxUrlController.text = prefs.getString('bounding_box_url') ?? 'http://192.168.62.227:8000/cv/form-detection-with-box/';
+      _boundingBoxUrlController.text = prefs.getString('bounding_box_url') ?? 'http://10.64.240.162:8002/cv/form-detection-with-box/';
       _ocrTextUrlController.text = prefs.getString('ocr_text_url') ?? 'http://192.168.62.227:8080/cv/ocr';
       _asrUrlController.text = prefs.getString('asr_url') ?? 'http://192.168.62.227:8001/upload-audio-zip/';
       _llmUrlController.text = prefs.getString('llm_url') ?? 'http://192.168.62.227:8021/get_llm_response';
+       print("Loaded settings:");
+      print("Bounding Box URL: ${_boundingBoxUrlController.text}");
+      print("OCR Text URL: ${_ocrTextUrlController.text}");
+      print("ASR URL: ${_asrUrlController.text}");
+      print("LLM URL: ${_llmUrlController.text}");
     });
   }
 
@@ -68,7 +73,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: Colors.teal,
+        backgroundColor: Color.fromRGBO(0, 150, 136, 1.0)
+,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -170,7 +176,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ElevatedButton(
                   onPressed: _isSaving ? null : _saveSettings,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
+                    backgroundColor: Color.fromRGBO(0, 150, 136, 1.0)
+,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: _isSaving

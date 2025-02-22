@@ -27,7 +27,8 @@
 //         decoration: BoxDecoration(
 //           color: !enabled 
 //             ? Colors.grey.withOpacity(0.5) 
-//             : (isLongPressing ? Colors.teal.withOpacity(0.7) : Colors.teal),
+//             : (isLongPressing ? Color.fromRGBO(0, 150, 136, 1.0)
+
 //           shape: BoxShape.circle,
 //           boxShadow: [
 //             BoxShadow(
@@ -146,7 +147,8 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.teal.withOpacity(0.2),
+                      color: Color.fromRGBO(0, 150, 136, 1.0)
+.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -158,8 +160,10 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
                   color: !widget.enabled
                       ? Colors.grey.withOpacity(0.5)
                       : (widget.isLongPressing
-                          ? Colors.teal.withOpacity(0.7)
-                          : Colors.teal),
+                          ? Color.fromRGBO(0, 150, 136, 1.0)
+.withOpacity(0.7)
+                          : Color.fromRGBO(0, 150, 136, 1.0)
+),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(

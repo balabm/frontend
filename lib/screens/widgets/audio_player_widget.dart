@@ -139,7 +139,8 @@
 // //                 onTap: _togglePlayback,
 // //                 child: CircleAvatar(
 // //                   radius: 14,
-// //                   backgroundColor: Colors.teal,
+// //                   backgroundColor: Color.fromRGBO(0, 150, 136, 1.0)
+
 // //                   child: Icon(
 // //                     _isPlaying ? Icons.pause : Icons.play_arrow,
 // //                     color: Colors.  white,
@@ -171,8 +172,10 @@
 // //                             _audioPlayer?.seekToPlayer(Duration(milliseconds: duration));
 // //                           });
 // //                         },
-// //                         activeColor: Colors.teal,
-// //                         inactiveColor: Colors.teal.withOpacity(0.3),
+// //                         activeColor: Color.fromRGBO(0, 150, 136, 1.0)
+
+// //                         inactiveColor: Color.fromRGBO(0, 150, 136, 1.0)
+
 // //                       ),
 // //                       const SizedBox(height: 8),
 // //                       Row(
@@ -359,7 +362,7 @@
 //                 padding: const EdgeInsets.only(bottom: 4,left: 4,right: 4),
 //                 child: CircleAvatar(
 //                   radius: 16,
-//                   backgroundColor: Colors.teal,
+//                   backgroundColor: Color.fromRGBO(0, 150, 136, 1.0)
 //                   child: Icon(
 //                     _isPlaying ? Icons.pause : Icons.play_arrow,
 //                     color: Colors.white,
@@ -394,8 +397,9 @@
 //                             Duration(milliseconds: duration));
 //                       });
 //                     },
-//                     activeColor: Colors.teal,
-//                     inactiveColor: Colors.teal.withOpacity(0.3),
+//                     activeColor: Color.fromRGBO(0, 150, 136, 1.0)
+
+//                     inactiveColor: Color.fromRGBO(0, 150, 136, 1.0
 //                   ),
 //                 ),
 //                 Row(
@@ -588,7 +592,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
                 padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
                 child: CircleAvatar(
                   radius: 16,
-                  backgroundColor: Colors.teal,
+                  backgroundColor: Color.fromRGBO(0, 150, 136, 1.0)
+,
                   child: Icon(
                     _isPlaying ? Icons.pause : Icons.play_arrow,
                     color: Colors.white,
@@ -621,8 +626,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
                         _audioPlayer?.seekToPlayer(Duration(milliseconds: duration));
                       });
                     },
-                    activeColor: Colors.teal,
-                    inactiveColor: Colors.teal.withOpacity(0.3),
+                    activeColor: Color.fromRGBO(0, 150, 136, 1.0)
+,
+                    inactiveColor: Color.fromRGBO(0, 150, 136, 1.0)
+.withOpacity(0.3),
                   ),
                 ),
                 Row(

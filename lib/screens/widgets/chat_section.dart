@@ -41,7 +41,8 @@ class ChatSection extends StatelessWidget {
             message: '...',
             isUser: false,
             isThinking: true,
-            timestamp: '',
+            timestamp: DateTime.now(),
+            //timestamp: timestamp,
           );
         }
 
@@ -50,7 +51,9 @@ class ChatSection extends StatelessWidget {
         final messageContent = message['message'] ?? message['content'] ?? message['asrResponse'] ?? '';
         final isAudioMessage = message['isAudioMessage'] == true || message['contentType'] == 'audio';
         final audioPath = message['audioPath'];
-        final timestamp = message['timestamp'] ?? '';
+        //final timestamp = message['timestamp'] ?? '';
+        final timestampString = message['timestamp'] ?? '';
+        final timestamp = DateTime.tryParse(timestampString) ?? DateTime.now(); // Parse timestamp string to DateTime
         if (isAudioMessage) {
            return ChatBubble(
             message: message['asrResponse'] ?? 'Voice message',

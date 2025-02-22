@@ -953,6 +953,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     }
   }
 
+  
+
   @override
   void dispose() {
     disposeAudio();
@@ -1026,63 +1028,125 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
           isLongPressing: _isLongPressing, // Pass the isLongPressing parameter
         );
 
-  Future<void> _processAudioAndSendToLLM() async {
-    if (_ocrText?.isEmpty ?? true) {
-      setState(() {
-        chatMessages.add({
-          'sender': 'assistant',
-          'message': 'Please select a field to extract text first.',
-        });
-        _needsScroll = true;
-      });
-      return;
-    }
+  // Future<void> _processAudioAndSendToLLM() async {
+  //   if (_ocrText?.isEmpty ?? true) {
+  //     setState(() {
+  //       chatMessages.add({
+  //         'sender': 'assistant',
+  //         'message': 'Please select a field to extract text first.',
+  //       });
+  //       _needsScroll = true;
+  //     });
+  //     return;
+  //   }
 
-    setState(() {
-      _inputEnabled = false;
-    });
+  //   setState(() {
+  //     _inputEnabled = false;
+  //   });
 
-    final zipFile = File(await zipRecordedAudio());
-    if (!await zipFile.exists()) {
-      setState(() {
-        _inputEnabled = true;
-      });
-      return;
-    }
+  //   final zipFile = File(await zipRecordedAudio());
+  //   if (!await zipFile.exists()) {
+  //     setState(() {
+  //       _inputEnabled = true;
+  //     });
+  //     return;
+  //   }
 
-    final asrResponse = await _apiRepository.sendAudioToApi(zipFile);
-    if (asrResponse == null) {
-      setState(() {
-        _inputEnabled = true;
-      });
-      return;
-    }
+  //   final asrResponse = await _apiRepository.sendAudioToApi(zipFile);
+  //   if (asrResponse == null) {
+  //     setState(() {
+  //       _inputEnabled = true;
+  //     });
+  //     return;
+  //   }
     
 
-    final asrData = jsonDecode(asrResponse);
-    final transcribedText = asrData['dummy_text'] ?? 'No transcription available';
+  //   final asrData = jsonDecode(asrResponse);
+  //   final transcribedText = asrData['Result'] ?? 'No transcription available';
 
-    setState(() {
-      // Store ASR response temporarily
-      _pendingAsrResponse = transcribedText;
+  //   setState(() {
+  //     // Store ASR response temporarily
+  //     _pendingAsrResponse = transcribedText;
       
-      chatMessages.add({
-        'sender': 'user',
-        'message': 'Audio message • $transcribedText',
-        'audioPath': recordedFilePath,
-        'asrResponse': transcribedText,
-        'isAudioMessage': true,
-      });
+  //     chatMessages.add({
+  //       'sender': 'user',
+  //       'message': 'Audio message • $transcribedText',
+  //       'audioPath': recordedFilePath,
+  //       'asrResponse': transcribedText,
+  //       'isAudioMessage': true,
+  //     });
         
-        _needsScroll = true;
-      _inputEnabled = true;
-    });
+  //       _needsScroll = true;
+  //     _inputEnabled = true;
+  //   });
 
-    _scrollToBottom();
-    await _sendToLLMApi(asrResponse, isAudioQuery: true);
+  //   _scrollToBottom();
+  //   await _sendToLLMApi(asrResponse, isAudioQuery: true);
+  // }
+
+  Future<void> _processAudioAndSendToLLM() async {
+  if (_ocrText?.isEmpty ?? true) {
+    setState(() {
+      chatMessages.add({
+        'sender': 'assistant',
+        'message': 'Please select a field to extract text first.',
+      });
+      _needsScroll = true;
+    });
+    return;
   }
 
-  
+  setState(() {
+    _inputEnabled = false;
+    _isThinking = true;  // ✅ Show "Processing audio..." in the instruction banner
+  });
+
+  final zipFile = File(await zipRecordedAudio());
+  if (!await zipFile.exists()) {
+    setState(() {
+      _inputEnabled = true;
+      _isThinking = false;
+    });
+    return;
+  }
+
+  final asrResponse = await _apiRepository.sendAudioToApi(zipFile);
+  if (asrResponse == null) {
+    setState(() {
+      _inputEnabled = true;
+      _isThinking = false;
+    });
+    return;
+  }
+
+  final Map<String, dynamic> asrData = jsonDecode(asrResponse);
+final String transcribedText = asrData['results'] != null && asrData['results'].isNotEmpty
+    ? asrData['results'][0]['ASR_output']?.toString() ?? 'No transcription available'
+    : 'No transcription available';  //ASR response from API
+
+  print('ASR API Response: $asrResponse');
+
+  setState(() {
+    _pendingAsrResponse = transcribedText;
+    
+    chatMessages.add({
+      'sender': 'user',
+      'message': 'Audio message • $transcribedText',
+      'audioPath': recordedFilePath,
+      'asrResponse': transcribedText,
+      'isAudioMessage': true,
+      
+    });
+
+    _needsScroll = true;
+    _inputEnabled = true;
+    _isThinking = false;  // ✅ Hide "Processing audio..." after ASR finishes
+  });
+
+  _scrollToBottom();
+  await _sendToLLMApi(transcribedText, isAudioQuery: true);
+}
+
 
   Future<void> _sendToLLMApi(String query, {bool isAudioQuery = false}) async {
     if (_ocrText?.isEmpty ?? true) {
@@ -1110,7 +1174,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     final llmResponse = await _apiRepository.sendToLLMApi(
       _ocrText!,
       selectedForm ?? 'Unknown Scheme', // Pass the selected form as scheme_name
-      voiceQuery: isAudioQuery ? query : null,
+      voiceQuery: query,
     );
 
     setState(() {
@@ -1189,6 +1253,9 @@ Future<void> _saveResponsesToFirestore() async {
       ocrText: _ocrText ?? '',
       chatMessages: chatMessages,
       boundingBoxes: boundingBoxes ?? [],
+      selectedForm: selectedForm ?? 'Unknown Form',
+      selectedBox: selectedBox // Pass the selectedBox here
+      //formName: selectedForm ?? 'Unknown Form', // Add the required formName argument
     );
 
     // Reset pending responses
@@ -1259,7 +1326,8 @@ bool isloaded = false;
         imagePath = args['imagePath'];
         boundingBoxes = args['bounding_boxes'] ?? args['boundingBoxes'];
         formId = args['formId'];
-        selectedForm = args['selectedForm']; // Retrieve the selected form
+        selectedForm = args['selectedForm']; // Store the selected form
+        print('Selected Form: $selectedForm'); 
       
         if (imagePath != null) {
           final fileName = path.basename(imagePath!)
@@ -1344,6 +1412,7 @@ bool isloaded = false;
 
           setState(() {
             boundingBoxes = existingForm['boundingBoxes'] ?? [];
+            selectedForm = existingForm['selectedForm'] ?? selectedForm;
             final currentField = existingForm['currentSelectedField'] as Map<String, dynamic>?;
             if (currentField != null) {
               _selectedFieldName = currentField['name'];
@@ -1351,6 +1420,7 @@ bool isloaded = false;
             }
             
             print('Loaded ${chatMessages.length} messages');
+            print('fetched form name ${selectedForm}');
             if (chatMessages.isNotEmpty) {
               _showBottomSheet = true;
               _inputEnabled = true;
@@ -1392,19 +1462,19 @@ bool isloaded = false;
       return; // Prevent interaction while processing
     }
 
-    if (_isFieldLocked) {
-      setState(() {
-        chatMessages.add({
-          'sender': 'assistant',
-          'message':
-              //'Please complete your queries for $_selectedFieldName first before selecting another field.',
-              'Please complete your queries before selecting another field.'
-        });
-        _needsScroll = true;
-      });
-      _scrollToBottom();
-      return;
-    }
+    // if (_isFieldLocked) {
+    //   setState(() {
+    //     chatMessages.add({
+    //       'sender': 'assistant',
+    //       'message':
+    //           //'Please complete your queries for $_selectedFieldName first before selecting another field.',
+    //           'Please complete your queries before selecting another field.'
+    //     });
+    //     _needsScroll = true;
+    //   });
+    //   _scrollToBottom();
+    //   return;
+    // }
 
     setState(() {
       _inputEnabled = true;
@@ -1454,6 +1524,10 @@ Future<File> _cropImage(String imagePath, Map<String, dynamic> box) async {
       imagePath: croppedImageFile.path,
       box: box,
     );
+
+    print('Sending to OCR API:');
+    print('Image Path: ${croppedImageFile.path}');
+    print('Box: $box');
 
     if (ocrResponse != null) {
       Provider.of<ApiResponseProvider>(context, listen: false)
@@ -1629,7 +1703,7 @@ Widget _buildInstructionBanner() {
     Widget build(BuildContext context) => Scaffold(
           appBar: AppBar(
             iconTheme: const IconThemeData(color: Colors.white),
-            backgroundColor: kPrimaryColor,
+            backgroundColor: Colors.teal,
             elevation: 0,
             actions: [
               TextButton.icon(
@@ -1651,13 +1725,13 @@ Widget _buildInstructionBanner() {
               ),
             ),
           ),
-          backgroundColor: Colors.white,
-          body: _isLoadingData
-      ? const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
-          ),
-        )
+          backgroundColor: const Color.fromRGBO(255, 255, 255, 1),
+      body: _isLoadingData
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
+              ),
+            )
       : Stack(
             children: [
               Column(
@@ -1694,12 +1768,7 @@ Widget _buildInstructionBanner() {
                         child: Image.file(
                           File(imagePath!),
                           fit: BoxFit.contain,
-                          width: _showBottomSheet
-                              ? MediaQuery.of(context).size.width
-                              : MediaQuery.of(context).size.width * 0.8,
-                          height: _showBottomSheet
-                              ? MediaQuery.of(context).size.height * 0.5
-                              : null,
+      width: MediaQuery.of(context).size.width, // Keep width constant
                         ),
                       ),
                     ),
@@ -1724,93 +1793,137 @@ Widget _buildInstructionBanner() {
               ),
               // Bottom Sheet
               if (_showBottomSheet)
-                DraggableScrollableSheet(
-  controller: _dragController,
-  initialChildSize: 0.9,
-  minChildSize: 0.4,
-  maxChildSize: 0.9,
-  builder: (context, scrollController) {
-    _scrollController = scrollController;
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+  DraggableScrollableSheet(
+    controller: _dragController,
+    initialChildSize: 0.9,
+    minChildSize: 0.0,
+    maxChildSize: 0.9,
+    builder: (context, scrollController) {
+      _scrollController = scrollController;
+      return GestureDetector(
+        onVerticalDragUpdate: (details) {
+          double delta = details.primaryDelta! / MediaQuery.of(context).size.height;
+          _dragController.jumpTo(_dragController.size - delta);
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(20),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                spreadRadius: 0,
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Enhanced curved drag handle area
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 170, 174, 174),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.grey[200]!,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Container(
+                        width: 30,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              Expanded(
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification is ScrollUpdateNotification) {
+                      if (scrollController.position.pixels <= 0) {
+                        return true;
+                      }
+                    }
+                    return false;
+                  },
+                  child: ChatSection(
+                    scrollController: scrollController,
+                    chatMessages: chatMessages,
+                    isThinking: _isThinking,
+                    userName: _userName,
+                    onPlayAudio: playAudio,
+                  ),
+                ),
+              ),
+              
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: _buildInstructionBanner(),
+              ),
+              
+              ChatInput(
+                messageController: _messageController,
+                inputEnabled: _inputEnabled && !_isThinking,
+                isRecording: isRecording,
+                dragController: _dragController,
+                recordingIndicator: _buildRecordingIndicator(),
+                microphoneButton: _messageController.text.isEmpty && !_isThinking
+                    ? _buildMicrophoneButton()
+                    : null,
+                onSendPressed: () {
+                  if (!_inputEnabled) return;
+                  FocusScope.of(context).unfocus();
+                  if (_messageController.text.isEmpty) return;
+                  if (_ocrText?.isEmpty ?? true) {
+                    Common.showErrorMessage(context, "Please select a field");
+                    return;
+                  }
+                  setState(() {
+                    chatMessages.add({
+                      'sender': 'user',
+                      'message': _messageController.text,
+                      'inputType': 'text'
+                    });
+                    _needsScroll = true;
+                  });
+                  _sendToLLMApi(_messageController.text);
+                  _messageController.clear();
+                },
+                slidingOffset: _slidingOffset,
+              ),
+            ],
+          ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 0,
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-         
-          Container(
-            width: 40,
-            height: 5,
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2.5),
-            ),
-          ),
-          
-          Expanded(
-            child: ChatSection(
-              scrollController: scrollController,
-              chatMessages: chatMessages,
-              isThinking: _isThinking,
-              userName: _userName,
-              onPlayAudio: playAudio,
-            ),
-          ),
-           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: _buildInstructionBanner(),
-          ),
-          ChatInput(
-            messageController: _messageController,
-            
-            inputEnabled: _inputEnabled && !_isThinking, // Disable if processing
-            isRecording: isRecording,
-            dragController: _dragController,
-            recordingIndicator: _buildRecordingIndicator(),
-            microphoneButton: _messageController.text.isEmpty && !_isThinking
-    ? _buildMicrophoneButton()
-    : null,
-            onSendPressed: () {
-              if (!_inputEnabled) return; 
-              FocusScope.of(context).unfocus();
-              if (_messageController.text.isEmpty) return;
-              if (_ocrText?.isEmpty ?? true) {
-                Common.showErrorMessage(context, "Please select a field");
-                return;
-              }
-              setState(() {
-                chatMessages.add({
-                  'sender': 'user',
-                  'message': _messageController.text,
-                  'inputType': 'text'
-                });
-                _needsScroll = true;
-              });
-               _sendToLLMApi(_messageController.text);
-  _messageController.clear();
-  
-  
-},
-            slidingOffset: _slidingOffset,
-          ),
-        ],
-      ),
-    );
-  },
-)
+      );
+    },
+  ),
             ],
           ),
         );
@@ -1831,7 +1944,7 @@ Widget _buildInstructionBanner() {
     //               fit: _showBottomSheet ? BoxFit.fitWidth : BoxFit.fitHeight,
     //               width: _showBottomSheet
     //                   ? MediaQuery.of(context).size.width
-    //                   : null,
+    //                   : null,r
     //               height: _showBottomSheet
     //                   ? MediaQuery.of(context).size.height * 0.5
     //                   : MediaQuery.of(context).size.height,

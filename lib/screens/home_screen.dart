@@ -7,6 +7,8 @@ import 'package:formbot/providers/authprovider.dart'; // Import AuthProvider
 import 'package:formbot/screens/widgets/common.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart'; // Import this for SystemNavigator.pop()
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -73,13 +75,44 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  // Future<void> _loadSubmittedForms() async {
+  //   final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+  //   final forms = await firebaseProvider.getSubmittedForms();
+  //   if (mounted) {
+  //     setState(() => _submittedForms = forms);
+  //   }
+  // }
+
   Future<void> _loadSubmittedForms() async {
-    final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
-    final forms = await firebaseProvider.getSubmittedForms();
-    if (mounted) {
-      setState(() => _submittedForms = forms);
+    try {
+      final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      final userId = authProvider.user?.uid;
+      if (userId == null) {
+        throw Exception('No authenticated user found');
+      }
+
+      // Fetch forms only for the current user
+      final forms = await firebaseProvider.getSubmittedForms(userId: userId);
+      
+      if (mounted) {
+        setState(() {
+          // Only set forms that belong to the current user
+          _submittedForms = forms.where((form) => form['userId'] == userId).toList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        Common.showMessage(
+          context, 
+          'Error loading forms: ${e.toString()}',
+          isError: true
+        );
+      }
     }
   }
+
 
   Future<void> _loadCapturedImages() async {
     final prefs = await SharedPreferences.getInstance();
@@ -96,10 +129,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _loadApiUrls() async {
     final prefs = await SharedPreferences.getInstance();
-    final boundingBoxUrl = prefs.getString('bounding_box_url') ?? 'http://192.168.62.227:8000/cv/form-detection-with-box/';
-    final ocrTextUrl = prefs.getString('ocr_text_url') ?? 'http://192.168.62.227:8080/cv/ocr';
-    final asrUrl = prefs.getString('asr_url') ?? 'http://192.168.62.227:8001/upload-audio-zip/';
-    final llmUrl = prefs.getString('llm_url') ?? 'http://192.168.62.227:8021/get_llm_response';
+    final boundingBoxUrl = prefs.getString('bounding_box_url') ?? 'http://10.64.26.89:8002/cv/form-detection-with-box/';
+    final ocrTextUrl = prefs.getString('ocr_text_url') ?? 'http://10.64.26.89:8001/cv/ocr';
+    final asrUrl = prefs.getString('asr_url') ?? 'http://10.64.26.83:8002/upload-audio-zip/';
+    final llmUrl = prefs.getString('llm_url') ?? 'http://10.64.26.89:8036/get_llm_response_schemes';
     // Use the URLs as neededR
   }
 
@@ -215,7 +248,8 @@ class _HomeScreenState extends State<HomeScreen>
                 _deleteForm(formId);
               }
             },
-            icon: Icon(Icons.more_vert, color: Colors.teal),
+            icon: Icon(Icons.more_vert, color: Color.fromRGBO(0, 150, 136, 1.0)
+),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -267,9 +301,8 @@ class _HomeScreenState extends State<HomeScreen>
       )
     : _buildEmptyState();
  Future<bool> _onWillPop() async {
-    // Navigate to the home page
-    Navigator.pushNamed(context, '/userInput');
-    return false; // Returning false prevents the default pop behavior
+  SystemNavigator.pop(); // This will close the app
+  return false; // Returning false prevents the default back navigation
 }
 
 @override
@@ -279,7 +312,8 @@ Widget build(BuildContext context) {
       child: Scaffold(        backgroundColor: Colors.grey[100],
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: Colors.teal,
+          backgroundColor: Color.fromRGBO(0, 150, 136, 1.0)
+,
           automaticallyImplyLeading: false, // Remove the back arrow icon
 
           iconTheme: const IconThemeData(color: Colors.white), // Set back arrow color to white
@@ -317,14 +351,15 @@ Widget build(BuildContext context) {
             ? const Center(
                 child: CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(
-                      Color.fromRGBO(11, 60, 102, 1)),
+                      Colors.teal),
                 ),
               )
             : ScaleTransition(
                 scale: _scaleAnimation,
                 child: RefreshIndicator(
                   onRefresh: _loadData,
-                  color: Colors.teal,
+                  color: Color.fromRGBO(0, 150, 136, 1.0)
+,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -346,7 +381,8 @@ Widget build(BuildContext context) {
             label: const Text('New Capture',
                 style: TextStyle(
                     color: Colors.white, fontWeight: FontWeight.w600)),
-            backgroundColor: Colors.teal,
+            backgroundColor: Color.fromRGBO(0, 150, 136, 1.0)
+,
           ),
         ),
       ),

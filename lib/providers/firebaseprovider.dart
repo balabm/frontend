@@ -112,6 +112,7 @@ class FirebaseProvider with ChangeNotifier {
     required List<dynamic> boundingBoxes,
     required List<Map<String, dynamic>> chatMessages,
     required Map<String, dynamic> selectedFields,
+    required String selectedForm, 
   }) async {
     _setLoading(true);
     try {
@@ -130,9 +131,12 @@ class FirebaseProvider with ChangeNotifier {
         'lastInteractionAt': DateTime.now().toIso8601String(),
         'fileName': sanitizedFileName,
         'originalFileName': originalFileName,
+        'selectedForm': selectedForm,
         'imagePath': imagePath,
+        'selectedForm': selectedForm,
         'boundingBoxes':
             boundingBoxes.map((box) => Map<String, dynamic>.from(box)).toList(),
+        
         'currentSelectedField': Map<String, dynamic>.from(selectedFields),
       }, SetOptions(merge: true));
 
@@ -223,6 +227,8 @@ class FirebaseProvider with ChangeNotifier {
     required String ocrText,
     required List<Map<String, dynamic>> chatMessages,
     required List<dynamic> boundingBoxes,
+     required String selectedForm,  // Add this parameter
+    Map<String, dynamic>? selectedBox,
   }) async {
     _setLoading(true);
     try {
@@ -251,6 +257,7 @@ class FirebaseProvider with ChangeNotifier {
         'timestamp': FieldValue.serverTimestamp(),
         'lastInteractionAt': FieldValue.serverTimestamp(),
         'imageBase64': base64Image,
+        'selectedForm': selectedForm,
         'fileName': path.basename(imagePath),
         'boundingBoxes': boundingBoxes,
         'currentSelectedField': {
@@ -267,7 +274,7 @@ class FirebaseProvider with ChangeNotifier {
       }, SetOptions(merge: true));
 
       await _appendMessages(
-          interactionDoc, chatMessages, selectedField, ocrText);
+          interactionDoc, chatMessages, selectedField, ocrText,  selectedBox: selectedBox);
 
       notifyListeners();
 
@@ -311,6 +318,7 @@ class FirebaseProvider with ChangeNotifier {
         chatMessages,
         selectedField,
         ocrText,
+        
       );
 
       notifyListeners();
@@ -327,7 +335,9 @@ class FirebaseProvider with ChangeNotifier {
       DocumentReference interactionDoc,
       List<Map<String, dynamic>> chatMessages,
       String selectedField,
-      String ocrText) async {
+      String ocrText,
+       {Map<String, dynamic>? selectedBox} // Add this parameter
+      ) async {
     final List<Map<String, dynamic>> mappedMessages = [];
 
     for (var msg in chatMessages) {
@@ -345,6 +355,13 @@ class FirebaseProvider with ChangeNotifier {
         'base64Audio': base64Audio,
         'fieldName': selectedField,
         'ocrContext': ocrText,
+        'selectedBox': selectedBox != null ? Map<String, dynamic>.from(selectedBox) : null, // Save selectedBox
+
+        
+        
+        
+
+        
       });
 
       print('Mapped message: ${mappedMessages.first.toString()}');
@@ -397,19 +414,54 @@ class FirebaseProvider with ChangeNotifier {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getSubmittedForms() async {
+//   Future<List<Map<String, dynamic>>> getSubmittedForms() async {
+//     try {
+//       final querySnapshot = await _firestore.collectionGroup('forms').get();
+//       return querySnapshot.docs.map((doc) {
+//         final data = doc.data();
+//         return {
+//           'formName': data['fileName'] ?? 'Unnamed Form',
+//           'formId': doc.id,
+//           'imageBase64': data['imageBase64'] ?? '',
+//         };
+//       }).toList();
+//     } catch (e) {
+//       print('Error fetching submitted forms: $e');
+//       return [];
+//     }
+//   }
+// }
+
+  Future<List<Map<String, dynamic>>> getSubmittedForms({required String userId}) async {
     try {
-      final querySnapshot = await _firestore.collectionGroup('forms').get();
+      // Query forms specifically from the user's subcollection
+      final querySnapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('forms')
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        print('No forms found for user: $userId');
+        return [];
+      }
+
       return querySnapshot.docs.map((doc) {
         final data = doc.data();
         return {
           'formName': data['fileName'] ?? 'Unnamed Form',
           'formId': doc.id,
           'imageBase64': data['imageBase64'] ?? '',
+          'timestamp': data['timestamp'],
+          'lastInteractionAt': data['lastInteractionAt'],
+          'currentSelectedField': data['currentSelectedField'],
+          'userId': userId  // Add userId for verification
+          
         };
       }).toList();
     } catch (e) {
-      print('Error fetching submitted forms: $e');
+      print('Error fetching submitted forms for user $userId: $e');
       return [];
     }
   }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:formbot/helpers/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:formbot/providers/authprovider.dart';
@@ -35,6 +36,7 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
   late AnimationController _fadeController;
   SharedPreferences? _prefs; // Remove 'late' keyword
   late Animation<double> _fadeAnimation;
+  String _forceRebuild = DateTime.now().millisecondsSinceEpoch.toString();
 
   Future<void> setPrefs() async {
     _prefs = await SharedPreferences.getInstance();
@@ -92,27 +94,78 @@ void didChangeDependencies() {
       image = loadedImage;
     });
   }
+// this is the crop function here 
+  // Future<void> _cropImage() async {
+  //   if (imagePath != null) {
+  //     CroppedFile? croppedFile = await ImageCropper().cropImage(
+  //       sourcePath: imagePath!,
+  //       aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+  //       uiSettings: [
+  //         AndroidUiSettings(
+  //           toolbarTitle: 'Crop Image',
+  //           toolbarColor: Color.fromRGBO(0, 150, 136, 1.0)
 
-  Future<void> _cropImage() async {
-    if (imagePath != null) {
-      CroppedFile? croppedFile = await ImageCropper().cropImage(
-        sourcePath: imagePath!,
-        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-        uiSettings: [
-          AndroidUiSettings(
-            toolbarTitle: 'Crop Image',
-            toolbarColor: Colors.teal,
-            toolbarWidgetColor: Colors.white,
-            initAspectRatio: CropAspectRatioPreset.original,
-            lockAspectRatio: false,
-          ),
-          IOSUiSettings(
-            minimumAspectRatio: 1.0,
-          ),
-        ],
-      );
+  //           toolbarWidgetColor: Colors.white,
+  //           initAspectRatio: CropAspectRatioPreset.original,
+  //           lockAspectRatio: false,
+  //         ),
+  //         IOSUiSettings(
+  //           minimumAspectRatio: 1.0,
+  //         ),
+  //       ],
+  //     );
 
-      if (croppedFile != null) {
+  //     if (croppedFile != null) {
+  //       // Get the directory of the cropped file
+  //       String directory = p.dirname(croppedFile.path);
+  //       // Create a new path with the original filename
+  //       String newPath = p.join(directory, originalFileName!);
+
+  //       // If a file already exists at the new path, delete it
+  //       if (await File(newPath).exists()) {
+  //         await File(newPath).delete();
+  //       }
+
+  //       // Copy the cropped file to the new path with original filename
+  //       await File(croppedFile.path).copy(newPath);
+  //       // Delete the temporary cropped file
+  //       await File(croppedFile.path).delete();
+
+  //       setState(() {
+  //         imagePath = newPath;
+  //         image = img.decodeImage(File(newPath).readAsBytesSync());
+  //       });
+  //     }
+  //   }
+  // }
+Future<void> _cropImage() async {
+  if (imagePath != null) {
+    CroppedFile? croppedFile = await ImageCropper().cropImage(
+      sourcePath: imagePath!,
+      aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
+      compressQuality: 100,
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop',
+          toolbarColor: Color.fromRGBO(0, 150, 136, 1.0)
+,
+          toolbarWidgetColor: Colors.white,
+          cropGridColor: Colors.black,
+          initAspectRatio: CropAspectRatioPreset.original,
+          lockAspectRatio: false,
+        ),
+        IOSUiSettings(
+          title: 'Crop',
+        ),
+      ],
+    );
+
+    if (croppedFile != null) {
+      // Clear image cache
+      imageCache.clear();
+      imageCache.clearLiveImages();
+
+      try {
         // Get the directory of the cropped file
         String directory = p.dirname(croppedFile.path);
         // Create a new path with the original filename
@@ -128,13 +181,23 @@ void didChangeDependencies() {
         // Delete the temporary cropped file
         await File(croppedFile.path).delete();
 
-        setState(() {
-          imagePath = newPath;
-          image = img.decodeImage(File(newPath).readAsBytesSync());
-        });
+        // Create a new file instance to force reload
+        final newFile = File(newPath);
+        
+        if (mounted) {
+          setState(() {
+            imagePath = newPath;
+            image = img.decodeImage(newFile.readAsBytesSync());
+            // Add a timestamp to force rebuild
+            _forceRebuild = DateTime.now().millisecondsSinceEpoch.toString();
+          });
+        }
+      } catch (e) {
+        print('Error updating cropped image: $e');
       }
     }
   }
+}
 
   Future<void> _sendImageToAPI() async {
     if (imagePath != null) {
@@ -145,7 +208,9 @@ void didChangeDependencies() {
       String fileName = p.basename(imagePath!);
       final boundingBoxUrl = _prefs?.getString('bounding_box_url');
       if (boundingBoxUrl == null || boundingBoxUrl.isEmpty) {
-        _showErrorSnackBar('Bounding Box URL is not set in settings.');
+        _showErrorToast(context, 'Bounding Box URL is not set in settings..');
+
+        //_showErrorToast('Bounding Box URL is not set in settings.');
         setState(() {
           _isLoading = false;
         });
@@ -170,6 +235,9 @@ void didChangeDependencies() {
         var response = await request.send();
         var responseData = await response.stream.bytesToString();
         var decodedResponse = jsonDecode(responseData);
+        print('Bounding Box Response: $decodedResponse');
+
+        
 
         if (response.statusCode == 200) {
           final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
@@ -183,6 +251,7 @@ void didChangeDependencies() {
             selectedField: '', // Initial empty field
             ocrText: '', // Initial empty OCR
             chatMessages: [], // Initial empty messages
+            selectedForm: selectedForm ?? 'Unknown Form', 
           );
 
           await Navigator.pushNamed(
@@ -196,14 +265,15 @@ void didChangeDependencies() {
             },
           );
         } else if (response.statusCode == 400) {
-          _showErrorSnackBar(
-              decodedResponse['message'] ?? 'Error processing image');
+          _showErrorToast(context, decodedResponse['message'] ?? 'Error processing image');
+
         } else {
-          _showErrorSnackBar(
-              'Network error or server error. Please try again later.');
+          _showErrorToast(context, 'Network error or server error. Please try again later.');
+
         }
       } catch (e) {
-        _showErrorSnackBar('Error sending image. Please try again.');
+       _showErrorToast(context, 'Error sending image. Please check the settings.');
+
       } finally {
         if (mounted) {
           setState(() {
@@ -212,37 +282,88 @@ void didChangeDependencies() {
         }
       }
     } else {
-      _showErrorSnackBar('No image selected.');
+      _showErrorToast(context, 'No image selected.');
+
     }
   }
 
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        action: SnackBarAction(
-          label: 'Dismiss',
-          textColor: Colors.white,
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
-        ),
-      ),
-    );
-  }
+  // void _showErrorSnackBar(String message) {
+  //   if (!mounted) return;
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     SnackBar(
+  //       content: Text(message),
+  //       backgroundColor: const Color.fromRGBO(255, 159, 126, 1.0),
+  //       behavior: SnackBarBehavior.floating,
+  //       shape: RoundedRectangleBorder(
+  //         borderRadius: BorderRadius.circular(10),
+  //       ),
+  //       action: SnackBarAction(
+  //         label: 'Dismiss',
+  //         textColor: Colors.white,
+  //         onPressed: () {
+  //           ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  //         },
+  //       ),
+  //     ),
+  //   );
+  // }
+// void _showErrorToast(String message) {
+//   if (!mounted) return;
+//   Fluttertoast.showToast(
+//     msg: message,
+//     toastLength: Toast.LENGTH_SHORT,
+//     gravity: ToastGravity.BOTTOM,
+//     backgroundColor: const Color.fromRGBO(255, 159, 126, 1.0),
+//     textColor: Colors.white,
+//     fontSize: 16.0,
+//   );
+// }
+void _showErrorToast(BuildContext context, String message) {
+  FToast fToast = FToast();
+  fToast.init(context);
+  
 
+  Widget toast = Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+    decoration: BoxDecoration(
+      color: Colors.black.withOpacity(0.85), // Semi-transparent background
+      borderRadius: BorderRadius.circular(4.0), // Reduced border radius for a sharper look
+      boxShadow: const [
+        BoxShadow(
+          color: Colors.black26,
+          blurRadius: 4.0,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.error_outline, color: Colors.white, size: 20),
+        SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            message,
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  fToast.showToast(
+    child: toast,
+    gravity: ToastGravity.BOTTOM,
+    toastDuration: Duration(seconds: 2),
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.teal,
+        backgroundColor: Color.fromRGBO(0, 150, 136, 1.0)
+,
         iconTheme: const IconThemeData(color: Colors.white),
         // title: const Text(
         //   'Process Image',
@@ -277,22 +398,25 @@ void didChangeDependencies() {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: imagePath != null
-                            ? Hero(
-                                tag: imagePath!,
-                                child: Image.file(
-                                  File(imagePath!),
-                                  fit: BoxFit.contain,
-                                ),
-                              )
-                            : const Center(
-                                child: Text(
-                                  'No image selected',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
+    ? Expanded(
+      child: Image.file(
+          File(imagePath!),
+          key: ValueKey('${imagePath}_${_forceRebuild}'),
+          fit: BoxFit.fitWidth,
+          gaplessPlayback: false, // Force image reload
+          cacheWidth: null, // Disable width caching
+          cacheHeight: null, // Disable height caching
+        ),
+    )
+    : const Center(
+        child: Text(
+          'No image selected',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 16,
+          ),
+        ),
+      ),
                       ),
                     ),
                   ),
@@ -326,7 +450,8 @@ void didChangeDependencies() {
                       children: [
                         const CircularProgressIndicator(
                           valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.teal),
+                              AlwaysStoppedAnimation<Color>(Color.fromRGBO(0, 150, 136, 1.0)
+),
                         ),
                         const SizedBox(height: 16),
                         Container(
@@ -366,7 +491,8 @@ void didChangeDependencies() {
       width: 150,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.teal,
+          backgroundColor: Color.fromRGBO(0, 150, 136, 1.0)
+,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12),
           shape: RoundedRectangleBorder(

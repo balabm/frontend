@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 
 class FormSelectionScreen extends StatefulWidget {
   const FormSelectionScreen({Key? key}) : super(key: key);
@@ -9,8 +10,8 @@ class FormSelectionScreen extends StatefulWidget {
 }
 
 class _FormSelectionScreenState extends State<FormSelectionScreen> {
-  // List of form names from the provided list.
   final List<String> formNames = [
+    "Others",
     "Laxmi Bai Social security pension scheme",
     "BIhar Diesel Grant Scheme",
     "Rashtriya Aarogya Nidhi",
@@ -342,168 +343,170 @@ class _FormSelectionScreenState extends State<FormSelectionScreen> {
   ];
 
   String? selectedForm;
- Future<bool> _onWillPop() async {
-    // Navigate to the home page
-    Navigator.pushNamed(context, '/home');
-    return false; // Returning false prevents the default pop behavior
-}
 
-@override
-Widget build(BuildContext context) {
+  Future<bool> _onWillPop() async {
+    Navigator.pushNamed(context, '/home');
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-      backgroundColor: Colors.white, // Set background to white
-      appBar: AppBar(
-        title: const Text(
-          "Select Form", 
-          style: TextStyle(color: Colors.white), // White text
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: const Text(
+            "Select Form",
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.teal,
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        backgroundColor: Colors.teal,
-        iconTheme: const IconThemeData(color: Colors.white), // Ensure white icons
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      "Choose a form to proceed:",
-                      style: TextStyle(
-                        fontSize: 18, 
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      decoration: InputDecoration(
-                        labelText: "Select a form",
-                        labelStyle: TextStyle(
-                          color: Colors.blueGrey[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.blueGrey[300]!,
-                            width: 1.5,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.blueGrey[200]!,
-                            width: 1.5,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.teal,
-                            width: 2,
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, 
-                          vertical: 10,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.assignment,
-                          color: Colors.blueGrey[600],
-                        ),
-                      ),
-                      dropdownColor: Colors.white,
-                      style: TextStyle(
-                        color: Colors.blueGrey[800],
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      iconEnabledColor: Colors.teal,
-                      iconDisabledColor: Colors.blueGrey[300],
-                      items: formNames.map((form) {
-                        return DropdownMenuItem<String>(
-                          value: form,
-                          child: Text(
-                            form,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedForm = value;
-                        });
-                        print('Selected form: $value');
-                      },
-                      value: selectedForm,
-                      isExpanded: true,
-                      menuMaxHeight: MediaQuery.of(context).size.height * 0.7, // Increased to 70% of screen height
-                      isDense: false,
-                      itemHeight: 60, // Increased item height for better readability
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (selectedForm != null) {
-                          print('Selected form: $selectedForm');
-                          SharedPreferences prefs = await SharedPreferences.getInstance();
-                          prefs.setString('selected_form', selectedForm!);
-                          Navigator.pushNamed(
-                            context,
-                            '/camera',
-                            arguments: { 
-                              'selectedForm': selectedForm,
-                            },
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Please select a form")),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.teal[600],
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 5,
-                        shadowColor: Colors.teal[800]?.withOpacity(0.6),
-                      ),
-                      child: const Text(
-                        "Proceed",
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        "Choose a form to proceed:",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
+                          color: Colors.black87,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                     DropdownSearch<String>(
+  items: formNames,
+  dropdownDecoratorProps: DropDownDecoratorProps(
+    dropdownSearchDecoration: InputDecoration(
+      labelText: "Select a form",
+      labelStyle: TextStyle(
+        color: Colors.blueGrey[700],
+        fontWeight: FontWeight.w600,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(15),
+        borderSide: BorderSide(
+          color: Colors.blueGrey[300]!,
+          width: 1.5,
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(15),
+        borderSide: BorderSide(
+          color: Colors.blueGrey[300]!,
+          width: 1.5,
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(15),
+        borderSide: BorderSide(
+          color: Colors.teal,
+          width: 2,
+        ),
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 15,
+        vertical: 18,
+      ),
+    ),
+  ),
+  popupProps: PopupProps.menu(
+    showSearchBox: true,
+    fit: FlexFit.loose,
+    
+    constraints: BoxConstraints(maxHeight: 400),
+    searchFieldProps: TextFieldProps(
+      cursorColor: Colors.teal,
+      decoration: InputDecoration(
+        hintText: "Search forms...",
+        hintStyle: TextStyle(color: Colors.blueGrey[400]),
+        filled: true,
+        fillColor: Colors.blueGrey[50],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 15,
+          vertical: 15,
+        ),
+        prefixIcon: Icon(
+          Icons.search,
+          color: Colors.blueGrey[600],
+        ),
+      ),
+    ),
+    menuProps: MenuProps(
+      borderRadius: BorderRadius.circular(15),
+      elevation: 4,
+      backgroundColor: Colors.white,
+      shadowColor: Colors.black.withOpacity(0.1),
+    ),
+  ),
+  onChanged: (value) {
+    setState(() {
+      selectedForm = value;
+    });
+  },
+  selectedItem: selectedForm,
+),
+
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (selectedForm != null) {
+                            SharedPreferences prefs =
+                                await SharedPreferences.getInstance();
+                            prefs.setString('selected_form', selectedForm!);
+                            
+                            Navigator.pushNamed(
+                              context,
+                              '/camera',
+                              arguments: {
+                                'selectedForm': selectedForm,
+                              },
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text("Please select a form")),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.teal,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 5,
+                        ),
+                        child: const Text(
+                          "Proceed",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+        ),
       ),
     );
   }

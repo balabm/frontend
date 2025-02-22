@@ -138,22 +138,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiRepository {
   Future<String> get boundingBoxUrl async {
     final prefs = await SharedPreferences.getInstance();
-    return  prefs.getString('urlupdated') == 'true' ?   prefs.getString('bounding_box_url') ?? '' : 'http://192.168.62.227:8000/cv/form-detection-with-box/';
+    return  prefs.getString('urlupdated') == 'true' ?   prefs.getString('bounding_box_url') ?? '' : 'http://10.64.26.89:8002/cv/form-detection-with-box/';
   }
 
   Future<String> get ocrTextUrl async {
     final prefs = await SharedPreferences.getInstance();
-    return  prefs.getString('urlupdated') == 'true' ?   prefs.getString('ocr_text_url') ?? '' :('ocr_text_url') ??''  'http://192.168.62.227:8080/cv/ocr';
+    return  prefs.getString('urlupdated') == 'true' ?   prefs.getString('ocr_text_url') ?? '' : 'http://10.64.26.89:8001/cv/ocr';
   }
 
   Future<String> get asrUrl async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('urlupdated') == 'true' ?  prefs.getString('asr_url') ?? '' : 'http://192.168.62.227:8001/upload-audio-zip/';
+    return prefs.getString('urlupdated') == 'true' ?  prefs.getString('asr_url') ?? '' : 'http://10.64.26.83:8002/upload-audio-zip/';
   }
 
   Future<String> get llmUrl async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('urlupdated') == 'true' ?  prefs.getString('llm_url') ?? '' : 'http://192.168.62.227:8021/get_llm_response';
+    return prefs.getString('urlupdated') == 'true' ?  prefs.getString('llm_url') ?? '' : 'http://10.64.26.89:8036/get_llm_response_schemes';
   }
 
   // Audio API calls
@@ -185,17 +185,60 @@ class ApiRepository {
   }
 
   // LLM API calls
+  // Future<Map<String, dynamic>?> sendToLLMApi(String formEntry, String schemeName, {String? voiceQuery}) async {
+  //   final uri = Uri.parse(await llmUrl);
+  //   print('LLM Request URL: $uri');
+  //   print('LLM Request Form Entry: $formEntry');
+  //   print('LLM Request Scheme Name: $schemeName');
+  //   try {
+  //     final response = await http.post(
+  //       uri,
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: jsonEncode({
+  //         'form_entry': formEntry,
+  //         'voice_query': voiceQuery ?? '',
+  //         'scheme_name': schemeName,
+  //       }),
+  //     );
+      
+
+  //     if (response.statusCode == 200) {
+  //       print('LLM Response: ${response.body}');
+  //       return jsonDecode(response.body);
+  //     }
+  //     print('Failed to get LLM response: ${response.statusCode}');
+  //     return null;
+  //   } catch (e) {
+  //     print('Error occurred while sending data to LLM API: $e');
+  //     return null;
+  //   }
+  // }
+
+// LLM API calls
   Future<Map<String, dynamic>?> sendToLLMApi(String formEntry, String schemeName, {String? voiceQuery}) async {
     final uri = Uri.parse(await llmUrl);
+
+    // Print the request details for debugging
+    print('LLM Request URL: $uri');
+    print('LLM Request Form Entry: $formEntry');
+    print('LLM Request Scheme Name: $schemeName');
+    if (voiceQuery != null) {
+      print('LLM Request Voice Query: $voiceQuery');
+    }
+
+    final requestBody = jsonEncode({
+      'form_entry': formEntry,
+      'voice_query': voiceQuery ?? '',
+      'scheme_name': schemeName,
+    });
+
+    print('LLM Request Body: $requestBody');
+
     try {
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'form_entry': formEntry,
-          'voice_query': voiceQuery ?? '',
-          'scheme_name': schemeName,
-        }),
+        body: requestBody,
       );
 
       if (response.statusCode == 200) {
@@ -209,8 +252,6 @@ class ApiRepository {
       return null;
     }
   }
-
-
   
 
   // OCR API calls
@@ -219,6 +260,9 @@ class ApiRepository {
     required Map<String, dynamic> box,
   }) async {
     final uri = Uri.parse(await ocrTextUrl);
+    print('OCR Request URL: $uri');
+    print('OCR Request Image Path: $imagePath');
+    print('OCR Request Box: $box');
     var request = http.MultipartRequest('POST', uri);
 
     var file = File(imagePath);

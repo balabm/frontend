@@ -44,8 +44,10 @@ class FormMenuButton extends StatelessWidget {
             child: ListTile(
               contentPadding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
               dense: true,
-              leading: Icon(Icons.cloud_upload, color: Colors.teal, size: 20),
-              title: Text('Upload New Form', style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold, fontSize: 14)),
+              leading: Icon(Icons.cloud_upload, color: Color.fromRGBO(0, 150, 136, 1.0)
+, size: 20),
+              title: Text('Upload New Form', style: TextStyle(color: Color.fromRGBO(0, 150, 136, 1.0)
+, fontWeight: FontWeight.bold, fontSize: 14)),
             ),
           ),
           PopupMenuDivider(),
@@ -54,8 +56,10 @@ class FormMenuButton extends StatelessWidget {
             child: ListTile(
               contentPadding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
               dense: true,
-              leading: Icon(Icons.camera_alt, color: Colors.teal, size: 20),
-              title: Text('Capture New Photo', style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold, fontSize: 14)),
+              leading: Icon(Icons.camera_alt, color: Color.fromRGBO(0, 150, 136, 1.0)
+, size: 20),
+              title: Text('Capture New Photo', style: TextStyle(color: Color.fromRGBO(0, 150, 136, 1.0)
+, fontWeight: FontWeight.bold, fontSize: 14)),
             ),
           ),
         ],
