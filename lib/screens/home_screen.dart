@@ -378,7 +378,7 @@ Widget build(BuildContext context) {
           child: FloatingActionButton.extended(
             onPressed: () => Navigator.pushNamed(context, '/form_selection'),
             icon: const Icon(Icons.add_a_photo, color: Colors.white),
-            label: const Text('New Capture',
+            label: const Text('New Form',
                 style: TextStyle(
                     color: Colors.white, fontWeight: FontWeight.w600)),
             backgroundColor: Color.fromRGBO(0, 150, 136, 1.0)

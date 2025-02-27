@@ -157,32 +157,66 @@ class ApiRepository {
   }
 
   // Audio API calls
+  // Future<String?> sendAudioToApi(File zipFile) async {
+  //   try {
+  //     var request = http.MultipartRequest(
+  //       'POST', 
+  //       Uri.parse(await asrUrl)
+  //     );
+
+  //     request.files.add(await http.MultipartFile.fromPath(
+  //       'file',
+  //       zipFile.path,
+  //       contentType: MediaType('application', 'zip'),
+  //     ));
+
+  //     var response = await request.send();
+  //     if (response.statusCode == 200) {
+  //       String responseBody = await response.stream.bytesToString();
+  //       print('Audio ZIP sent successfully!');
+  //       return responseBody;
+  //     }
+  //     print('Failed to upload ZIP: ${response.statusCode}');
+  //     return null;
+  //   } catch (e) {
+  //     print('Error uploading audio ZIP file: $e');
+  //     return null;
+  //   }
+  // }
   Future<String?> sendAudioToApi(File zipFile) async {
-    try {
-      var request = http.MultipartRequest(
-        'POST', 
-        Uri.parse(await asrUrl)
-      );
+  try {
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse(await asrUrl),
+    );
 
-      request.files.add(await http.MultipartFile.fromPath(
-        'file',
-        zipFile.path,
-        contentType: MediaType('application', 'zip'),
-      ));
+    request.files.add(await http.MultipartFile.fromPath(
+      'file',
+      zipFile.path,
+      contentType: MediaType('application', 'zip'),
+    ));
 
-      var response = await request.send();
-      if (response.statusCode == 200) {
-        String responseBody = await response.stream.bytesToString();
-        print('Audio ZIP sent successfully!');
-        return responseBody;
-      }
+    var response = await request.send();
+    if (response.statusCode == 200) {
+      String responseBody = await response.stream.bytesToString();
+      print('Audio ZIP sent successfully!');
+      return responseBody;
+    } else if (response.statusCode == 400) {
+      String errorBody = await response.stream.bytesToString();
+      print('Failed to upload ZIP: $errorBody');
+      
+      
+      return errorBody;
+    } else {
       print('Failed to upload ZIP: ${response.statusCode}');
       return null;
-    } catch (e) {
-      print('Error uploading audio ZIP file: $e');
-      return null;
     }
+  } catch (e) {
+    print('Error uploading audio ZIP file: $e');
+    return null;
   }
+}
+
 
   // LLM API calls
   // Future<Map<String, dynamic>?> sendToLLMApi(String formEntry, String schemeName, {String? voiceQuery}) async {

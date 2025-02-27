@@ -376,7 +376,7 @@ class _FormSelectionScreenState extends State<FormSelectionScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Text(
-                        "Choose a form to proceed:",
+                        "Select a Scheme to Proceed:",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -388,7 +388,7 @@ class _FormSelectionScreenState extends State<FormSelectionScreen> {
   items: formNames,
   dropdownDecoratorProps: DropDownDecoratorProps(
     dropdownSearchDecoration: InputDecoration(
-      labelText: "Select a form",
+      labelText: "Choose a Scheme",
       labelStyle: TextStyle(
         color: Colors.blueGrey[700],
         fontWeight: FontWeight.w600,

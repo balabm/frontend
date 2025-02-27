@@ -16,6 +16,11 @@ class ChatInput extends StatefulWidget {
   final Widget? microphoneButton;
   final Function() onSendPressed;
   final double slidingOffset;
+    //final FocusNode? focusNode; // Add this line
+  final FocusNode focusNode; // Declare focusNode here
+
+
+  
 
   const ChatInput({
     Key? key,
@@ -27,6 +32,8 @@ class ChatInput extends StatefulWidget {
     this.microphoneButton,
     required this.onSendPressed,
     required this.slidingOffset,
+    required this.focusNode, // And require it here
+    
   }) : super(key: key);
 
   @override
@@ -63,6 +70,11 @@ class _ChatInputState extends State<ChatInput> {
                     ),
                     child: TextField(
                       controller: widget.messageController,
+                      focusNode: widget.focusNode, // Use focusNode from widget
+                      minLines: 1, // Start with 1 line
+                       maxLines: 6, // Maximum of 6 lines before scrolling
+                       cursorColor: kPrimaryColor, // Cursor color set to Teal
+                      textInputAction: TextInputAction.newline, // New line on Enter
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
@@ -82,6 +94,8 @@ class _ChatInputState extends State<ChatInput> {
                         color: Colors.black87,
                       ),
                       enabled: true,
+                        keyboardType: TextInputType.multiline,
+                      scrollPhysics: const BouncingScrollPhysics(), // Smooth scrolling effect
                       onTap: () {
                         if (!widget.dragController.isAttached) return;
 
@@ -117,7 +131,7 @@ class _ChatInputState extends State<ChatInput> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: kShadowColor,
+                        color: const Color.fromARGB(26, 175, 236, 236),
                         spreadRadius: 1,
                         blurRadius: 3,
                         offset: const Offset(0, 1),

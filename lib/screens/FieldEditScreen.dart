@@ -877,6 +877,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:formbot/providers/authprovider.dart';
 import 'package:formbot/providers/firebaseprovider.dart';
 import 'package:formbot/screens/widgets/apirepository.dart';
@@ -895,6 +896,8 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:path/path.dart' as path; // Add this import
 import 'package:image/image.dart' as img; // Add this import
+import 'package:fluttertoast/fluttertoast.dart';
+
 
 
 class FieldEditScreen extends StatefulWidget {
@@ -905,6 +908,8 @@ class FieldEditScreen extends StatefulWidget {
 
 class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
   final _apiRepository = ApiRepository();
+  final FocusNode _messageFocusNode = FocusNode();//for keyboard focus
+
   final _messageController = TextEditingController();
   final _dragController = DraggableScrollableController();
   ScrollController _scrollController = ScrollController();
@@ -961,6 +966,9 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     _messageController.dispose();
     _scrollController.dispose();
     _dragController.dispose();
+      _messageFocusNode.dispose(); // Clean up the focus node
+
+
     super.dispose();
   }
 
@@ -991,6 +999,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
           _slidingOffset = 0; // Reset sliding offset when starting
         });
         startRecording();
+        
       },
       onLongPressMoveUpdate: (details) {
         setState(() {
@@ -1002,6 +1011,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
             _isLongPressing = false;
           }
         });
+
       },
       onLongPressEnd: (_) {
         // If not already canceled during slide
@@ -1016,6 +1026,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
           _slidingOffset = 0;
           _isLongPressing = false;
         });
+           // _messageFocusNode.requestFocus(); // Keep keyboard active
+
       },
     );
       
@@ -1089,9 +1101,10 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     setState(() {
       chatMessages.add({
         'sender': 'assistant',
-        'message': 'Please select a field to extract text first.',
+        'message': 'Please select a field.',
       });
       _needsScroll = true;
+      _scrollToBottom();
     });
     return;
   }
@@ -1119,10 +1132,41 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     return;
   }
 
-  final Map<String, dynamic> asrData = jsonDecode(asrResponse);
-final String transcribedText = asrData['results'] != null && asrData['results'].isNotEmpty
-    ? asrData['results'][0]['ASR_output']?.toString() ?? 'No transcription available'
-    : 'No transcription available';  //ASR response from API
+//   final Map<String, dynamic> asrData = jsonDecode(asrResponse);
+// final String transcribedText = asrData['results'] != null && asrData['results'].isNotEmpty
+//     ? asrData['results'][0]['ASR_output']?.toString() ?? 'No transcription available'
+//     : 'No transcription available';  //ASR response from API
+final Map<String, dynamic> asrData = jsonDecode(asrResponse);
+print("ASR data $asrData");
+String transcribedText = 'No transcription available';
+
+// Check if response is successful
+if (asrData['code']?.toString().trim() == 'OK') {
+  print("inside the looooooooooooooooop");
+  transcribedText = asrData['results'] != null && asrData['results'].isNotEmpty
+      ? asrData['results'][0]['ASR_output']?.toString() ?? 'No transcription available'
+      : 'No transcription available';
+} 
+// Check if there's an error
+else if (asrData['detail'] != null &&
+    asrData['detail']['code']?.toString().trim() == 'ERROR' &&
+    asrData['detail']['message']?.toString().contains('Silence detected') == true) {
+  transcribedText = 'Silence detected';
+  print('Silence detected: $transcribedText');
+  setState(() {
+    _pendingAsrResponse = transcribedText;
+    _isThinking = false;
+    _inputEnabled = true;
+    
+    
+    
+  });
+    return;  // Stop further processing if silence is detected
+
+}
+
+print('Transcription Result: $transcribedText');
+
 
   print('ASR API Response: $asrResponse');
 
@@ -1131,7 +1175,7 @@ final String transcribedText = asrData['results'] != null && asrData['results'].
     
     chatMessages.add({
       'sender': 'user',
-      'message': 'Audio message • $transcribedText',
+      'message': transcribedText,
       'audioPath': recordedFilePath,
       'asrResponse': transcribedText,
       'isAudioMessage': true,
@@ -1189,7 +1233,9 @@ final String transcribedText = asrData['results'] != null && asrData['results'].
       _needsScroll = true;
       _isThinking = false;
       _inputEnabled = true;
+      _pendingAsrResponse = null;
         _scrollToBottom();
+
     });
     // Save responses to Firestore
     _saveResponsesToFirestore();
@@ -1239,12 +1285,92 @@ final String transcribedText = asrData['results'] != null && asrData['results'].
   //   _saveResponsesToFirestore();
   // }
 
+// Future<void> _saveResponsesToFirestore() async {
+//   final uid = _authProvider.user?.uid;
+//   if (uid == null) return;
+
+//   try {
+//     final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+
+//     await firebaseProvider.saveFormWithDetails(
+//       uid: uid,
+//       imagePath: imagePath!, // doc ID will be derived from file name
+//       selectedField: _selectedFieldName ?? 'unnamed_field',
+//       ocrText: _ocrText ?? '',
+//       chatMessages: chatMessages,
+//       boundingBoxes: boundingBoxes ?? [],
+//       selectedForm: selectedForm ?? 'Unknown Form',
+//       selectedBox: selectedBox // Pass the selectedBox here
+//       //formName: selectedForm ?? 'Unknown Form', // Add the required formName argument
+//     );
+
+//     // Reset pending responses
+//     _pendingAsrResponse = null;
+//     _pendingLlmResponse = null;
+
+//   } catch (e) {
+//     print('Error saving to Firestore: $e');
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(content: Text('Error saving form data: $e')),
+//     );
+//   }
+// }
+
+// // Helper method to find last user input
+// String? _findLastUserInput() {
+//   for (var message in chatMessages.reversed) {
+//     if (message['sender'] == 'user') {
+//       return message['message'];
+//     }
+//   }
+//   return null;
+// }
+
+// // Add method to retrieve user's interaction history
+// Future<List<Map<String, dynamic>>> getInteractionHistory() async {
+//   final uid = _authProvider.user?.uid;
+//   if (uid == null) return [];
+
+//   try {
+//     final querySnapshot = await FirebaseFirestore.instance
+//         .collection('users')
+//         .doc(uid)
+//         .collection('interactions')
+//         .orderBy('timestamp', descending: true)
+//         .limit(50) // Adjust limit as needed
+//         .get();
+
+//     return querySnapshot.docs
+//         .map((doc) => {
+//               'id': doc.id,
+//               ...doc.data(),
+//             })
+//         .toList();
+//   } catch (e) {
+//     print('Error fetching interaction history: $e');
+//     return [];
+//   }
+// }
 Future<void> _saveResponsesToFirestore() async {
   final uid = _authProvider.user?.uid;
-  if (uid == null) return;
+  if (uid == null) {
+    print('DEBUG: User ID is null, aborting save.');
+    return;
+  }
 
   try {
     final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+
+    // Debug prints to inspect the data being saved
+    print('DEBUG: Preparing to save form data with the following details:');
+    print('DEBUG: User ID: $uid');
+    print('DEBUG: Image Path: $imagePath');
+    print('DEBUG: Selected Field: ${_selectedFieldName ?? 'unnamed_field'}');
+    print('DEBUG: OCR Text: ${_ocrText ?? ''}');
+    print('DEBUG: Chat Messages: $chatMessages');
+    print('DEBUG: Bounding Boxes: ${boundingBoxes ?? []}');
+    print('DEBUG: Selected Form: ${selectedForm ?? 'Unknown Form'}');
+    print('DEBUG: Selected Box: $selectedBox');
 
     await firebaseProvider.saveFormWithDetails(
       uid: uid,
@@ -1254,16 +1380,17 @@ Future<void> _saveResponsesToFirestore() async {
       chatMessages: chatMessages,
       boundingBoxes: boundingBoxes ?? [],
       selectedForm: selectedForm ?? 'Unknown Form',
-      selectedBox: selectedBox // Pass the selectedBox here
-      //formName: selectedForm ?? 'Unknown Form', // Add the required formName argument
+      selectedBox: selectedBox
     );
 
     // Reset pending responses
     _pendingAsrResponse = null;
     _pendingLlmResponse = null;
+    print('DEBUG: Form data saved successfully.');
 
-  } catch (e) {
-    print('Error saving to Firestore: $e');
+  } catch (e, stacktrace) {
+    print('ERROR: Error saving to Firestore: $e');
+    print('ERROR: Stack trace: $stacktrace');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Error saving form data: $e')),
     );
@@ -1274,18 +1401,24 @@ Future<void> _saveResponsesToFirestore() async {
 String? _findLastUserInput() {
   for (var message in chatMessages.reversed) {
     if (message['sender'] == 'user') {
+      print('DEBUG: Found last user input: ${message['message']}');
       return message['message'];
     }
   }
+  print('DEBUG: No user input found.');
   return null;
 }
 
 // Add method to retrieve user's interaction history
 Future<List<Map<String, dynamic>>> getInteractionHistory() async {
   final uid = _authProvider.user?.uid;
-  if (uid == null) return [];
+  if (uid == null) {
+    print('DEBUG: User ID is null, cannot fetch interaction history.');
+    return [];
+  }
 
   try {
+    print('DEBUG: Fetching interaction history for User ID: $uid');
     final querySnapshot = await FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
@@ -1294,14 +1427,16 @@ Future<List<Map<String, dynamic>>> getInteractionHistory() async {
         .limit(50) // Adjust limit as needed
         .get();
 
+    print('DEBUG: Interaction history fetched successfully.');
     return querySnapshot.docs
         .map((doc) => {
               'id': doc.id,
               ...doc.data(),
             })
         .toList();
-  } catch (e) {
-    print('Error fetching interaction history: $e');
+  } catch (e, stacktrace) {
+    print('ERROR: Error fetching interaction history: $e');
+    print('ERROR: Stack trace: $stacktrace');
     return [];
   }
 }
@@ -1439,23 +1574,34 @@ bool isloaded = false;
     }
   }
 
-  void _scrollToBottom() => setState(() {
-        _needsScroll = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _dragController.animateTo(
-            0.6,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
-        });
-      });
+  // void _scrollToBottom() => setState(() {
+  //       _needsScroll = true;
+  //       WidgetsBinding.instance.addPostFrameCallback((_) {
+  //         _dragController.animateTo(
+  //           0.6,
+  //           duration: const Duration(milliseconds: 300),
+  //           curve: Curves.easeOut,
+  //         );
+  //         if (_scrollController.hasClients) {
+  //           _scrollController.animateTo(
+  //             _scrollController.position.maxScrollExtent,
+  //             duration: const Duration(milliseconds: 300),
+  //             curve: Curves.easeOut,
+  //           );
+  //         }
+  //       });
+  //     });
+void _scrollToBottom() {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  });
+}
 
   void _onBoundingBoxTap(Map<String, dynamic> box) {
     if (_isThinking) {
@@ -1477,6 +1623,8 @@ bool isloaded = false;
     // }
 
     setState(() {
+          _pendingAsrResponse = null;  // Reset ASR response when a new field is selected
+
       _inputEnabled = true;
       _selectedFieldName = box['class'];
       if (selectedBox != null) previouslySelectedBoxes.add(selectedBox!);
@@ -1539,7 +1687,9 @@ Future<File> _cropImage(String imagePath, Map<String, dynamic> box) async {
           'sender': 'assistant',
           'message':
               //'Field ${box['class']} selected. The detected text is: $_ocrText',
-              '$_ocrText',
+              'Selected Field Is:\n$_ocrText',
+               'isBold': true,
+              //'$_ocrText',
         });
         _isThinking = false;
         _needsScroll = true;
@@ -1571,27 +1721,52 @@ Widget _buildInstructionBanner() {
   bool showCompletionBanner = false;
   IconData? leadingIcon;
 
-  if (_selectedFieldName == null) {
-    instructionText = 'Tap to select a field';
-    //leadingIcon = Icons.touch_app;
-  } else if (_ocrText == null) {
-    instructionText = 'Scanning $_selectedFieldName...';
-    //leadingIcon = Icons.scanner;
-  } else if (_ocrText != null && _inputEnabled && chatMessages.isEmpty) {
-    instructionText = 'Tap to ask or type a question';
-    //leadingIcon = Icons.question_answer;
-  } else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
-    instructionText = 'Tap to select another field';
-    showCompletionBanner = true;
-    //leadingIcon = Icons.arrow_back;
-  } else if (_isThinking) {
-    instructionText = 'Analyzing content...';
-    //leadingIcon = Icons.psychology;
-  } else {
-    instructionText = 'Ask about selected field';
-    //leadingIcon = Icons.chat;
-  }
+//   if (_selectedFieldName == null) {
+//     instructionText = 'Tap to select a field';
+//     //leadingIcon = Icons.touch_app;
+//   } else if (_ocrText == null) {
+//     instructionText = 'Scanning $_selectedFieldName...';
+//     //leadingIcon = Icons.scanner;
+//   } else if (_ocrText != null && _inputEnabled && chatMessages.isEmpty) {
+//     instructionText = 'Tap to ask or type a question';
+//     //leadingIcon = Icons.question_answer;
+//   } else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
+//     instructionText = 'Tap to select another field';
+//     showCompletionBanner = true;
+//     //leadingIcon = Icons.arrow_back;
+//   }  else if (_pendingAsrResponse == 'Silence detected') {
+//   instructionText = 'Silence detected';
 
+// } else if (_isThinking) {
+//     instructionText = 'Analyzing content...';
+//     //leadingIcon = Icons.psychology;
+//   }
+//  else {
+//     instructionText = 'Ask about selected field';
+//     //leadingIcon = Icons.chat;
+//   }
+if (_selectedFieldName == null) {
+  instructionText = 'Tap to select a field';
+  //leadingIcon = Icons.touch_app;
+} else if (_ocrText == null) {
+  instructionText = 'Scanning $_selectedFieldName...';
+  //leadingIcon = Icons.scanner;
+} else if (_isThinking) {
+  instructionText = 'Analyzing content...';
+  //leadingIcon = Icons.psychology;
+} else if (_pendingAsrResponse == 'Silence detected') {
+  instructionText = 'Silence detected,Please Retry';
+} else if (_ocrText != null && _inputEnabled && chatMessages.isEmpty) {
+  instructionText = 'Tap to ask or type a question';
+  //leadingIcon = Icons.question_answer;
+} else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
+  instructionText = 'Tap to select another field';
+  showCompletionBanner = true;
+  //leadingIcon = Icons.arrow_back;
+} else {
+  instructionText = 'Ask about selected field';
+  //leadingIcon = Icons.chat;
+}
   return TweenAnimationBuilder<double>(
     tween: Tween(begin: 0.95, end: 1.0),
     duration: const Duration(milliseconds: 200),
@@ -1768,7 +1943,7 @@ Widget _buildInstructionBanner() {
                         child: Image.file(
                           File(imagePath!),
                           fit: BoxFit.contain,
-      width: MediaQuery.of(context).size.width, // Keep width constant
+      //width: MediaQuery.of(context).size.width, // Keep width constant
                         ),
                       ),
                     ),
@@ -1831,7 +2006,7 @@ Widget _buildInstructionBanner() {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 170, 174, 174),
+                    color: const Color.fromARGB(255, 243, 244, 244),
                     border: Border(
                       bottom: BorderSide(
                         color: Colors.grey[200]!,
@@ -1846,7 +2021,7 @@ Widget _buildInstructionBanner() {
                         height: 4,
                         margin: const EdgeInsets.only(bottom: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Colors.grey,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -1854,7 +2029,7 @@ Widget _buildInstructionBanner() {
                         width: 30,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Colors.grey,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -1897,6 +2072,8 @@ Widget _buildInstructionBanner() {
                 microphoneButton: _messageController.text.isEmpty && !_isThinking
                     ? _buildMicrophoneButton()
                     : null,
+                focusNode: _messageFocusNode, // Pass FocusNode here
+                //focusNode: _messageFocusNode, // Pass FocusNode here
                 onSendPressed: () {
                   if (!_inputEnabled) return;
                   FocusScope.of(context).unfocus();
@@ -1912,9 +2089,12 @@ Widget _buildInstructionBanner() {
                       'inputType': 'text'
                     });
                     _needsScroll = true;
+                    
                   });
                   _sendToLLMApi(_messageController.text);
                   _messageController.clear();
+                  _scrollToBottom(); // Scroll to bottom after sending a message
+
                 },
                 slidingOffset: _slidingOffset,
               ),
@@ -1928,37 +2108,3 @@ Widget _buildInstructionBanner() {
           ),
         );
 }
-// child: FittedBox(
-    //   fit: _showBottomSheet ? BoxFit.contain : BoxFit.fitWidth,
-    //   alignment: Alignment.topCenter,
-    //   child: InteractiveViewer(
-    //     panEnabled: true,
-    //     minScale: 0.5,
-    //     maxScale: 4.0,
-    //     child: Stack(
-    //       children: [
-    //         if (imagePath != null)
-    //           Center( 
-    //             child: Image.file(
-    //               File(imagePath!),
-    //               fit: _showBottomSheet ? BoxFit.fitWidth : BoxFit.fitHeight,
-    //               width: _showBottomSheet
-    //                   ? MediaQuery.of(context).size.width
-    //                   : null,r
-    //               height: _showBottomSheet
-    //                   ? MediaQuery.of(context).size.height * 0.5
-    //                   : MediaQuery.of(context).size.height,
-    //             ),
-    //           ),
-    //         if (boundingBoxes != null)
-    //           BoundingBoxOverlay(
-    //             imagePath: imagePath!,
-    //             boundingBoxes: boundingBoxes!,
-    //             selectedBox: selectedBox,
-    //             previouslySelectedBoxes: previouslySelectedBoxes,
-    //             onBoundingBoxTap: _onBoundingBoxTap,
-    //           ),
-    //       ],
-    //     ),
-    //   ),
-    // ),

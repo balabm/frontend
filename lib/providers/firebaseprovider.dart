@@ -353,8 +353,8 @@ class FirebaseProvider with ChangeNotifier {
         'content': msg['message'],
         'contentType': msg['isAudioMessage'] == true ? 'audio' : 'text',
         'base64Audio': base64Audio,
-        'fieldName': selectedField,
-        'ocrContext': ocrText,
+        //'fieldName': selectedField,
+        //'ocrContext': ocrText,
         'selectedBox': selectedBox != null ? Map<String, dynamic>.from(selectedBox) : null, // Save selectedBox
 
         
