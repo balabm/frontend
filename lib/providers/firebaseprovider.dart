@@ -36,6 +36,8 @@ class FirebaseProvider with ChangeNotifier {
     }
   }
 
+
+
   // Add a document to a Firestore collection
   Future<void> addDocument(
       String collectionPath, Map<String, dynamic> data) async {
@@ -49,6 +51,100 @@ class FirebaseProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
+
+// Add this method to the FirebaseProvider class
+
+// Future<void> updateFormName(String uid, String formId, String newName) async {
+//   _setLoading(true);
+//   try {
+//     print('Updating form name for UID: $uid, Form ID: $formId, New Name: $newName');
+
+//     // Reference to the specific form document in Firestore
+//     final formRef = FirebaseFirestore.instance
+//         .collection('users')
+//         .doc(uid)
+//         .collection('forms')
+//         .doc(formId);
+
+//     // Update the fileName field in Firestore
+//     await formRef.update({
+//       'fileName': newName, // Update the fileName field
+//       'lastInteractionAt': FieldValue.serverTimestamp(), // Optional: Update timestamp
+//     });
+
+//     notifyListeners();
+//     print('Form name updated in Firebase: $formId -> $newName');
+//   } catch (e) {
+//     print('Error updating form name in Firebase: $e');
+//     throw Exception('Failed to update form name in Firebase');
+//   } finally {
+//     _setLoading(false);
+//   }
+// }
+Future<void> updateFormName(String uid, String formId, String newName) async {
+  _setLoading(true);
+  try {
+    print('🔹 Start: Updating form name');
+    print('🔹 UID: $uid, Form ID: $formId, New Name: $newName');
+
+    // Reference to the forms collection
+    final formsCollection = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('forms');
+
+    // Print all document IDs to verify `formId`
+    final snapshot = await formsCollection.get();
+    if (snapshot.docs.isEmpty) {
+      print('❌ No forms found for this user.');
+      throw Exception('No forms found for this user.');
+    }
+
+    print('🔹 Existing Form IDs:');
+    for (var doc in snapshot.docs) {
+      print('   - ${doc.id}');
+    }
+
+    // Reference to the specific form document
+    final formRef = formsCollection.doc(formId);
+
+    print('🔹 Checking if the document exists in Firestore...');
+    final docSnapshot = await formRef.get();
+
+    if (!docSnapshot.exists) {
+      print('❌ Error: Document does not exist! Form ID: $formId');
+      throw Exception('Document does not exist');
+    }
+
+    // Print the current document data before updating
+    print('🔹 Document Data Before Update: ${docSnapshot.data()}');
+
+    print('🔹 Document exists, proceeding with update...');
+
+    // Update the fileName field in Firestore
+    await formRef.update({
+      'fileName': newName, // Update the fileName field
+      'lastInteractionAt': FieldValue.serverTimestamp(), // Update timestamp
+    });
+
+    print('✅ Success: Form name updated in Firebase');
+
+    // Print the updated document data
+    final updatedSnapshot = await formRef.get();
+    print('🔹 Document Data After Update: ${updatedSnapshot.data()}');
+
+    notifyListeners();
+  } on FirebaseException catch (e) {
+    print('❌ FirebaseException: Code: ${e.code}, Message: ${e.message}');
+    throw Exception('Firebase error: ${e.message}');
+  } catch (e) {
+    print('❌ General Exception: $e');
+    throw Exception('Failed to update form name: $e');
+  } finally {
+    print('🔹 Finished update operation');
+    _setLoading(false);
+  }
+}
 
   // Update a document in a Firestore collection
   Future<void> updateDocument(

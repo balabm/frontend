@@ -28,7 +28,7 @@ class Common {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message),
-      backgroundColor: isError ? Colors.red.shade400 : Colors.green.shade400,
+      backgroundColor: isError ? Colors.red.shade400 :  Color(0xFF009688),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       margin: const EdgeInsets.all(16),

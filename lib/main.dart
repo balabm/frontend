@@ -15,6 +15,9 @@ import 'package:firebase_core/firebase_core.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+ 
+  
   runApp(
     MultiProvider(
       providers: [
@@ -36,10 +39,19 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Form Capture App',
       theme: ThemeData(
+        
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
+        textSelectionTheme: TextSelectionThemeData(
+    cursorColor: Colors.teal, // Set cursor color to teal
+    selectionColor: Colors.teal.withOpacity(0.3), // Highlight selection color
+    selectionHandleColor: Colors.teal, // Selection handle (drag handles) color
+  ),
+        
       ),
-      initialRoute: '/userInput', // Set UserInputScreen as the initial route
+      home: const AuthWrapper(), // Use AuthWrapper as the initial screen
+
+      //initialRoute: '/userInput', // Set UserInputScreen as the initial route
       routes: {
         '/userInput': (context) => UserInputScreen(),
         '/home': (context) => const HomeScreen(),
@@ -49,6 +61,74 @@ class MyApp extends StatelessWidget {
         '/settings': (context) => const SettingsScreen(),
         '/form_selection': (context) => const FormSelectionScreen(), // Add this line
         
+      },
+    );
+  }
+}
+// class AuthWrapper extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     final authProvider = Provider.of<AuthProvider>(context);
+
+//     return FutureBuilder(
+//       future: authProvider.checkUserSignedIn(),
+//       builder: (context, snapshot) {
+//         if (snapshot.connectionState == ConnectionState.waiting) {
+//           print('🔄 Checking authentication state...');
+//           return Scaffold(
+//             body: Center(
+//               child: CircularProgressIndicator(),
+//             ),
+//           );
+//         } else {
+//           if (snapshot.hasData && snapshot.data == true) {
+//             print('✅ User is authenticated. Navigating to HomeScreen.');
+//             return const HomeScreen(); // Navigate to HomeScreen if authenticated
+//           } else {
+//             print('❌ User is not authenticated. Showing UserInputScreen.');
+//             return UserInputScreen(); // Navigate to UserInputScreen if not authenticated
+//           }
+//         }
+//       },
+//     );
+//   }
+// }
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({Key? key}) : super(key: key);
+
+  @override
+  _AuthWrapperState createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  late Future<bool> _authCheckFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Cache the Future in initState
+    _authCheckFuture = Provider.of<AuthProvider>(context, listen: false).checkUserSignedIn();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _authCheckFuture, // Use the cached Future
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          print('🔄 Checking authentication state...');
+          return Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        } else if (snapshot.hasData && snapshot.data == true) {
+          print('✅ User is authenticated. Navigating to HomeScreen.');
+          return const HomeScreen(); // Navigate to HomeScreen if authenticated
+        } else {
+          print('❌ User is not authenticated. Showing UserInputScreen.');
+          return UserInputScreen(); // Navigate to UserInputScreen if not authenticated
+        }
       },
     );
   }

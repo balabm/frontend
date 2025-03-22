@@ -839,23 +839,23 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                      child: Row(
+                      padding: const EdgeInsets.symmetric(horizontal: 70.0, vertical: 8.0),
+                        child: Row(
                         children: [
+                          // Expanded(
+                          //   child: _buildButton(
+                          //     icon: Icons.crop,
+                          //     label: 'Crop',
+                          //     onPressed: _isLoading ? null : _cropImage,
+                          //   ),
+                          // ),
+                          const SizedBox(width: 5),
                           Expanded(
-                            child: _buildButton(
-                              icon: Icons.crop,
-                              label: 'Crop',
-                              onPressed: _isLoading ? null : _cropImage,
-                            ),
+                          child: _buildButton(
+                            icon: Icons.arrow_forward,
+                            label: 'Next',
+                            onPressed: _isLoading ? null : _sendImageToAPI,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildButton(
-                              icon: Icons.navigate_next,
-                              label: 'Next',
-                              onPressed: _isLoading ? null : _sendImageToAPI,
-                            ),
                           ),
                         ],
                       ),

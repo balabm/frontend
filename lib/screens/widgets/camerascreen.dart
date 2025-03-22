@@ -591,6 +591,8 @@ import 'package:flutter_doc_scanner/flutter_doc_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -622,76 +624,83 @@ class _CameraScreenState extends State<CameraScreen> {
 
   /// Scan Document
   Future<void> scanDocument() async {
-    try {
-      print("🚀 Triggering document scan...");
+  try {
+    print("🚀 Triggering document scan...");
 
-      final scannedDocuments = await FlutterDocScanner().getScannedDocumentAsImages(page: 1);
-      print("📸 Scanned Documents: $scannedDocuments");
+    final scannedDocuments = await FlutterDocScanner().getScannedDocumentAsImages(page: 1);
+    print("📸 Scanned Documents: $scannedDocuments");
 
-      final scannedPages = scannedDocuments['Uri'];
-      print("🔍 Debug: scannedPages -> $scannedPages");
+    final scannedPages = scannedDocuments['Uri'];
+    print("🔍 Debug: scannedPages -> $scannedPages");
 
-      if (scannedPages != null) {
-        String scannedPath = "";
+    if (scannedPages != null) {
+      String scannedPath = "";
 
-        if (scannedPages is List) {
-          scannedPath = scannedPages.first['imageUri'] ?? "";
-        } else if (scannedPages is String) {
-          final match = RegExp(r'imageUri=(file://[^}]+)').firstMatch(scannedPages);
-          scannedPath = match?.group(1) ?? "";
-        }
-
-        print("✅ Extracted Image Path: $scannedPath");
-
-        if (scannedPath.isNotEmpty) {
-          final savedPath = await _saveImage(scannedPath);
-          print("💾 Image saved at: $savedPath");
-
-          if (!mounted) return;
-
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Navigator.pushReplacementNamed(
-              context,
-              '/image_processing',
-              arguments: {
-                'imagePath': savedPath,
-                'selectedForm': selectedForm,
-              },
-            );
-          });
-        }
+      if (scannedPages is List) {
+        scannedPath = scannedPages.first['imageUri'] ?? "";
+      } else if (scannedPages is String) {
+        final match = RegExp(r'imageUri=(file://[^}]+)').firstMatch(scannedPages);
+        scannedPath = match?.group(1) ?? "";
       }
-    } on PlatformException catch (e) {
-      print("❌ PlatformException: Failed to scan document. Error: $e");
-    } catch (e) {
-      print("❌ Unexpected Error: $e");
+
+      print("✅ Extracted Image Path: $scannedPath");
+
+      if (scannedPath.isNotEmpty) {
+        final savedPath = await _saveImage(scannedPath);
+        print("💾 Image saved at: $savedPath");
+
+        if (!mounted) return;
+
+        // Generate a timestamp-based name for the form
+        final DateTime now = DateTime.now();
+        final String formName = "${now.year}-${now.month}-${now.day}_${now.hour}-${now.minute}-${now.second}";
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/image_processing',
+            arguments: {
+              'imagePath': savedPath,
+              'selectedForm': formName, // Pass the timestamp-based form name
+            },
+          );
+        });
+      }
     }
+  } on PlatformException catch (e) {
+    print("❌ PlatformException: Failed to scan document. Error: $e");
+  } catch (e) {
+    print("❌ Unexpected Error: $e");
   }
-
-  /// Save Scanned Image
-  Future<String> _saveImage(String scannedPath) async {
-    try {
-      final File scannedFile = File(Uri.parse(scannedPath).toFilePath());
-      if (!await scannedFile.exists()) {
-        print("❌ ERROR: Scanned file does NOT exist at $scannedPath");
-        return "";
-      }
-
-      String extension = scannedPath.split('.').last;
-      if (extension.isEmpty || !['jpg', 'jpeg', 'png'].contains(extension.toLowerCase())) {
-        extension = "jpg";
-      }
-
-      final String newPath = "/storage/emulated/0/Download/scanned_document.$extension";
-      await scannedFile.copy(newPath);
-      print("✅ File successfully saved at: $newPath");
-
-      return newPath;
-    } catch (e) {
-      print("❌ Error saving file: $e");
+}
+  /// Save Scanned Image with Dynamic Form Name
+Future<String> _saveImage(String scannedPath) async {
+  try {
+    final File scannedFile = File(Uri.parse(scannedPath).toFilePath());
+    if (!await scannedFile.exists()) {
+      print("❌ ERROR: Scanned file does NOT exist at $scannedPath");
       return "";
     }
+
+    // Get current date and time
+    DateTime now = DateTime.now();
+    String formattedDate = "${now.year}-${now.month}-${now.day}_${now.hour}-${now.minute}-${now.second}";
+
+    // Create a meaningful form name based on timestamp
+    String formName = "Form_$formattedDate";
+
+    Directory? directory = await getExternalStorageDirectory();
+    String newPath = "${directory?.path}/${formName}.jpg";
+
+    await scannedFile.copy(newPath);
+    print("✅ File successfully saved at: $newPath");
+
+    return newPath;
+  } catch (e) {
+    print("❌ Error saving file: $e");
+    return "";
   }
+}
 
   /// Pick Image from Gallery
   Future<void> _pickImage() async {
