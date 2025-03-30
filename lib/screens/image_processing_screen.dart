@@ -715,10 +715,13 @@ class _ImageProcessingScreenState extends State<ImageProcessingScreen>
             chatMessages: [], // Initial empty messages
             selectedForm: selectedForm ?? 'Unknown Form', 
           );
+          print('selected Form in image processing screen: $selectedForm');
+
 
           await Navigator.pushNamed(
             context,
             '/field_edit_screen',
+            
             arguments: {
               'imagePath': imagePath!,
               'bounding_boxes': decodedResponse['bounding_boxes'],

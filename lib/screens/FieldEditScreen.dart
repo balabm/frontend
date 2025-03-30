@@ -1351,6 +1351,52 @@ print('Transcription Result: $transcribedText');
 //     return [];
 //   }
 // }
+//working
+// Future<void> _saveResponsesToFirestore() async {
+//   final uid = _authProvider.user?.uid;
+//   if (uid == null) {
+//     print('DEBUG: User ID is null, aborting save.');
+//     return;
+//   }
+
+//   try {
+//     final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+
+//     // Debug prints to inspect the data being saved
+//     print('DEBUG: Preparing to save form data with the following details:');
+//     print('DEBUG: User ID: $uid');
+//     print('DEBUG: Image Path: $imagePath');
+//     print('DEBUG: Selected Field: ${_selectedFieldName ?? 'unnamed_field'}');
+//     print('DEBUG: OCR Text: ${_ocrText ?? ''}');
+//     print('DEBUG: Chat Messages: $chatMessages');
+//     print('DEBUG: Bounding Boxes: ${boundingBoxes ?? []}');
+//     print('DEBUG: Selected Form: ${selectedForm ?? 'Unknown Form'}');
+//     print('DEBUG: Selected Box: $selectedBox');
+
+//     await firebaseProvider.saveFormWithDetails(
+//       uid: uid,
+//       imagePath: imagePath!, // doc ID will be derived from file name
+//       selectedField: _selectedFieldName ?? 'unnamed_field',
+//       ocrText: _ocrText ?? '',
+//       chatMessages: chatMessages,
+//       boundingBoxes: boundingBoxes ?? [],
+//       selectedForm: selectedForm ?? 'Unknown Form',
+//       selectedBox: selectedBox
+//     );
+
+//     // Reset pending responses
+//     _pendingAsrResponse = null;
+//     _pendingLlmResponse = null;
+//     print('DEBUG: Form data saved successfully.');
+
+//   } catch (e, stacktrace) {
+//     print('ERROR: Error saving to Firestore: $e');
+//     print('ERROR: Stack trace: $stacktrace');
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(content: Text('Error saving form data: $e')),
+//     );
+//   }
+// }
 Future<void> _saveResponsesToFirestore() async {
   final uid = _authProvider.user?.uid;
   if (uid == null) {
@@ -1367,17 +1413,43 @@ Future<void> _saveResponsesToFirestore() async {
     print('DEBUG: Image Path: $imagePath');
     print('DEBUG: Selected Field: ${_selectedFieldName ?? 'unnamed_field'}');
     print('DEBUG: OCR Text: ${_ocrText ?? ''}');
-    print('DEBUG: Chat Messages: $chatMessages');
-    print('DEBUG: Bounding Boxes: ${boundingBoxes ?? []}');
-    print('DEBUG: Selected Form: ${selectedForm ?? 'Unknown Form'}');
-    print('DEBUG: Selected Box: $selectedBox');
+    
+    // Only save messages that haven't been saved yet
+    List<Map<String, dynamic>> unsavedMessages = [];
+    
+    // Check if we're tracking which messages have been saved
+    if (!this.mounted) return;
+    
+    // Find messages that haven't been saved yet
+    for (int i = 0; i < chatMessages.length; i++) {
+      if (chatMessages[i]['savedToFirebase'] != true) {
+        // Clone the message without modifying the original
+        final messageToSave = Map<String, dynamic>.from(chatMessages[i]);
+        unsavedMessages.add(messageToSave);
+        
+        // Mark this message as saved in our local state
+        if (mounted) {
+          setState(() {
+            chatMessages[i]['savedToFirebase'] = true;
+          });
+        }
+      }
+    }
+    
+    print('DEBUG: Unsaved Chat Messages: ${unsavedMessages.length}');
+    
+    if (unsavedMessages.isEmpty) {
+      print('DEBUG: No new messages to save.');
+      return;
+    }
 
+    // Only save if there are new messages
     await firebaseProvider.saveFormWithDetails(
       uid: uid,
       imagePath: imagePath!, // doc ID will be derived from file name
       selectedField: _selectedFieldName ?? 'unnamed_field',
       ocrText: _ocrText ?? '',
-      chatMessages: chatMessages,
+      chatMessages: unsavedMessages, // Only sending unsaved messages
       boundingBoxes: boundingBoxes ?? [],
       selectedForm: selectedForm ?? 'Unknown Form',
       selectedBox: selectedBox
@@ -1386,7 +1458,7 @@ Future<void> _saveResponsesToFirestore() async {
     // Reset pending responses
     _pendingAsrResponse = null;
     _pendingLlmResponse = null;
-    print('DEBUG: Form data saved successfully.');
+    print('DEBUG: Form data saved successfully. Saved ${unsavedMessages.length} new messages.');
 
   } catch (e, stacktrace) {
     print('ERROR: Error saving to Firestore: $e');
@@ -1591,8 +1663,27 @@ bool isloaded = false;
   //         }
   //       });
   //     });
+// void _scrollToBottom() {
+//   WidgetsBinding.instance.addPostFrameCallback((_) {
+//     if (_scrollController.hasClients) {
+//       _scrollController.animateTo(
+//         _scrollController.position.maxScrollExtent,
+//         duration: const Duration(milliseconds: 300),
+//         curve: Curves.easeOut,
+//       );
+//     }
+//   });
+// }
 void _scrollToBottom() {
   WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_dragController.isAttached) {
+      _dragController.animateTo(
+        0.6,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,

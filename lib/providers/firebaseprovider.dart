@@ -229,31 +229,90 @@ Future<void> updateFormName(String uid, String formId, String newName) async {
         'originalFileName': originalFileName,
         'selectedForm': selectedForm,
         'imagePath': imagePath,
-        'selectedForm': selectedForm,
+        //'selectedForm': selectedForm,
         'boundingBoxes':
             boundingBoxes.map((box) => Map<String, dynamic>.from(box)).toList(),
         
         'currentSelectedField': Map<String, dynamic>.from(selectedFields),
       }, SetOptions(merge: true));
+      
+final interactionDoc = formRef.collection('interactions').doc('interactionLog');
 
-      final interactionDoc =
-          formRef.collection('interactions').doc('interactionLog');
-      final messages = chatMessages
-          .map((msg) => {
-                'sender': msg['sender'],
-                'message': msg['message'],
-                'isAudioMessage': msg['isAudioMessage'] ?? false,
-                'audioBase64': msg['audioBase64'],
-                'timestamp': DateTime.now().toIso8601String(),
-              })
-          .toList();
+// Step 1: Fetch existing messages
+final docSnapshot = await interactionDoc.get();
+List<dynamic> existingMessages = [];
 
-      await interactionDoc.set({
-        'timestamp': DateTime.now().toIso8601String(),
-        'messages': messages,
-      });
+if (docSnapshot.exists) {
+  final data = docSnapshot.data();
+  if (data != null && data['messages'] != null) {
+    existingMessages = List.from(data['messages']);
+  }
+}
 
-      print('Successfully saved ${messages.length} messages');
+print("🔹 Step 1: Existing Messages from Firestore (Before Merge)");
+for (int i = 0; i < existingMessages.length; i++) {
+  print("📥 Index $i -> ${existingMessages[i]}");
+}
+
+// Step 2: Get new messages from `chatMessages`
+final newMessages = chatMessages.map((msg) => {
+  'sender': msg['sender'],
+  'message': msg['message'],
+  'isAudioMessage': msg['isAudioMessage'] ?? false,
+  'audioBase64': msg['audioBase64'],
+  'timestamp': DateTime.now().toIso8601String(),
+}).toList();
+
+print("🔹 Step 2: New Messages to be Added");
+for (int i = 0; i < newMessages.length; i++) {
+  print("🆕 Index $i -> ${newMessages[i]}");
+}
+
+// Step 3: Avoid duplicates (Check only sender and message)
+for (var newMsg in newMessages) {
+  bool alreadyExists = existingMessages.any((msg) =>
+      msg['message'] == newMsg['message'] &&
+      msg['sender'] == newMsg['sender']); // Ignore timestamp difference
+
+  if (!alreadyExists) {
+    existingMessages.add(newMsg);
+    print("✅ Added New Message -> ${newMsg}");
+  } else {
+    print("⚠️ Duplicate Detected, Skipping -> ${newMsg}");
+  }
+}
+
+print("🔹 Step 3: Final Messages List (Before Saving)");
+for (int i = 0; i < existingMessages.length; i++) {
+  print("📤 Index $i -> ${existingMessages[i]}");
+}
+
+// Step 4: Save merged messages to Firestore
+await interactionDoc.set({
+  'timestamp': DateTime.now().toIso8601String(),
+  'messages': existingMessages, 
+}, SetOptions(merge: true));
+
+print("📝 Step 4: Messages successfully saved to Firestore!");
+
+      // final interactionDoc =
+      //     formRef.collection('interactions').doc('interactionLog');
+      // final messages = chatMessages
+      //     .map((msg) => {
+      //           'sender': msg['sender'],
+      //           'message': msg['message'],
+      //           'isAudioMessage': msg['isAudioMessage'] ?? false,
+      //           'audioBase64': msg['audioBase64'],
+      //           'timestamp': DateTime.now().toIso8601String(),
+      //         })
+      //     .toList();
+
+      // await interactionDoc.set({
+      //   'timestamp': DateTime.now().toIso8601String(),
+      //   'messages': messages,
+      // });
+
+      // print('Successfully saved ${messages.length} messages');
     } catch (e) {
       print('Error saving form data: $e');
       throw Exception('Failed to save form data');
@@ -323,7 +382,7 @@ Future<void> updateFormName(String uid, String formId, String newName) async {
     required String ocrText,
     required List<Map<String, dynamic>> chatMessages,
     required List<dynamic> boundingBoxes,
-     required String selectedForm,  // Add this parameter
+    required String selectedForm,  // Add this parameter
     Map<String, dynamic>? selectedBox,
   }) async {
     _setLoading(true);
@@ -363,16 +422,42 @@ Future<void> updateFormName(String uid, String formId, String newName) async {
       }, SetOptions(merge: true));
 
       // Instead of separate docs, store all messages in a single 'interactionLog' doc
-      final interactionDoc =
-          formRef.collection('interactions').doc('interactionLog');
-      await interactionDoc.set({
-        'timestamp': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      // final interactionDoc =
+      //     formRef.collection('interactions').doc('interactionLog');
+      // await interactionDoc.set({
+      //   'timestamp': FieldValue.serverTimestamp(),
+      // }, SetOptions(merge: true));
 
-      await _appendMessages(
-          interactionDoc, chatMessages, selectedField, ocrText,  selectedBox: selectedBox);
+      // await _appendMessages(
+      //     interactionDoc, 
+      //     chatMessages, 
+      //     selectedField,
+      //      ocrText,  
+      //      selectedBox: selectedBox);
 
-      notifyListeners();
+      // notifyListeners();
+
+
+// Step 1: Ensure interactionLog exists before appending messages
+final interactionDoc = formRef.collection('interactions').doc('interactionLog');
+
+// Ensure the document exists first
+DocumentSnapshot docSnapshot = await interactionDoc.get();
+if (!docSnapshot.exists) {
+  await interactionDoc.set({'timestamp': FieldValue.serverTimestamp(), 'messages': []});
+}
+
+// Append messages in a controlled manner
+await _appendMessages(
+  interactionDoc,
+  chatMessages,
+  selectedField,
+  ocrText,
+  selectedBox: selectedBox,
+);
+
+notifyListeners(); // Ensure this is not calling multiple times
+
 
       print('Saved form data: ${formRef.id}');
       return formRef.id; // Return the form ID
@@ -409,13 +494,13 @@ Future<void> updateFormName(String uid, String formId, String newName) async {
       });
 
       // Add new interaction
-      await _appendMessages(
-        formRef.collection('interactions').doc('interactionLog'),
-        chatMessages,
-        selectedField,
-        ocrText,
+      // await _appendMessages(
+      //   formRef.collection('interactions').doc('interactionLog'),
+      //   chatMessages,
+      //   selectedField,
+      //   ocrText,
         
-      );
+      // );
 
       notifyListeners();
       print('Added interaction to form: $formId');
@@ -427,6 +512,7 @@ Future<void> updateFormName(String uid, String formId, String newName) async {
     }
   }
 
+ 
   Future<void> _appendMessages(
       DocumentReference interactionDoc,
       List<Map<String, dynamic>> chatMessages,
@@ -469,47 +555,74 @@ Future<void> updateFormName(String uid, String formId, String newName) async {
     print('Appended messages: $mappedMessages');
   }
 
-  Future<List<Map<String, dynamic>>> getUserForms(String uid) async {
-    try {
-      final querySnapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('forms')
-          .orderBy('lastInteractionAt', descending: true)
-          .get();
+  //working code
+//   Future<void> _appendMessages(
+//   DocumentReference interactionDoc,
+//   List<Map<String, dynamic>> chatMessages,
+//   String selectedField,
+//   String ocrText, {
+//   Map<String, dynamic>? selectedBox,
+// }) async {
+//   try {
+//     // Step 1: Fetch existing messages from Firestore
+//     final existingDoc = await interactionDoc.get();
+//     List<Map<String, dynamic>> existingMessages = [];
+//     if (existingDoc.exists) {
+//       final data = existingDoc.data() as Map<String, dynamic>?; // Explicitly cast to Map<String, dynamic>
+//       if (data != null && data['messages'] != null) {
+//         existingMessages = List<Map<String, dynamic>>.from(data['messages']); // Cast to List<Map<String, dynamic>>
+//       }
+//     }
 
-      return await Future.wait(querySnapshot.docs.map((doc) async {
-        final formData = doc.data();
-        final interactionDoc = await doc.reference
-            .collection('interactions')
-            .doc('interactionLog')
-            .get();
+//     // Step 2: Create a set of unique identifiers for existing messages
+//     final existingMessageHashes = existingMessages.map((msg) {
+//       return _generateMessageHash(msg['sender'], msg['content']);
+//     }).toSet();
 
-        final interactions = interactionDoc.exists
-            ? [
-                {
-                  'messages': interactionDoc.data()?['messages'] ?? [],
-                }
-              ]
-            : [];
+//     // Step 3: Map only the new messages
+//     final List<Map<String, dynamic>> newMessages = chatMessages.map((msg) {
+//       String? base64Audio;
+//       if (msg['isAudioMessage'] == true && msg['audioPath'] != null) {
+//         final fileBytes = File(msg['audioPath']).readAsBytesSync();
+//         base64Audio = base64Encode(fileBytes);
+//       }
 
-        return {
-          'id': doc.id,
-          'timestamp': formData['timestamp'],
-          'lastInteractionAt': formData['lastInteractionAt'],
-          'fileName': formData['fileName'],
-          'imageBase64': formData['imageBase64'],
-          'boundingBoxes': formData['boundingBoxes'],
-          'currentSelectedField': formData['currentSelectedField'],
-          'interactions': interactions,
-        };
-      }));
-    } catch (e) {
-      print('Error fetching user forms: $e');
-      return [];
-    }
-  }
+//       return {
+//         'timestamp': DateTime.now().toIso8601String(),
+//         'sender': msg['sender'],
+//         'content': msg['message'],
+//         'contentType': msg['isAudioMessage'] == true ? 'audio' : 'text',
+//         'base64Audio': base64Audio,
+//         'selectedBox': selectedBox != null ? Map<String, dynamic>.from(selectedBox) : null,
+//       };
+//     }).toList();
 
+//     // Step 4: Filter out messages that already exist in Firestore
+//     final List<Map<String, dynamic>> trulyNewMessages = newMessages.where((newMsg) {
+//       final newMessageHash = _generateMessageHash(newMsg['sender'], newMsg['content']);
+//       return !existingMessageHashes.contains(newMessageHash);
+//     }).toList();
+
+//     // Step 5: Append only the truly new messages
+//     if (trulyNewMessages.isNotEmpty) {
+//       await interactionDoc.update({
+//         'messages': FieldValue.arrayUnion(trulyNewMessages),
+//       });
+
+//       print('Appended new messages: $trulyNewMessages');
+//     } else {
+//       print('No new messages to append.');
+//     }
+//   } catch (e) {
+//     print('Error appending messages: $e');
+//     throw Exception('Failed to append messages');
+//   }
+// }
+
+// Helper method to generate a unique hash for a message
+String _generateMessageHash(String sender, String content) {
+  return '$sender|$content'.hashCode.toString();
+}
 //   Future<List<Map<String, dynamic>>> getSubmittedForms() async {
 //     try {
 //       final querySnapshot = await _firestore.collectionGroup('forms').get();
