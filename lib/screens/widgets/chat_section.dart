@@ -7,6 +7,10 @@ class ChatSection extends StatelessWidget {
   final bool isThinking;
   final String userName;
   final Function(String) onPlayAudio;
+  //final Function(int, bool) onFeedback; // Add onFeedback parameter
+final Function(int, bool, String?, String?) onFeedback; // index, isHelpful, category, feedbackText
+
+  
 
   const ChatSection({
     Key? key,
@@ -15,6 +19,8 @@ class ChatSection extends StatelessWidget {
     required this.isThinking,
     required this.userName,
     required this.onPlayAudio,
+    required this.onFeedback, // Initialize onFeedback
+
   }) : super(key: key);
 
   @override
@@ -42,19 +48,29 @@ class ChatSection extends StatelessWidget {
             isUser: false,
             isThinking: true,
             timestamp: DateTime.now(),
+            
             //timestamp: timestamp,
           );
         }
-
+        
         final message = chatMessages[index];
         final isUser = message['sender'] == 'user';
+        final isLLMResponse = message['isLLMResponse'] ?? false;
+
         final messageContent = message['message'] ?? message['content'] ?? message['asrResponse'] ?? '';
         final isAudioMessage = message['isAudioMessage'] == true || message['contentType'] == 'audio';
         final audioPath = message['audioPath'];
         //final timestamp = message['timestamp'] ?? '';
         final timestampString = message['timestamp'] ?? '';
-        final timestamp = DateTime.tryParse(timestampString) ?? DateTime.now(); // Parse timestamp string to DateTime
+DateTime? timestamp;
+try {
+  timestamp = DateTime.parse(timestampString);
+} catch (e) {
+  print('Invalid timestamp format: $timestampString');
+  timestamp = DateTime.now(); // Fallback to current time if parsing fails
+} // Use a default timestamp if parsing fails
         if (isAudioMessage) {
+
            return ChatBubble(
             message: message['asrResponse'] ?? 'Voice message',
           asrResponse: message['asrResponse'],
@@ -62,13 +78,17 @@ class ChatSection extends StatelessWidget {
           isThinking: false,
           isAudioMessage: isAudioMessage,
           audioPath: audioPath,
-          timestamp: timestamp,
+          //timestamp: timestamp,
+ timestamp: timestamp,          
+ isLLMResponse: isLLMResponse, // Pass the isLLMResponse property
           
           onPlayAudio: isAudioMessage && audioPath != null 
             ? () => onPlayAudio(audioPath)
             : null,
         );
         }
+        print('Rendering message: ${message['message']}');
+        print('isLLMResponse: $isLLMResponse');
         return ChatBubble(
           message: isAudioMessage 
               ? 'Voice message'
@@ -78,10 +98,19 @@ class ChatSection extends StatelessWidget {
           isAudioMessage: isAudioMessage,
           audioPath: audioPath,
           timestamp: timestamp,
-          
+          //timestamp: DateTime.now(),
+          isLLMResponse: isLLMResponse, // Pass the isLLMResponse property
+
           onPlayAudio: isAudioMessage && audioPath != null 
             ? () => onPlayAudio(audioPath)
             : null,
+  //          onFeedback: (bool isHelpful) {
+  //   onFeedback(index, isHelpful); // Pass feedback to parent widget
+  // },
+ // In the ChatBubble instantiation inside ChatSection
+onFeedback: (bool isHelpful, String? category, String? feedbackText) {
+  onFeedback(index, isHelpful, category, feedbackText);
+},
         );
       },
     );

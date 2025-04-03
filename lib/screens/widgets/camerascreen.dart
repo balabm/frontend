@@ -661,7 +661,8 @@ class _CameraScreenState extends State<CameraScreen> {
             '/image_processing',
             arguments: {
               'imagePath': savedPath,
-              'selectedForm': formName, // Pass the timestamp-based form name
+              'selectedForm': selectedForm, // Pass the selected form name 
+              //'selectedForm': formName, // Pass the timestamp-based form name
             },
           );
         });

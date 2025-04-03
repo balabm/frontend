@@ -875,6 +875,8 @@
 // }
 
 
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -1102,6 +1104,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       chatMessages.add({
         'sender': 'assistant',
         'message': 'Please select a field.',
+
+
       });
       _needsScroll = true;
       _scrollToBottom();
@@ -1226,10 +1230,20 @@ print('Transcription Result: $transcribedText');
       _pendingLlmResponse = llmResponse;
 
       chatMessages.add({
+        'messageId': DateTime.now().millisecondsSinceEpoch.toString() + '_' + (1000 + Random().nextInt(9000)).toString(),
+
         'sender': 'assistant',
+        //'message': llmResponse?['response'] ?? '...',
+        'isLLMResponse': true, // Mark as LLM response
         'message': llmResponse?['response'] ??
             'Failed to get response. Please try again.',
+        'feedback': null, // Initialize feedback as null
+  'timestamp': DateTime.now().toUtc().toIso8601String(), // Ensure consistent UTC format
+
+
       });
+      print('Added LLM response: ${chatMessages.last}');
+
       _needsScroll = true;
       _isThinking = false;
       _inputEnabled = true;
@@ -1237,121 +1251,43 @@ print('Transcription Result: $transcribedText');
         _scrollToBottom();
 
     });
+    print('Adding LLM response: ${llmResponse?['response']}');
+    print('isLLMResponse: true');
     // Save responses to Firestore
     _saveResponsesToFirestore();
   }
 
-  // Future<void> _sendToLLMApi(String query, {bool isAudioQuery = false}) async {
-  //   if (_ocrText?.isEmpty ?? true) {
-  //     setState(() {
-  //       chatMessages.add({
-  //         'sender': 'assistant',
-  //         'message': 'Please select a field to extract text first.',
-  //       });
-  //       _needsScroll = true;
-        
-  //       _scrollToBottom();
-  //     });
-  //     return;
-  //   }
+void _handleFeedback(int index, bool isHelpful, String? category, String? feedbackText) {
+  setState(() {
+    chatMessages[index]['feedback'] = isHelpful ? 'thumbs_up' : 'thumbs_down';
+    chatMessages[index]['feedbackCategory'] = category;
+    chatMessages[index]['feedbackText'] = feedbackText;
+    chatMessages[index]['feedbackSaved'] = false;
+  });
+  print('Feedback for message $index: ${chatMessages[index]['feedback']}');
+  print('Feedback category: ${chatMessages[index]['feedbackCategory']}');
+  print('Feedback comments: ${chatMessages[index]['feedbackText']}');
 
-  //   setState(() {
-  //     _needsScroll = true;
-  //     _isThinking = true;
-  //     _isFieldLocked = false;
-  //     _inputEnabled = false;
-  //   });
-
-  //   final llmResponse = await _apiRepository.sendToLLMApi(
-  //     _ocrText!,
-  //     voiceQuery: isAudioQuery ? query : null,
-  //   );
-
-  //   setState(() {
-  //     // Store LLM response temporarily
-  //     _pendingLlmResponse = llmResponse;
-
-  //     chatMessages.add({
-  //       'sender': 'assistant',
-  //       'message': llmResponse?['response'] ??
-  //           'Failed to get response. Please try again.',
-  //     });
-  //     _needsScroll = true;
-  //     _isThinking = false;
-  //     _inputEnabled = true;
-  //       _scrollToBottom();
-  //   });
-  //   // Save responses to Firestore
-  //   _saveResponsesToFirestore();
-  // }
-
-// Future<void> _saveResponsesToFirestore() async {
-//   final uid = _authProvider.user?.uid;
-//   if (uid == null) return;
-
-//   try {
-//     final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
-
-//     await firebaseProvider.saveFormWithDetails(
-//       uid: uid,
-//       imagePath: imagePath!, // doc ID will be derived from file name
-//       selectedField: _selectedFieldName ?? 'unnamed_field',
-//       ocrText: _ocrText ?? '',
-//       chatMessages: chatMessages,
-//       boundingBoxes: boundingBoxes ?? [],
-//       selectedForm: selectedForm ?? 'Unknown Form',
-//       selectedBox: selectedBox // Pass the selectedBox here
-//       //formName: selectedForm ?? 'Unknown Form', // Add the required formName argument
-//     );
-
-//     // Reset pending responses
-//     _pendingAsrResponse = null;
-//     _pendingLlmResponse = null;
-
-//   } catch (e) {
-//     print('Error saving to Firestore: $e');
-//     ScaffoldMessenger.of(context).showSnackBar(
-//       SnackBar(content: Text('Error saving form data: $e')),
-//     );
-//   }
+  
+  // Save updates to Firestore
+  _saveResponsesToFirestore();
+}
+// void _handleFeedback(int index, bool isHelpful, String? feedbackText) {
+//   print('Before update - Feedback for message $index: ${chatMessages[index]['feedback']}');
+  
+//   setState(() {
+//     chatMessages[index]['feedback'] = isHelpful ? 'thumbs_up' : 'thumbs_down';
+//     chatMessages[index]['feedbackText'] = feedbackText; // Store the feedback text
+//     chatMessages[index]['feedbackSaved'] = false; // Mark that this feedback needs to be saved
+//   });
+  
+//   print('After update - Feedback for message $index: ${chatMessages[index]['feedback']}');
+//   print('Feedback text: ${chatMessages[index]['feedbackText']}');
+//   print('Full message after update: ${chatMessages[index]}');
+// print('Feedback received: index=$index, isHelpful=$isHelpful, feedbackText=$feedbackText');
+//   // Save updates to Firestore
+//   _saveResponsesToFirestore();
 // }
-
-// // Helper method to find last user input
-// String? _findLastUserInput() {
-//   for (var message in chatMessages.reversed) {
-//     if (message['sender'] == 'user') {
-//       return message['message'];
-//     }
-//   }
-//   return null;
-// }
-
-// // Add method to retrieve user's interaction history
-// Future<List<Map<String, dynamic>>> getInteractionHistory() async {
-//   final uid = _authProvider.user?.uid;
-//   if (uid == null) return [];
-
-//   try {
-//     final querySnapshot = await FirebaseFirestore.instance
-//         .collection('users')
-//         .doc(uid)
-//         .collection('interactions')
-//         .orderBy('timestamp', descending: true)
-//         .limit(50) // Adjust limit as needed
-//         .get();
-
-//     return querySnapshot.docs
-//         .map((doc) => {
-//               'id': doc.id,
-//               ...doc.data(),
-//             })
-//         .toList();
-//   } catch (e) {
-//     print('Error fetching interaction history: $e');
-//     return [];
-//   }
-// }
-//working
 // Future<void> _saveResponsesToFirestore() async {
 //   final uid = _authProvider.user?.uid;
 //   if (uid == null) {
@@ -1359,35 +1295,196 @@ print('Transcription Result: $transcribedText');
 //     return;
 //   }
 
+//   print('Saving messages to Firestore, messages count: ${chatMessages.length}');
+
 //   try {
 //     final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
 
-//     // Debug prints to inspect the data being saved
-//     print('DEBUG: Preparing to save form data with the following details:');
-//     print('DEBUG: User ID: $uid');
-//     print('DEBUG: Image Path: $imagePath');
-//     print('DEBUG: Selected Field: ${_selectedFieldName ?? 'unnamed_field'}');
-//     print('DEBUG: OCR Text: ${_ocrText ?? ''}');
-//     print('DEBUG: Chat Messages: $chatMessages');
-//     print('DEBUG: Bounding Boxes: ${boundingBoxes ?? []}');
-//     print('DEBUG: Selected Form: ${selectedForm ?? 'Unknown Form'}');
-//     print('DEBUG: Selected Box: $selectedBox');
+//     // Generate a consistent docId based on the formId
+//     final localFormId = formId ?? path.basename(imagePath!).split('.').first;
+//     final docId = localFormId;
 
-//     await firebaseProvider.saveFormWithDetails(
-//       uid: uid,
-//       imagePath: imagePath!, // doc ID will be derived from file name
-//       selectedField: _selectedFieldName ?? 'unnamed_field',
-//       ocrText: _ocrText ?? '',
-//       chatMessages: chatMessages,
-//       boundingBoxes: boundingBoxes ?? [],
-//       selectedForm: selectedForm ?? 'Unknown Form',
-//       selectedBox: selectedBox
-//     );
+//     print('DEBUG: Using consistent docId: $docId');
+
+//     // FIRST: Handle new messages that haven't been saved yet
+//     List<Map<String, dynamic>> unsavedMessages = [];
+
+//     for (int i = 0; i < chatMessages.length; i++) {
+//       if (chatMessages[i]['savedToFirebase'] != true) {
+//         final messageToSave = Map<String, dynamic>.from(chatMessages[i]);
+//         unsavedMessages.add(messageToSave);
+
+//         // Mark this message as saved in our local state
+//         if (mounted) {
+//           setState(() {
+//             chatMessages[i]['savedToFirebase'] = true;
+//           });
+//         }
+//       }
+//     }
+
+//     print('DEBUG: Unsaved Chat Messages: ${unsavedMessages.length}');
+
+//     if (unsavedMessages.isNotEmpty) {
+//       // Save new messages to Firestore
+//       await firebaseProvider.saveFormWithDetails(
+//         uid: uid,
+//         imagePath: imagePath!,
+//         selectedField: _selectedFieldName ?? 'unnamed_field',
+//         ocrText: _ocrText ?? '',
+//         chatMessages: unsavedMessages,
+//         boundingBoxes: boundingBoxes ?? [],
+//         selectedForm: selectedForm ?? 'Unknown Form',
+//         selectedBox: selectedBox,
+//       );
+
+//       print('DEBUG: Form data saved successfully. Saved ${unsavedMessages.length} new messages.');
+      
+//       // IMPORTANT: Add a small delay to ensure Firestore has processed the new messages
+//       await Future.delayed(Duration(milliseconds: 500));
+//     }
+
+//     // THEN: Handle feedback updates for existing messages
+//     List<Map<String, dynamic>> messagesWithUpdatedFeedback = [];
+
+//     for (int i = 0; i < chatMessages.length; i++) {
+//       if (chatMessages[i]['feedback'] != null &&
+//           chatMessages[i]['feedbackSaved'] != true) {
+//         final messageWithFeedback = {
+//           'index': i,
+//           'timestamp': chatMessages[i]['timestamp'],
+//           'feedback': chatMessages[i]['feedback'],
+//         };
+
+//         messagesWithUpdatedFeedback.add(messageWithFeedback);
+
+//         // Mark feedback as saved
+//         if (mounted) {
+//           setState(() {
+//             chatMessages[i]['feedbackSaved'] = true;
+//           });
+//         }
+//       }
+//     }
+
+//     print('DEBUG: Messages with feedback updates: ${messagesWithUpdatedFeedback.length}');
+
+//     if (messagesWithUpdatedFeedback.isNotEmpty) {
+//       await firebaseProvider.updateMessageFeedback(
+//         uid: uid,
+//         docId: docId,
+//         feedbackUpdates: messagesWithUpdatedFeedback,
+//       );
+
+//       print('DEBUG: Feedback updates saved successfully for ${messagesWithUpdatedFeedback.length} messages.');
+//     }
 
 //     // Reset pending responses
 //     _pendingAsrResponse = null;
 //     _pendingLlmResponse = null;
-//     print('DEBUG: Form data saved successfully.');
+
+//   } catch (e, stacktrace) {
+//     print('ERROR: Error saving to Firestore: $e');
+//     print('ERROR: Stack trace: $stacktrace');
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(content: Text('Error saving form data: $e')),
+//     );
+//   }
+// }
+// Future<void> _saveResponsesToFirestore() async {
+//   final uid = _authProvider.user?.uid;
+//   if (uid == null) {
+//     print('DEBUG: User ID is null, aborting save.');
+//     return;
+//   }
+
+//   print('Saving messages to Firestore, messages count: ${chatMessages.length}');
+
+//   try {
+//     final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+
+//     // Generate a consistent docId based on the formId
+//     final localFormId = formId ?? path.basename(imagePath!).split('.').first;
+//     final docId = localFormId;
+
+//     print('DEBUG: Using consistent docId: $docId');
+
+//     // FIRST: Handle new messages that haven't been saved yet
+//     List<Map<String, dynamic>> unsavedMessages = [];
+
+//     for (int i = 0; i < chatMessages.length; i++) {
+//       if (chatMessages[i]['savedToFirebase'] != true) {
+//         final messageToSave = Map<String, dynamic>.from(chatMessages[i]);
+//         unsavedMessages.add(messageToSave);
+
+//         // Mark this message as saved in our local state
+//         if (mounted) {
+//           setState(() {
+//             chatMessages[i]['savedToFirebase'] = true;
+//           });
+//         }
+//       }
+//     }
+
+//     print('DEBUG: Unsaved Chat Messages: ${unsavedMessages.length}');
+
+//     if (unsavedMessages.isNotEmpty) {
+//       // Save new messages to Firestore
+//       await firebaseProvider.saveFormWithDetails(
+//         uid: uid,
+//         imagePath: imagePath!,
+//         selectedField: _selectedFieldName ?? 'unnamed_field',
+//         ocrText: _ocrText ?? '',
+//         chatMessages: unsavedMessages,
+//         boundingBoxes: boundingBoxes ?? [],
+//         selectedForm: selectedForm ?? 'Unknown Form',
+//         selectedBox: selectedBox,
+//       );
+
+//       print('DEBUG: Form data saved successfully. Saved ${unsavedMessages.length} new messages.');
+      
+//       // IMPORTANT: Add a small delay to ensure Firestore has processed the new messages
+//       await Future.delayed(Duration(milliseconds: 500));
+//     }
+
+//     // THEN: Handle feedback updates for existing messages
+//     List<Map<String, dynamic>> messagesWithUpdatedFeedback = [];
+
+//     for (int i = 0; i < chatMessages.length; i++) {
+//       if (chatMessages[i]['feedback'] != null &&
+//           chatMessages[i]['feedbackSaved'] != true) {
+//         final messageWithFeedback = {
+//           'messageId': chatMessages[i]['messageId'], // Use messageId for identification
+//           'index': i, // Include index as fallback
+//           'feedback': chatMessages[i]['feedback'],
+//         };
+
+//         messagesWithUpdatedFeedback.add(messageWithFeedback);
+
+//         // Mark feedback as saved
+//         if (mounted) {
+//           setState(() {
+//             chatMessages[i]['feedbackSaved'] = true;
+//           });
+//         }
+//       }
+//     }
+
+//     print('DEBUG: Messages with feedback updates: ${messagesWithUpdatedFeedback.length}');
+
+//     if (messagesWithUpdatedFeedback.isNotEmpty) {
+//       await firebaseProvider.updateMessageFeedback(
+//         uid: uid,
+//         docId: docId,
+//         feedbackUpdates: messagesWithUpdatedFeedback,
+//       );
+
+//       print('DEBUG: Feedback updates saved successfully for ${messagesWithUpdatedFeedback.length} messages.');
+//     }
+
+//     // Reset pending responses
+//     _pendingAsrResponse = null;
+//     _pendingLlmResponse = null;
 
 //   } catch (e, stacktrace) {
 //     print('ERROR: Error saving to Firestore: $e');
@@ -1404,29 +1501,25 @@ Future<void> _saveResponsesToFirestore() async {
     return;
   }
 
+  print('Saving messages to Firestore, messages count: ${chatMessages.length}');
+
   try {
     final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
 
-    // Debug prints to inspect the data being saved
-    print('DEBUG: Preparing to save form data with the following details:');
-    print('DEBUG: User ID: $uid');
-    print('DEBUG: Image Path: $imagePath');
-    print('DEBUG: Selected Field: ${_selectedFieldName ?? 'unnamed_field'}');
-    print('DEBUG: OCR Text: ${_ocrText ?? ''}');
-    
-    // Only save messages that haven't been saved yet
+    // Generate a consistent docId based on the formId
+    final localFormId = formId ?? path.basename(imagePath!).split('.').first;
+    final docId = localFormId;
+
+    print('DEBUG: Using consistent docId: $docId');
+
+    // FIRST: Handle new messages that haven't been saved yet
     List<Map<String, dynamic>> unsavedMessages = [];
-    
-    // Check if we're tracking which messages have been saved
-    if (!this.mounted) return;
-    
-    // Find messages that haven't been saved yet
+
     for (int i = 0; i < chatMessages.length; i++) {
       if (chatMessages[i]['savedToFirebase'] != true) {
-        // Clone the message without modifying the original
         final messageToSave = Map<String, dynamic>.from(chatMessages[i]);
         unsavedMessages.add(messageToSave);
-        
+
         // Mark this message as saved in our local state
         if (mounted) {
           setState(() {
@@ -1435,31 +1528,75 @@ Future<void> _saveResponsesToFirestore() async {
         }
       }
     }
-    
+
     print('DEBUG: Unsaved Chat Messages: ${unsavedMessages.length}');
-    
-    if (unsavedMessages.isEmpty) {
-      print('DEBUG: No new messages to save.');
-      return;
+
+    if (unsavedMessages.isNotEmpty) {
+      // Save new messages to Firestore
+      await firebaseProvider.saveFormWithDetails(
+        uid: uid,
+        imagePath: imagePath!,
+        selectedField: _selectedFieldName ?? 'unnamed_field',
+        ocrText: _ocrText ?? '',
+        chatMessages: unsavedMessages,
+        boundingBoxes: boundingBoxes ?? [],
+        selectedForm: selectedForm ?? 'Unknown Form',
+        selectedBox: selectedBox,
+      );
+
+      print('DEBUG: Form data saved successfully. Saved ${unsavedMessages.length} new messages.');
+          
+      // IMPORTANT: Add a small delay to ensure Firestore has processed the new messages
+      await Future.delayed(Duration(milliseconds: 500));
     }
 
-    // Only save if there are new messages
-    await firebaseProvider.saveFormWithDetails(
-      uid: uid,
-      imagePath: imagePath!, // doc ID will be derived from file name
-      selectedField: _selectedFieldName ?? 'unnamed_field',
-      ocrText: _ocrText ?? '',
-      chatMessages: unsavedMessages, // Only sending unsaved messages
-      boundingBoxes: boundingBoxes ?? [],
-      selectedForm: selectedForm ?? 'Unknown Form',
-      selectedBox: selectedBox
-    );
+    // THEN: Handle feedback updates for existing messages
+    List<Map<String, dynamic>> messagesWithUpdatedFeedback = [];
+
+    // for (int i = 0; i < chatMessages.length; i++) {
+    //   if (chatMessages[i]['feedback'] != null &&
+    //       chatMessages[i]['feedbackSaved'] != true) {
+    //     final messageWithFeedback = {
+    //       'messageId': chatMessages[i]['messageId'], // Use messageId for identification
+    //       'index': i, // Include index as fallback
+    //       'feedback': chatMessages[i]['feedback'],
+    //       'feedbackText': chatMessages[i]['feedbackText'], // Add the feedback text
+    //     };
+    for (int i = 0; i < chatMessages.length; i++) {
+  if (chatMessages[i]['feedback'] != null && chatMessages[i]['feedbackSaved'] != true) {
+    final messageWithFeedback = {
+      'messageId': chatMessages[i]['messageId'],
+      'feedback': chatMessages[i]['feedback'],
+      'feedbackCategory': chatMessages[i]['feedbackCategory'],
+      'feedbackText': chatMessages[i]['feedbackText'],
+    };
+
+        messagesWithUpdatedFeedback.add(messageWithFeedback);
+
+        // Mark feedback as saved
+        if (mounted) {
+          setState(() {
+            chatMessages[i]['feedbackSaved'] = true;
+          });
+        }
+      }
+    }
+
+    print('DEBUG: Messages with feedback updates: ${messagesWithUpdatedFeedback.length}');
+
+    if (messagesWithUpdatedFeedback.isNotEmpty) {
+      await firebaseProvider.updateMessageFeedback(
+        uid: uid,
+        docId: docId,
+        feedbackUpdates: messagesWithUpdatedFeedback,
+      );
+
+      print('DEBUG: Feedback updates saved successfully for ${messagesWithUpdatedFeedback.length} messages.');
+    }
 
     // Reset pending responses
     _pendingAsrResponse = null;
     _pendingLlmResponse = null;
-    print('DEBUG: Form data saved successfully. Saved ${unsavedMessages.length} new messages.');
-
   } catch (e, stacktrace) {
     print('ERROR: Error saving to Firestore: $e');
     print('ERROR: Stack trace: $stacktrace');
@@ -1468,8 +1605,6 @@ Future<void> _saveResponsesToFirestore() async {
     );
   }
 }
-
-// Helper method to find last user input
 String? _findLastUserInput() {
   for (var message in chatMessages.reversed) {
     if (message['sender'] == 'user') {
@@ -1581,99 +1716,205 @@ bool isloaded = false;
     }
   }
 
-  Future<void> _loadExistingFormData(String formId) async {
-    setState(() => _isLoadingData = true);
-    final uid = _authProvider.user?.uid;
-    if (uid == null) {
-      print('No user ID available');
-      return;
-    }
+  // Future<void> _loadExistingFormData(String formId) async {
+  //   setState(() => _isLoadingData = true);
+  //   final uid = _authProvider.user?.uid;
+  //   if (uid == null) {
+  //     print('No user ID available');
+  //     return;
+  //   }
 
-    try {
-      print('Attempting to load form data for uid: $uid, formId: $formId');
-      final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
-      final existingForm = await firebaseProvider.getFormWithInteractions(uid, formId);
+  //   try {
+  //     print('Attempting to load form data for uid: $uid, formId: $formId');
+  //     final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+  //     final existingForm = await firebaseProvider.getFormWithInteractions(uid, formId);
       
-      if (existingForm != null) {
-        print('Found existing form data');
-        if (mounted) {
-          // Process messages and restore audio files
-          final allInteractions = existingForm['interactions'] as List<dynamic>;
-          chatMessages.clear();
+  //     if (existingForm != null) {
+  //       print('Found existing form data');
+  //       if (mounted) {
+  //         // Process messages and restore audio files
+  //         final allInteractions = existingForm['interactions'] as List<dynamic>;
+  //         chatMessages.clear();
           
-          for (var interaction in allInteractions) {
-            final messages = interaction['messages'] ?? [];
-            for (var m in messages) {
-              final messageData = Map<String, dynamic>.from(m);
-              if (messageData['contentType'] == 'audio' && messageData['base64Audio'] != null) {
-                // Convert base64 audio to file
-                final audioPath = await _base64ToAudioFile(messageData['base64Audio']);
-                if (audioPath != null) {
-                  messageData['audioPath'] = audioPath;
-                  messageData['isAudioMessage'] = true;
-                }
-              }
-              chatMessages.add(messageData);
-            }
-          }
+  //         for (var interaction in allInteractions) {
+  //           final messages = interaction['messages'] ?? [];
+  //           for (var m in messages) {
+  //             final messageData = Map<String, dynamic>.from(m);
+  //             if (messageData['contentType'] == 'audio' && messageData['base64Audio'] != null) {
+  //               // Convert base64 audio to file
+  //               final audioPath = await _base64ToAudioFile(messageData['base64Audio']);
+  //               if (audioPath != null) {
+  //                 messageData['audioPath'] = audioPath;
+  //                 messageData['isAudioMessage'] = true;
+  //               }
+  //             }
+  //             chatMessages.add(messageData);
+  //           }
+  //         }
 
-          setState(() {
-            boundingBoxes = existingForm['boundingBoxes'] ?? [];
-            selectedForm = existingForm['selectedForm'] ?? selectedForm;
-            final currentField = existingForm['currentSelectedField'] as Map<String, dynamic>?;
-            if (currentField != null) {
-              _selectedFieldName = currentField['name'];
-              _ocrText = currentField['ocrText'];
-            }
+  //         setState(() {
+  //           boundingBoxes = existingForm['boundingBoxes'] ?? [];
+  //           selectedForm = existingForm['selectedForm'] ?? selectedForm;
+  //           final currentField = existingForm['currentSelectedField'] as Map<String, dynamic>?;
+  //           if (currentField != null) {
+  //             _selectedFieldName = currentField['name'];
+  //             _ocrText = currentField['ocrText'];
+  //           }
             
-            print('Loaded ${chatMessages.length} messages');
-            print('fetched form name ${selectedForm}');
-            if (chatMessages.isNotEmpty) {
-              _showBottomSheet = true;
-              _inputEnabled = true;
-            }
-          });
-        }
-      } else {
-        print('No existing form data found for formId: $formId');
-      }
-    } catch (e) {
-      print('Error loading existing form data: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingData = false);
-      }
-    }
+  //           print('Loaded ${chatMessages.length} messages');
+  //           print('fetched form name ${selectedForm}');
+  //           if (chatMessages.isNotEmpty) {
+  //             _showBottomSheet = true;
+  //             _inputEnabled = true;
+  //           }
+  //         });
+  //       }
+  //     } else {
+  //       print('No existing form data found for formId: $formId');
+  //     }
+  //   } catch (e) {
+  //     print('Error loading existing form data: $e');
+  //   } finally {
+  //     if (mounted) {
+  //       setState(() => _isLoadingData = false);
+  //     }
+  //   }
+  // }
+//   Future<void> _loadExistingFormData(String formId) async {
+//   setState(() => _isLoadingData = true);
+//   final uid = _authProvider.user?.uid;
+//   if (uid == null) {
+//     print('No user ID available');
+//     return;
+//   }
+
+//   try {
+//     print('Attempting to load form data for uid: $uid, formId: $formId');
+//     final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+
+//     // Use the same docId as in _saveResponsesToFirestore
+//     final docId = formId;
+
+//     final existingForm = await firebaseProvider.getFormWithInteractions(uid, docId);
+
+//     if (existingForm != null) {
+//       print('Found existing form data');
+//       if (mounted) {
+//         // Process messages and restore audio files
+//         final allInteractions = existingForm['interactions'] as List<dynamic>;
+//         chatMessages.clear();
+
+//         for (var interaction in allInteractions) {
+//           final messages = interaction['messages'] ?? [];
+//           for (var m in messages) {
+//   final messageData = Map<String, dynamic>.from(m);
+//   // Make sure sender is properly set
+//   if (!messageData.containsKey('sender')) {
+//     // If sender isn't in the data, try to determine it from other properties
+//     messageData['sender'] = messageData['isUser'] == true ? 'user' : 'assistant';
+//   }
+  
+//   // Make sure sender is properly set
+//   if (!messageData.containsKey('sender')) {
+//     // If sender isn't in the data, try to determine it from other properties
+//     messageData['sender'] = messageData['isUser'] == true ? 'user' : 'assistant';
+//   }
+  
+//   if (messageData['contentType'] == 'audio' && messageData['base64Audio'] != null) {
+//     // Convert base64 audio to file
+//     final audioPath = await _base64ToAudioFile(messageData['base64Audio']);
+//     if (audioPath != null) {
+//       messageData['audioPath'] = audioPath;
+//       messageData['isAudioMessage'] = true;
+//     }
+//   }
+//   chatMessages.add(messageData);
+// }
+ Future<void> _loadExistingFormData(String formId) async { 
+  setState(() => _isLoadingData = true);
+  final uid = _authProvider.user?.uid;
+  if (uid == null) {
+    print('No user ID available');
+    return;
   }
 
-  // void _scrollToBottom() => setState(() {
-  //       _needsScroll = true;
-  //       WidgetsBinding.instance.addPostFrameCallback((_) {
-  //         _dragController.animateTo(
-  //           0.6,
-  //           duration: const Duration(milliseconds: 300),
-  //           curve: Curves.easeOut,
-  //         );
-  //         if (_scrollController.hasClients) {
-  //           _scrollController.animateTo(
-  //             _scrollController.position.maxScrollExtent,
-  //             duration: const Duration(milliseconds: 300),
-  //             curve: Curves.easeOut,
-  //           );
-  //         }
-  //       });
-  //     });
-// void _scrollToBottom() {
-//   WidgetsBinding.instance.addPostFrameCallback((_) {
-//     if (_scrollController.hasClients) {
-//       _scrollController.animateTo(
-//         _scrollController.position.maxScrollExtent,
-//         duration: const Duration(milliseconds: 300),
-//         curve: Curves.easeOut,
-//       );
-//     }
-//   });
-// }
+  try {
+    print('Attempting to load form data for uid: $uid, formId: $formId');
+    final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+
+    // Use the same docId as in _saveResponsesToFirestore
+    final docId = formId;
+
+    final existingForm = await firebaseProvider.getFormWithInteractions(uid, docId);
+
+    if (existingForm != null) {
+      print('Found existing form data');
+      if (mounted) {
+        // Process messages and restore audio files
+        final allInteractions = existingForm['interactions'] as List<dynamic>;
+        chatMessages.clear();
+        for (var interaction in allInteractions) {
+  final messages = interaction['messages'] ?? [];
+  for (var m in messages) {
+    final messageData = Map<String, dynamic>.from(m);
+
+    // Parse and validate the timestamp
+    if (messageData['timestamp'] != null) {
+      try {
+        messageData['timestamp'] = DateTime.parse(messageData['timestamp']).toIso8601String();
+      } catch (e) {
+        print('Invalid timestamp format: ${messageData['timestamp']}');
+        messageData['timestamp'] = DateTime.now().toUtc().toIso8601String(); // Fallback to current time
+      }
+    }
+
+    // Ensure the sender field is correctly set
+    if (!messageData.containsKey('sender')) {
+      if (messageData['isUser'] == true) {
+        messageData['sender'] = 'user';
+      } else {
+        messageData['sender'] = 'assistant';
+      }
+    }
+
+    // Debugging logs
+    print('Restored message: ${messageData['message']}');
+    print('Sender: ${messageData['sender']}');
+
+    chatMessages.add(messageData);
+  }
+}
+
+
+        setState(() {
+          boundingBoxes = existingForm['boundingBoxes'] ?? [];
+          selectedForm = existingForm['selectedForm'] ?? selectedForm;
+          final currentField = existingForm['currentSelectedField'] as Map<String, dynamic>?;
+          if (currentField != null) {
+            _selectedFieldName = currentField['name'];
+            _ocrText = currentField['ocrText'];
+          }
+
+          print('Loaded ${chatMessages.length} messages');
+          print('Fetched form name: $selectedForm');
+          if (chatMessages.isNotEmpty) {
+            _showBottomSheet = true;
+            _inputEnabled = true;
+          }
+        });
+      }
+    } else {
+      print('No existing form data found for formId: $formId');
+    }
+  } catch (e) {
+    print('Error loading existing form data: $e');
+  } finally {
+    if (mounted) {
+      setState(() => _isLoadingData = false);
+    }
+  }
+} 
+  
 void _scrollToBottom() {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     if (_dragController.isAttached) {
@@ -2145,6 +2386,9 @@ if (_selectedFieldName == null) {
                     isThinking: _isThinking,
                     userName: _userName,
                     onPlayAudio: playAudio,
+onFeedback: (int index, bool isHelpful, String? category, String? feedbackText) {
+    _handleFeedback(index, isHelpful, category, feedbackText);
+  },
                   ),
                 ),
               ),
