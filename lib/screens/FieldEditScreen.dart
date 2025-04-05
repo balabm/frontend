@@ -1106,6 +1106,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
         'message': 'Please select a field.',
 
 
+
       });
       _needsScroll = true;
       _scrollToBottom();
@@ -1235,6 +1236,7 @@ print('Transcription Result: $transcribedText');
         'sender': 'assistant',
         //'message': llmResponse?['response'] ?? '...',
         'isLLMResponse': true, // Mark as LLM response
+        
         'message': llmResponse?['response'] ??
             'Failed to get response. Please try again.',
         'feedback': null, // Initialize feedback as null
@@ -1830,23 +1832,107 @@ bool isloaded = false;
 //   }
 //   chatMessages.add(messageData);
 // }
- Future<void> _loadExistingFormData(String formId) async { 
+//  Future<void> _loadExistingFormData(String formId) async { 
+//   setState(() => _isLoadingData = true);
+//   final uid = _authProvider.user?.uid;
+//   if (uid == null) {
+//     print('No user ID available');
+//     return;
+//   }
+
+//   try {
+//     print('Attempting to load form data for uid: $uid, formId: $formId');
+//     final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+
+//     // Use the same docId as in _saveResponsesToFirestore
+//     final docId = formId;
+
+//     final existingForm = await firebaseProvider.getFormWithInteractions(uid, docId);
+
+//     if (existingForm != null) {
+//       print('Found existing form data');
+//       if (mounted) {
+//         // Process messages and restore audio files
+//         final allInteractions = existingForm['interactions'] as List<dynamic>;
+//         chatMessages.clear();
+//         for (var interaction in allInteractions) {
+//   final messages = interaction['messages'] ?? [];
+//   for (var m in messages) {
+//     final messageData = Map<String, dynamic>.from(m);
+
+//     // Parse and validate the timestamp
+//     if (messageData['timestamp'] != null) {
+//       try {
+//         messageData['timestamp'] = DateTime.parse(messageData['timestamp']).toIso8601String();
+//       } catch (e) {
+//         print('Invalid timestamp format: ${messageData['timestamp']}');
+//         messageData['timestamp'] = DateTime.now().toUtc().toIso8601String(); // Fallback to current time
+//       }
+//     }
+
+//     // Ensure the sender field is correctly set
+//     if (!messageData.containsKey('sender')) {
+//       if (messageData['isUser'] == true) {
+//         messageData['sender'] = 'user';
+//       } else {
+//         messageData['sender'] = 'assistant';
+//       }
+//     }
+
+//     // Debugging logs
+//     print('Restored message: ${messageData['message']}');
+//     print('Sender: ${messageData['sender']}');
+
+//     chatMessages.add(messageData);
+//   }
+// }
+
+
+//         setState(() {
+//           boundingBoxes = existingForm['boundingBoxes'] ?? [];
+//           selectedForm = existingForm['selectedForm'] ?? selectedForm;
+//           final currentField = existingForm['currentSelectedField'] as Map<String, dynamic>?;
+//           if (currentField != null) {
+//             _selectedFieldName = currentField['name'];
+//             _ocrText = currentField['ocrText'];
+//           }
+
+//           print('Loaded ${chatMessages.length} messages');
+//           print('Fetched form name: $selectedForm');
+//           if (chatMessages.isNotEmpty) {
+//             _showBottomSheet = true;
+//             _inputEnabled = true;
+//           }
+//         });
+//       }
+//     } else {
+//       print('No existing form data found for formId: $formId');
+//     }
+//   } catch (e) {
+//     print('Error loading existing form data: $e');
+//   } finally {
+//     if (mounted) {
+//       setState(() => _isLoadingData = false);
+//     }
+//   }
+// } 
+  Future<void> _loadExistingFormData(String formId) async {
   setState(() => _isLoadingData = true);
   final uid = _authProvider.user?.uid;
   if (uid == null) {
     print('No user ID available');
     return;
   }
-
+  
   try {
     print('Attempting to load form data for uid: $uid, formId: $formId');
     final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
-
+    
     // Use the same docId as in _saveResponsesToFirestore
     final docId = formId;
-
+    
     final existingForm = await firebaseProvider.getFormWithInteractions(uid, docId);
-
+    
     if (existingForm != null) {
       print('Found existing form data');
       if (mounted) {
@@ -1854,39 +1940,78 @@ bool isloaded = false;
         final allInteractions = existingForm['interactions'] as List<dynamic>;
         chatMessages.clear();
         for (var interaction in allInteractions) {
-  final messages = interaction['messages'] ?? [];
-  for (var m in messages) {
-    final messageData = Map<String, dynamic>.from(m);
+          final messages = interaction['messages'] ?? [];
+          for (var m in messages) {
+            final messageData = Map<String, dynamic>.from(m);
+            messageData['isLLMResponse'] = m['isLLMResponse'] ?? false;
+            
+            // Parse and validate the timestamp
+            if (messageData['timestamp'] != null) {
+              try {
+                messageData['timestamp'] = DateTime.parse(messageData['timestamp']).toIso8601String();
+              } catch (e) {
+                print('Invalid timestamp format: ${messageData['timestamp']}');
+                messageData['timestamp'] = DateTime.now().toUtc().toIso8601String(); // Fallback to current time
+              }
+            }
+            
+            // Ensure the sender field is correctly set
+            if (!messageData.containsKey('sender')) {
+              if (messageData['isUser'] == true) {
+                messageData['sender'] = 'user';
+              } else {
+                messageData['sender'] = 'assistant';
+              }
+            }
 
-    // Parse and validate the timestamp
-    if (messageData['timestamp'] != null) {
-      try {
-        messageData['timestamp'] = DateTime.parse(messageData['timestamp']).toIso8601String();
-      } catch (e) {
-        print('Invalid timestamp format: ${messageData['timestamp']}');
-        messageData['timestamp'] = DateTime.now().toUtc().toIso8601String(); // Fallback to current time
-      }
+    //         if (messageData['contentType'] == 'audio' && messageData['base64Audio'] != null) {
+    //   // Convert base64 audio to file
+    //   final audioPath = await _base64ToAudioFile(messageData['base64Audio']);
+    //   if (audioPath != null) {
+    //     messageData['audioPath'] = audioPath;
+    //     messageData['isAudioMessage'] = true;
+    //   }
+    // }
+
+    if (messageData['contentType'] == 'audio' && messageData['base64Audio'] != null) {
+  // Convert base64 audio to file
+  final audioPath = await _base64ToAudioFile(messageData['base64Audio']);
+  if (audioPath != null) {
+    messageData['audioPath'] = audioPath;
+    messageData['isAudioMessage'] = true;
+
+    // Fetch ASR content if available
+    if (messageData['asrResponse'] != null) {
+      messageData['asrResponse'] = messageData['asrResponse'];
+    } else {
+      messageData['asrResponse'] = 'No transcription available'; // Default value if ASR content is missing
     }
-
-    // Ensure the sender field is correctly set
-    if (!messageData.containsKey('sender')) {
-      if (messageData['isUser'] == true) {
-        messageData['sender'] = 'user';
-      } else {
-        messageData['sender'] = 'assistant';
-      }
-    }
-
-    // Debugging logs
-    print('Restored message: ${messageData['message']}');
-    print('Sender: ${messageData['sender']}');
-
-    chatMessages.add(messageData);
   }
 }
 
-
+            
+            // Restore feedback if it exists
+            if (messageData.containsKey('feedback')) {
+              messageData['feedback'] = messageData['feedback'] ?? null;
+    messageData['feedbackCategory'] = messageData['feedbackCategory'] ?? null;
+    messageData['feedbackText'] = messageData['feedbackText'] ?? null;
+              print('DEBUG: Restoring feedback: ${messageData['feedback']}');
+              print('DEBUG: Restoring feedback text: ${messageData['feedbackText']}');
+              print('DEBUG: Restoring feedback category: ${messageData['feedbackCategory']}');
+            } else {
+              print('DEBUG: No feedback found for message');
+            }
+            
+            // Debugging logs
+            print('Restored message: ${messageData['message']}');
+            print('Sender: ${messageData['sender']}');
+            
+            chatMessages.add(messageData);
+          }
+        }
+        
         setState(() {
+          
           boundingBoxes = existingForm['boundingBoxes'] ?? [];
           selectedForm = existingForm['selectedForm'] ?? selectedForm;
           final currentField = existingForm['currentSelectedField'] as Map<String, dynamic>?;
@@ -1894,7 +2019,7 @@ bool isloaded = false;
             _selectedFieldName = currentField['name'];
             _ocrText = currentField['ocrText'];
           }
-
+          
           print('Loaded ${chatMessages.length} messages');
           print('Fetched form name: $selectedForm');
           if (chatMessages.isNotEmpty) {
@@ -1913,8 +2038,7 @@ bool isloaded = false;
       setState(() => _isLoadingData = false);
     }
   }
-} 
-  
+}
 void _scrollToBottom() {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     if (_dragController.isAttached) {

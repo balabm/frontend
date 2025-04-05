@@ -64,7 +64,7 @@ final Function(int, bool, String?, String?) onFeedback; // index, isHelpful, cat
         final timestampString = message['timestamp'] ?? '';
 DateTime? timestamp;
 try {
-  timestamp = DateTime.parse(timestampString);
+  timestamp = DateTime.parse(timestampString).toLocal();
 } catch (e) {
   print('Invalid timestamp format: $timestampString');
   timestamp = DateTime.now(); // Fallback to current time if parsing fails
@@ -90,6 +90,7 @@ try {
         print('Rendering message: ${message['message']}');
         print('isLLMResponse: $isLLMResponse');
         return ChatBubble(
+          
           message: isAudioMessage 
               ? 'Voice message'
               : messageContent.toString(),
@@ -99,18 +100,30 @@ try {
           audioPath: audioPath,
           timestamp: timestamp,
           //timestamp: DateTime.now(),
-          isLLMResponse: isLLMResponse, // Pass the isLLMResponse property
-
-          onPlayAudio: isAudioMessage && audioPath != null 
+          //isLLMResponse: isUser ? false : true,  // All non-user messages are LLM responses
+          isLLMResponse: message['isLLMResponse'] ?? (message['feedback'] != null),
+          //isLLMResponse: message['isLLMResponse'] ?? false, // Ensure proper restoration
+          //isLLMResponse: isLLMResponse, // Pass the isLLMResponse property
+          // Add these properties to pass restored feedback
+          // Improved feedback data extraction
+  existingFeedback: message['feedback'] ?? null, // Will be 'thumbs_up' or 'thumbs_down'
+  existingFeedbackCategory: message['feedbackCategory'] ?? null,
+  existingFeedbackText: message['feedbackText'] ?? null,
+         
+                  onPlayAudio: isAudioMessage && audioPath != null 
             ? () => onPlayAudio(audioPath)
             : null,
   //          onFeedback: (bool isHelpful) {
   //   onFeedback(index, isHelpful); // Pass feedback to parent widget
   // },
  // In the ChatBubble instantiation inside ChatSection
+ 
 onFeedback: (bool isHelpful, String? category, String? feedbackText) {
+  print('Feedback sent to parent: $isHelpful, $category, $feedbackText');
   onFeedback(index, isHelpful, category, feedbackText);
 },
+//chat restore 
+
         );
       },
     );
