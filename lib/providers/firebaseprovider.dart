@@ -173,6 +173,84 @@ Future<void> updateFormName(String uid, String formId, String newName) async {
       _setLoading(false);
     }
   }
+Future<String> saveFormWithDetails({
+    required String uid,
+    required String imagePath,
+    required String selectedField,
+    required String ocrText,
+    required List<Map<String, dynamic>> chatMessages,
+    required List<dynamic> boundingBoxes,
+    required String selectedForm,  // Add this parameter
+    Map<String, dynamic>? selectedBox,
+  }) async {
+    _setLoading(true);
+    try {
+      // Clean up filename to match database format
+      final fileName = path
+          .basename(imagePath)
+          .replaceAll('.', '_')
+          .replaceAll('_png_png', '_png'); // Fix double extension
+
+      final formRef = _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('forms')
+          .doc(fileName);
+
+      print('Saving form with ID: $fileName');
+
+      // Convert image to base64
+      final File imageFile = File(imagePath);
+      final List<int> imageBytes = await imageFile.readAsBytes();
+      final String base64Image = base64Encode(imageBytes);
+
+      // Save main form document
+      await formRef.set({
+        'id': fileName,
+        'timestamp': FieldValue.serverTimestamp(),
+        'lastInteractionAt': FieldValue.serverTimestamp(),
+        'imageBase64': base64Image,
+        'selectedForm': selectedForm,
+        'fileName': path.basename(imagePath),
+        'boundingBoxes': boundingBoxes,
+        'currentSelectedField': {
+          'name': selectedField,
+          'ocrText': ocrText,
+        },
+      }, SetOptions(merge: true));
+
+      
+
+// Step 1: Ensure interactionLog exists before appending messages
+final interactionDoc = formRef.collection('interactions').doc('interactionLog');
+
+// Ensure the document exists first
+DocumentSnapshot docSnapshot = await interactionDoc.get();
+if (!docSnapshot.exists) {
+  await interactionDoc.set({'timestamp': FieldValue.serverTimestamp(), 'messages': []});
+}
+
+// Append messages in a controlled manner
+await _appendMessages(
+  interactionDoc,
+  chatMessages,
+  selectedField,
+  ocrText,
+  selectedBox: selectedBox,
+);
+
+notifyListeners(); // Ensure this is not calling multiple times
+
+
+      print('Saved form data: ${formRef.id}');
+      return formRef.id; // Return the form ID
+    } catch (e) {
+      print('Error saving form data: $e');
+      throw Exception('Failed to save form data');
+    } finally {
+      _setLoading(false);
+    }
+  }
 
   Future<void> saveFormWithImage({
     required String uid,
@@ -361,7 +439,7 @@ print("📝 Step 4: Messages successfully saved to Firestore!");
 
   
 
-  Future<String> saveFormWithDetails({
+  Future<String> FormWithDetails({
     required String uid,
     required String imagePath,
     required String selectedField,
@@ -676,5 +754,29 @@ String _generateMessageHash(String sender, String content) {
       print('Error fetching submitted forms for user $userId: $e');
       return [];
     }
+  }
+
+  Map<String, dynamic> sanitizeForFirestore(Map<String, dynamic> data) {
+    final result = Map<String, dynamic>.from(data);
+    
+    // Remove fields that can't be stored in Firestore
+    result.removeWhere((key, value) => 
+      value is File || 
+      key == 'audioPath' || // Local file paths can't be stored
+      value == null || // Consider removing null values
+      key.contains('.') || key.contains('/') || key.contains('[') || key.contains(']') // Invalid field name characters
+    );
+    
+    // Convert timestamps if needed
+    if (result.containsKey('timestamp') && result['timestamp'] is DateTime) {
+      result['timestamp'] = (result['timestamp'] as DateTime).toIso8601String();
+    }
+    
+    // Make sure messageId is a string
+    if (result.containsKey('messageId') && result['messageId'] != null) {
+      result['messageId'] = result['messageId'].toString();
+    }
+    
+    return result;
   }
 }

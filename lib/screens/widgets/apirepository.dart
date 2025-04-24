@@ -131,9 +131,12 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:formbot/helpers/firebase_handler.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class ApiRepository {
   Future<String> get boundingBoxUrl async {
@@ -157,45 +160,66 @@ class ApiRepository {
   }
 
   // Audio API calls
-  // Future<String?> sendAudioToApi(File zipFile) async {
-  //   try {
-  //     var request = http.MultipartRequest(
-  //       'POST', 
-  //       Uri.parse(await asrUrl)
-  //     );
+//     Future<String?> sendAudioToApi(File zipFile) async {
+//   try {
+//     var request = http.MultipartRequest(
+//       'POST',
+//       Uri.parse(await asrUrl),
+//     );
 
-  //     request.files.add(await http.MultipartFile.fromPath(
-  //       'file',
-  //       zipFile.path,
-  //       contentType: MediaType('application', 'zip'),
-  //     ));
+//     request.files.add(await http.MultipartFile.fromPath(
+//       'file',
+//       zipFile.path,
+//       contentType: MediaType('application', 'zip'),
+//     ));
 
-  //     var response = await request.send();
-  //     if (response.statusCode == 200) {
-  //       String responseBody = await response.stream.bytesToString();
-  //       print('Audio ZIP sent successfully!');
-  //       return responseBody;
-  //     }
-  //     print('Failed to upload ZIP: ${response.statusCode}');
-  //     return null;
-  //   } catch (e) {
-  //     print('Error uploading audio ZIP file: $e');
-  //     return null;
-  //   }
-  // }
-  Future<String?> sendAudioToApi(File zipFile) async {
+//     var response = await request.send();
+//     if (response.statusCode == 200) {
+//       String responseBody = await response.stream.bytesToString();
+//       print('Audio ZIP sent successfully!');
+//       return responseBody;
+//     } else if (response.statusCode == 400) {
+//       String errorBody = await response.stream.bytesToString();
+//       print('Failed to upload ZIP: $errorBody');
+      
+      
+//       return errorBody;
+//     } else {
+//       print('Failed to upload ZIP: ${response.statusCode}');
+//       return null;
+//     }
+//   } catch (e) {
+//     print('Error uploading audio ZIP file: $e');
+//     return null;
+//   }
+// }
+Future<String?> sendAudioToApi(File zipFile, String uid) async {
   try {
+    // Get the user's profile details
+    final FirebaseHandler firebaseHandler = FirebaseHandler();
+    final userProfile = await firebaseHandler.getUserProfileDetails(uid);
+    
     var request = http.MultipartRequest(
       'POST',
       Uri.parse(await asrUrl),
     );
-
+    
+    // Add the ZIP file
     request.files.add(await http.MultipartFile.fromPath(
       'file',
       zipFile.path,
       contentType: MediaType('application', 'zip'),
     ));
-
+    
+    // Add user profile parameters
+    request.fields['gender'] = userProfile['gender'];
+    request.fields['age'] = userProfile['age'].toString();
+    request.fields['state'] = userProfile['state'];
+    request.fields['nation'] = userProfile['nation'];
+    request.fields['first_language'] = userProfile['first_language'];
+    
+    print('Sending ASR request with user profile: ${userProfile}');
+    
     var response = await request.send();
     if (response.statusCode == 200) {
       String responseBody = await response.stream.bytesToString();
@@ -204,8 +228,6 @@ class ApiRepository {
     } else if (response.statusCode == 400) {
       String errorBody = await response.stream.bytesToString();
       print('Failed to upload ZIP: $errorBody');
-      
-      
       return errorBody;
     } else {
       print('Failed to upload ZIP: ${response.statusCode}');

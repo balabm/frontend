@@ -9,12 +9,14 @@ import 'screens/user_input_screen.dart'; // Ensure this import is correct
 import 'screens/home_screen.dart';
 import 'screens/image_processing_screen.dart';
 import 'screens/FieldEditScreen.dart';
+import 'screens/userDetailsScreen.dart'; // Import UserDetailsScreen
+
 import 'screens/form_selection_screen.dart'; // Import FormSelectionScreen
 import 'package:firebase_core/firebase_core.dart';
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  
 
  
   
@@ -60,7 +62,12 @@ class MyApp extends StatelessWidget {
         '/camera': (context) => const CameraScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/form_selection': (context) => const FormSelectionScreen(), // Add this line
-        
+        '/user_details': (context) => const UserDetailsScreen(), // Add this line
+        //'/profile_edit': (context) => const UserDetailsScreen(),
+        '/profile_edit': (context) => const UserDetailsScreen(isEditMode: true),
+
+
+
       },
     );
   }

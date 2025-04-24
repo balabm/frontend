@@ -817,6 +817,9 @@ class _HomeScreenState extends State<HomeScreen>
   List<Map<String, dynamic>> _submittedForms = [];
   List<String> _capturedImages = [];
   String _userName = '';
+  String _profileImageBase64 = ''; // Changed to store base64 image string
+
+  String _img = '';
   //bool _isLoading = true;
   String _userEmail = ''; // Add this for displaying user email in drawer
   bool _isLoading = true;
@@ -948,17 +951,40 @@ Future<void> _updateLastActivity() async {
   }
 
   // Updated to load user name and email
-  Future<void> _loadUserInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  // Future<void> _loadUserInfo() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    if (mounted) {
-      setState(() {
-        _userName = prefs.getString('userName') ?? 'User';
-        _userEmail = authProvider.user?.email ?? 'No email';
-      });
-    }
+  //   if (mounted) {
+  //     setState(() {
+  //       _userName = prefs.getString('userName') ?? 'User';
+  //       _userEmail = authProvider.user?.email ?? 'No email';
+  //     });
+  //   }
+  // }
+// Now, update the _loadUserInfo method to fetch the profile image URL
+  Future<void> _loadUserInfo() async {
+  final prefs = await SharedPreferences.getInstance();
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  
+  Map<String, dynamic>? userDetails = await authProvider.getUserDetails();
+  
+  if (mounted) {
+    setState(() {
+      _userName = prefs.getString('userName') ?? 'User';
+      _userEmail = authProvider.user?.email ?? 'No email';
+      
+      // Extract base64 data from data URI
+      String? imageData = userDetails?['profileImageUrl'];
+      if (imageData != null && imageData.contains(',')) {
+        _profileImageBase64 = imageData.split(',').last;
+      } else {
+        _profileImageBase64 = imageData ?? '';
+      }
+    });
   }
+}
+
    // Logout method
   Future<void> _logout() async {
     try {
@@ -1601,73 +1627,108 @@ Widget _buildFormTile(Map<String, dynamic> form) {
   return false; // Returning false prevents the default back navigation
 }
 // Build the drawer for the home screen
- Widget _buildDrawer() {
+Widget _buildDrawer() {
   return Drawer(
     child: Column(
       children: [
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: Color.fromRGBO(0, 150, 136, 1.0),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white,
-                    radius: 30,
-                    child: Text(
-                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color.fromRGBO(0, 150, 136, 1.0),
-                      ),
+        // Make this entire header section clickable
+        InkWell(
+          onTap: () {
+            // Close drawer first
+            Navigator.pop(context);
+            // Navigate to profile edit screen
+            Navigator.pushNamed(context, '/profile_edit');
+          },
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Color.fromRGBO(0, 150, 136, 1.0),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Stack(
+                      children: [
+                        _profileImageBase64.isNotEmpty
+                          ? CircleAvatar(
+                              backgroundColor: Colors.white,
+                              radius: 30,
+                              backgroundImage: MemoryImage(base64Decode(_profileImageBase64)),
+                            )
+                          : CircleAvatar(
+                              backgroundColor: Colors.white,
+                              radius: 30,
+                              child: Text(
+                                _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color.fromRGBO(0, 150, 136, 1.0),
+                                ),
+                              ),
+                            ),
+                        // Add edit indicator
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.edit,
+                              size: 14,
+                              color: Color.fromRGBO(0, 150, 136, 1.0),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  _userName.toUpperCase(),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 5),
-                Text(
-                  _userEmail,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 14,
-                  ),
-                ),
-                if (_lastActivity != null) 
-                  Padding(
-                    padding: EdgeInsets.only(top: 5),
-                    child: Text(
-                      'Last active: ${DateFormat('MMM d, yyyy').format(_lastActivity!)}',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 12,
-                      ),
+                  SizedBox(height: 10),
+                  Text(
+                    _userName.toUpperCase(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-              ],
+                  SizedBox(height: 5),
+                  Text(
+                    _userEmail,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (_lastActivity != null) 
+                    Padding(
+                      padding: EdgeInsets.only(top: 5),
+                      child: Text(
+                        'Last active: ${DateFormat('MMM d, yyyy').format(_lastActivity!)}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
-        Expanded(
+        ),        Expanded(
           child: ListView(
             padding: EdgeInsets.zero,
             physics: BouncingScrollPhysics(),

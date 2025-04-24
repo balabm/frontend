@@ -1128,14 +1128,40 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     return;
   }
 
-  final asrResponse = await _apiRepository.sendAudioToApi(zipFile);
-  if (asrResponse == null) {
-    setState(() {
-      _inputEnabled = true;
-      _isThinking = false;
-    });
-    return;
-  }
+
+  // Get the user ID from AuthProvider
+final uid = _authProvider.user?.uid;
+if (uid == null) {
+  setState(() {
+    _inputEnabled = true;
+    _isThinking = false;
+  });
+  // Show a message that user isn't logged in
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('User authentication required')),
+  );
+  return;
+}
+ 
+  // Pass both the zip file and the user ID
+final asrResponse = await _apiRepository.sendAudioToApi(zipFile, uid);
+if (asrResponse == null) {
+  setState(() {
+    _inputEnabled = true;
+    _isThinking = false;
+  });
+  return;
+}
+
+
+  // final asrResponse = await _apiRepository.sendAudioToApi(zipFile);
+  // if (asrResponse == null) {
+  //   setState(() {
+  //     _inputEnabled = true;
+  //     _isThinking = false;
+  //   });
+  //   return;
+  // }
 
 //   final Map<String, dynamic> asrData = jsonDecode(asrResponse);
 // final String transcribedText = asrData['results'] != null && asrData['results'].isNotEmpty
@@ -1964,31 +1990,61 @@ bool isloaded = false;
               }
             }
 
-    //         if (messageData['contentType'] == 'audio' && messageData['base64Audio'] != null) {
-    //   // Convert base64 audio to file
-    //   final audioPath = await _base64ToAudioFile(messageData['base64Audio']);
-    //   if (audioPath != null) {
-    //     messageData['audioPath'] = audioPath;
-    //     messageData['isAudioMessage'] = true;
-    //   }
-    // }
+  //           if (messageData['contentType'] == 'audio' && messageData['base64Audio'] != null) {
+  //              print('DEBUG: Audio message content: ${messageData['content']}');
+  // print('DEBUG: Audio message has base64: ${messageData['base64Audio'] != null}');
+  //     // Convert base64 audio to file
+  //     final audioPath = await _base64ToAudioFile(messageData['base64Audio']);
+  //     if (audioPath != null) {
+  //       messageData['audioPath'] = audioPath;
+  //       messageData['isAudioMessage'] = true;
 
-    if (messageData['contentType'] == 'audio' && messageData['base64Audio'] != null) {
+  //     }
+  //     if (messageData['content'] != null) {
+  //     messageData['message'] = messageData['content'];
+  //   }
+  //   }
+  // In the _loadExistingFormData method, replace the audio message handling code:
+if (messageData['contentType'] == 'audio' && messageData['base64Audio'] != null) {
+  print('DEBUG: Audio message content: ${messageData['content']}');
+  print('DEBUG: Audio message has base64: ${messageData['base64Audio'] != null}');
+  print('DEBUG: ASR response: ${messageData['asrResponse']}');
+  
   // Convert base64 audio to file
   final audioPath = await _base64ToAudioFile(messageData['base64Audio']);
   if (audioPath != null) {
     messageData['audioPath'] = audioPath;
     messageData['isAudioMessage'] = true;
-
-    // Fetch ASR content if available
+    
+    // Check for ASR response in various possible fields
+    String transcription = 'No transcription available';
+    
     if (messageData['asrResponse'] != null) {
-      messageData['asrResponse'] = messageData['asrResponse'];
-    } else {
-      messageData['asrResponse'] = 'No transcription available'; // Default value if ASR content is missing
+      // Priority 1: Use asrResponse field if available
+      transcription = messageData['asrResponse'];
+      print('DEBUG: Using asrResponse: $transcription');
+    } else if (messageData['content'] != null) {
+      // Priority 2: Use content field if available
+      transcription = messageData['content'];
+      print('DEBUG: Using content field: $transcription');
+    } else if (messageData['message'] != null && messageData['message'].contains('•')) {
+      // Priority 3: Extract from message field if it contains the bullet separator
+      final parts = messageData['message'].split('•');
+      if (parts.length > 1) {
+        transcription = parts[1].trim();
+        print('DEBUG: Extracted from message: $transcription');
+      }
     }
+    
+    // Set both the asrResponse and message fields to ensure proper display
+    messageData['asrResponse'] = transcription;
+    messageData['message'] = transcription;
+    
+    print('DEBUG: Final transcription set to: $transcription');
   }
 }
 
+    
             
             // Restore feedback if it exists
             if (messageData.containsKey('feedback')) {
