@@ -593,7 +593,6 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
-
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
 
@@ -608,100 +607,114 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   void initState() {
     super.initState();
+    // Get arguments and immediately launch scanner
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      setState(() {
-        selectedForm = args?['selectedForm'];
-      });
+      selectedForm = args?['selectedForm'];
       print("Selected Form in CameraScreen: $selectedForm");
-
-      // Automatically trigger document scan after UI is built
-      Future.delayed(Duration(milliseconds: 500), () {
-        scanDocument();
-      });
+      
+      // Launch scanner immediately
+      scanDocument();
     });
   }
 
-  /// Scan Document
-  Future<void> scanDocument() async {
-  try {
-    print("🚀 Triggering document scan...");
+  /// Process scanned document result
+  Future<void> _processScannedDocument(Map<dynamic, dynamic> scannedDocuments) async {
+    try {
+      print("📸 Scanned Documents: $scannedDocuments");
 
-    final scannedDocuments = await FlutterDocScanner().getScannedDocumentAsImages(page: 1);
-    print("📸 Scanned Documents: $scannedDocuments");
+      final scannedPages = scannedDocuments['Uri'];
+      print("🔍 Debug: scannedPages -> $scannedPages");
 
-    final scannedPages = scannedDocuments['Uri'];
-    print("🔍 Debug: scannedPages -> $scannedPages");
+      if (scannedPages != null) {
+        String scannedPath = "";
 
-    if (scannedPages != null) {
-      String scannedPath = "";
+        if (scannedPages is List) {
+          scannedPath = scannedPages.first['imageUri'] ?? "";
+        } else if (scannedPages is String) {
+          final match = RegExp(r'imageUri=(file://[^}]+)').firstMatch(scannedPages);
+          scannedPath = match?.group(1) ?? "";
+        }
 
-      if (scannedPages is List) {
-        scannedPath = scannedPages.first['imageUri'] ?? "";
-      } else if (scannedPages is String) {
-        final match = RegExp(r'imageUri=(file://[^}]+)').firstMatch(scannedPages);
-        scannedPath = match?.group(1) ?? "";
-      }
+        print("✅ Extracted Image Path: $scannedPath");
 
-      print("✅ Extracted Image Path: $scannedPath");
+        if (scannedPath.isNotEmpty) {
+          final savedPath = await _saveImage(scannedPath);
+          print("💾 Image saved at: $savedPath");
 
-      if (scannedPath.isNotEmpty) {
-        final savedPath = await _saveImage(scannedPath);
-        print("💾 Image saved at: $savedPath");
+          if (!mounted) return;
 
-        if (!mounted) return;
-
-        // Generate a timestamp-based name for the form
-        final DateTime now = DateTime.now();
-        final String formName = "${now.year}-${now.month}-${now.day}_${now.hour}-${now.minute}-${now.second}";
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Navigate to processing screen
           Navigator.pushReplacementNamed(
             context,
             '/image_processing',
             arguments: {
               'imagePath': savedPath,
-              'selectedForm': selectedForm, // Pass the selected form name 
-              //'selectedForm': formName, // Pass the timestamp-based form name
+              'selectedForm': selectedForm,
             },
           );
-        });
+        } else {
+          // If scanning was canceled, stay on this screen
+          if (mounted) {
+            setState(() {});
+          }
+        }
+      }
+    } catch (e) {
+      print("❌ Error processing scanned document: $e");
+      // If there was an error, stay on this screen
+      if (mounted) {
+        setState(() {});
       }
     }
-  } on PlatformException catch (e) {
-    print("❌ PlatformException: Failed to scan document. Error: $e");
-  } catch (e) {
-    print("❌ Unexpected Error: $e");
   }
-}
+
+  /// Scan Document - Immediately launches Flutter Doc Scanner
+  Future<void> scanDocument() async {
+    try {
+      print("🚀 Launching document scanner...");
+      
+      // Launch Flutter Doc Scanner directly
+      final scannedDocuments = await FlutterDocScanner().getScannedDocumentAsImages(page: 1);
+      
+      // Process the result
+      await _processScannedDocument(scannedDocuments);
+      
+    } on PlatformException catch (e) {
+      print("❌ PlatformException: Failed to scan document. Error: $e");
+    } catch (e) {
+      print("❌ Unexpected Error: $e");
+    }
+  }
+
   /// Save Scanned Image with Dynamic Form Name
-Future<String> _saveImage(String scannedPath) async {
-  try {
-    final File scannedFile = File(Uri.parse(scannedPath).toFilePath());
-    if (!await scannedFile.exists()) {
-      print("❌ ERROR: Scanned file does NOT exist at $scannedPath");
+  Future<String> _saveImage(String scannedPath) async {
+    try {
+      final File scannedFile = File(Uri.parse(scannedPath).toFilePath());
+      if (!await scannedFile.exists()) {
+        print("❌ ERROR: Scanned file does NOT exist at $scannedPath");
+        return "";
+      }
+
+      // Get current date and time
+      DateTime now = DateTime.now();
+      String formattedDate = "${now.year}-${now.month}-${now.day}_${now.hour}-${now.minute}-${now.second}";
+
+      // Create a meaningful form name based on timestamp
+      String formName = "Form_$formattedDate";
+
+      Directory? directory = await getExternalStorageDirectory();
+      String newPath = "${directory?.path}/${formName}.jpg";
+
+      await scannedFile.copy(newPath);
+      print("✅ File successfully saved at: $newPath");
+
+      return newPath;
+    } catch (e) {
+      print("❌ Error saving file: $e");
       return "";
     }
-
-    // Get current date and time
-    DateTime now = DateTime.now();
-    String formattedDate = "${now.year}-${now.month}-${now.day}_${now.hour}-${now.minute}-${now.second}";
-
-    // Create a meaningful form name based on timestamp
-    String formName = "Form_$formattedDate";
-
-    Directory? directory = await getExternalStorageDirectory();
-    String newPath = "${directory?.path}/${formName}.jpg";
-
-    await scannedFile.copy(newPath);
-    print("✅ File successfully saved at: $newPath");
-
-    return newPath;
-  } catch (e) {
-    print("❌ Error saving file: $e");
-    return "";
   }
-}
 
   /// Pick Image from Gallery
   Future<void> _pickImage() async {
@@ -724,67 +737,21 @@ Future<String> _saveImage(String scannedPath) async {
 
   @override
   Widget build(BuildContext context) {
+    // This is just a loading screen while we immediately launch the scanner
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Center(child: CircularProgressIndicator()),
-
-          // Positioned(
-          //   top: 85,
-          //   left: 0,
-          //   right: 0,
-          //   child: Center(
-          //     child: Text(
-          //       'Scan a document',
-          //       style: TextStyle(color: Colors.white, fontSize: 20),
-          //     ),
-          //   ),
-          // ),
-
-          Positioned(
-            bottom: 30,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 60, height: 60),
-
-                  GestureDetector(
-                    onTap: scanDocument,
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white, width: 3),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Container(
-                        margin: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: const Icon(
-                      Icons.photo_library,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                  ),
-                ],
-              ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: Colors.white),
+            SizedBox(height: 20),
+            Text(
+              'Launching scanner...',
+              style: TextStyle(color: Colors.white, fontSize: 18),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

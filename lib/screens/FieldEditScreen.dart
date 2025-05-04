@@ -1245,11 +1245,14 @@ print('Transcription Result: $transcribedText');
     });
 
     print('Sending to LLM API with scheme_name: $selectedForm');
+      final uid = _authProvider.user?.uid;
 
     final llmResponse = await _apiRepository.sendToLLMApi(
       _ocrText!,
       selectedForm ?? 'Unknown Scheme', // Pass the selected form as scheme_name
       voiceQuery: query,
+      uid: uid,
+      formId: formId,
     );
 
     setState(() {
