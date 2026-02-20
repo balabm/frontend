@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chat_bubble.dart';
+import 'thinking_indicator.dart';
 
 class ChatSection extends StatelessWidget {
   final ScrollController scrollController;
@@ -25,31 +26,90 @@ final Function(int, bool, String?, String?) onFeedback; // index, isHelpful, cat
 
   @override
   Widget build(BuildContext context) {
-    if (chatMessages.isEmpty) {
-      return const Center(
-        child: Text(
-          'No messages yet',
-          style: TextStyle(
-            color: Colors.grey,
-            fontSize: 16,
-          ),
+    // Show thinking indicator even when there are no messages
+    if (chatMessages.isEmpty && !isThinking) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Color(0xFF00796B).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.chat_bubble_outline,
+                size: 48,
+                color: Color(0xFF00796B),
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'No messages yet',
+              style: TextStyle(
+                color: Color(0xFF757575),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.3,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Start a conversation',
+              style: TextStyle(
+                color: Color(0xFF9E9E9E),
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
       );
     }
 
     return ListView.builder(
       controller: scrollController,
-       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 0.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       itemCount: chatMessages.length + (isThinking ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == chatMessages.length) {
-          return  ChatBubble(
-            message: '...',
-            isUser: false,
-            isThinking: true,
-            timestamp: DateTime.now(),
-            
-            //timestamp: timestamp,
+          // Animated thinking indicator
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Bot avatar
+                Container(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: const CircleAvatar(
+                      backgroundImage: AssetImage('assets/5.png'),
+                      radius: 16,
+                    ),
+                  ),
+                ),
+                // Animated thinking bubble
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 12.0,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                      bottomLeft: Radius.circular(4),
+                    ),
+                  ),
+                  child: const ThinkingIndicator(),
+                ),
+              ],
+            ),
           );
         }
         

@@ -13,7 +13,7 @@ import 'dart:convert';
 
 class UserDetailsScreen extends StatefulWidget {
   final bool isEditMode;
-  
+
   const UserDetailsScreen({
     Key? key,
     this.isEditMode = false,
@@ -27,7 +27,8 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _ageController = TextEditingController();
   final _stateController = TextEditingController(); // New controller for state
-  final _nationController = TextEditingController(); // New controller for nation
+  final _nationController =
+      TextEditingController(); // New controller for nation
   String _selectedGender = 'Prefer not to say';
   String _selectedLanguage = 'English';
   String _selectedState = ''; // New variable for dropdown state
@@ -43,29 +44,28 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     // 'French',
     // 'Hindi',
     // 'Kannada'
-    'Assamese',  
+    'Assamese',
     'Bengali',
     'Bodo',
     'Dogri',
     'Gujarati',
     'Hindi',
-    'Kannada',     
-    'Kashmiri',   
-    'Konkani',    
-    'Maithili',   
-    'Malayalam',   
-    'Manipuri (Meitei)',    
-    'Marathi',     
-    'Nepali',    
-    'Odia',    
-    'Punjabi',  
-    'Sanskrit',   
-    'Santali',  
-    'Sindhi',   
-    'Tamil',   
-    'Telugu', 
+    'Kannada',
+    'Kashmiri',
+    'Konkani',
+    'Maithili',
+    'Malayalam',
+    'Manipuri (Meitei)',
+    'Marathi',
+    'Nepali',
+    'Odia',
+    'Punjabi',
+    'Sanskrit',
+    'Santali',
+    'Sindhi',
+    'Tamil',
+    'Telugu',
     'Urdu'
-    
   ];
 
   final List<String> _indianStates = [
@@ -99,13 +99,8 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     'West Bengal'
   ];
 
-
   // Gender options
-  final List<String> _genders = [
-    'Male',
-    'Female',
-    'Prefer not to say'
-  ];
+  final List<String> _genders = ['Male', 'Female', 'Prefer not to say'];
 
   @override
   void initState() {
@@ -135,7 +130,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
   //     if (userDoc.exists && userDoc.data() != null) {
   //       final userData = userDoc.data()!;
-        
+
   //       setState(() {
   //         _selectedLanguage = userData['preferredLanguage'] ?? 'English';
   //         _selectedGender = userData['gender'] ?? 'Prefer not to say';
@@ -154,51 +149,52 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   // }
 
   Future<void> _loadUserData() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  setState(() => _isLoading = true);
+    setState(() => _isLoading = true);
 
-  try {
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
-    if (userDoc.exists && userDoc.data() != null) {
-      final userData = userDoc.data()!;
-      
-      setState(() {
-        _selectedLanguage = userData['preferredLanguage'] ?? 'Hindi';
-        _selectedGender = userData['gender'] ?? 'Prefer not to say';
-        _ageController.text = userData['age']?.toString() ?? '';
-        _selectedState = userData['state'] ?? ''; // Load selected state
-        _nationController.text = userData['nation'] ?? ''; // Keep loading nation
-        _currentProfileImageUrl = userData['profileImageUrl'];
-      });
+      if (userDoc.exists && userDoc.data() != null) {
+        final userData = userDoc.data()!;
+
+        setState(() {
+          _selectedLanguage = userData['preferredLanguage'] ?? 'Hindi';
+          _selectedGender = userData['gender'] ?? 'Prefer not to say';
+          _ageController.text = userData['age']?.toString() ?? '';
+          _selectedState = userData['state'] ?? ''; // Load selected state
+          _nationController.text =
+              userData['nation'] ?? ''; // Keep loading nation
+          _currentProfileImageUrl = userData['profileImageUrl'];
+        });
+      }
+    } catch (e) {
+      Common.showMessage(context, 'Error loading user data: ${e.toString()}',
+          isError: true);
+    } finally {
+      setState(() => _isLoading = false);
     }
-  } catch (e) {
-    Common.showMessage(
-        context, 'Error loading user data: ${e.toString()}', isError: true);
-  } finally {
-    setState(() => _isLoading = false);
   }
-}
 
   Future<void> _pickImage(ImageSource source) async {
     try {
       final picker = ImagePicker();
       final pickedImage = await picker.pickImage(
         source: source,
-        maxWidth: 1200, // Higher resolution for better cropping quality
-        maxHeight: 1200,
-        imageQuality: 90,
+        maxWidth: 1024, // Reduced resolution to keep file size small
+        maxHeight: 1024,
+        imageQuality: 60, // Reduced quality to stay under Firestore's 1MB limit
       );
 
       if (pickedImage != null) {
         // Send to cropping screen
         final croppedFile = await _cropImage(File(pickedImage.path));
-        
+
         if (croppedFile != null) {
           setState(() {
             _profileImage = croppedFile;
@@ -206,134 +202,136 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         }
       }
     } catch (e) {
-      Common.showMessage(
-          context, 'Error picking image: ${e.toString()}', isError: true);
+      Common.showMessage(context, 'Error picking image: ${e.toString()}',
+          isError: true);
     }
   }
 
   Future<File?> _cropImage(File imageFile) async {
-  try {
-    final croppedFile = await ImageCropper().cropImage(
-      sourcePath: imageFile.path,
-      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1), // Square aspect ratio for profile pictures
-      uiSettings: [
-        AndroidUiSettings(
-          toolbarTitle: 'Crop Profile Picture',
-          toolbarColor: const Color(0xFF00BFA5),
-          toolbarWidgetColor: Colors.white,
-          activeControlsWidgetColor: const Color(0xFF00BFA5),
-          initAspectRatio: CropAspectRatioPreset.square,
-          lockAspectRatio: true,
-          showCropGrid: true,
-        ),
-        IOSUiSettings(
-          title: 'Crop Profile Picture',
-          doneButtonTitle: 'Done',
-          cancelButtonTitle: 'Cancel',
-          aspectRatioLockEnabled: true,
-        ),
-        WebUiSettings(
-          context: context,
-          // presentStyle: 'dialog',  // String value instead of enum
-          // boundary: const CroppieBoundary(width: 400, height: 400),
-          // viewPort: const CroppieViewPort(width: 300, height: 300, type: 'circle'),
-          // enableExif: true,
-          // enableZoom: true,
-          // showZoomer: true,
-        ),
-      ],
-    );
-
-    if (croppedFile != null) {
-      return File(croppedFile.path);
-    }
-    return null;
-  } catch (e) {
-    print('Error cropping image: $e');
-    // Don't block the flow if cropping fails, use original image
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Error during image cropping. Using original image.'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-    return imageFile; // Return original image on error
-  }
-}
-
-Future<void> _showImageSourceDialog() async {
-  await showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (BuildContext context) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Profile Picture',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Text(
-              //   'Select and crop your profile picture',
-              //   style: TextStyle(
-              //     fontSize: 14,
-              //     color: Colors.grey.shade600,
-              //   ),
-              //   textAlign: TextAlign.center,
-              // ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _imageSourceOption(
-                    icon: Icons.camera_alt,
-                    title: 'Camera',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _pickImage(ImageSource.camera);
-                    },
-                  ),
-                  _imageSourceOption(
-                    icon: Icons.photo_library,
-                    title: 'Gallery',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _pickImage(ImageSource.gallery);
-                    },
-                  ),
-                  if (_profileImage != null || _currentProfileImageUrl != null)
-                    _imageSourceOption(
-                      icon: Icons.delete,
-                      title: 'Remove',
-                      onTap: () {
-                        Navigator.pop(context);
-                        setState(() {
-                          _profileImage = null;
-                          _currentProfileImageUrl = null;
-                        });
-                      },
-                      color: Colors.red.shade300,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
+    try {
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: imageFile.path,
+        aspectRatio: const CropAspectRatio(
+            ratioX: 1, ratioY: 1), // Square aspect ratio for profile pictures
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Profile Picture',
+            toolbarColor: const Color(0xFF00BFA5),
+            toolbarWidgetColor: Colors.white,
+            activeControlsWidgetColor: const Color(0xFF00BFA5),
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+            showCropGrid: true,
           ),
+          IOSUiSettings(
+            title: 'Crop Profile Picture',
+            doneButtonTitle: 'Done',
+            cancelButtonTitle: 'Cancel',
+            aspectRatioLockEnabled: true,
+          ),
+          WebUiSettings(
+            context: context,
+            // presentStyle: 'dialog',  // String value instead of enum
+            // boundary: const CroppieBoundary(width: 400, height: 400),
+            // viewPort: const CroppieViewPort(width: 300, height: 300, type: 'circle'),
+            // enableExif: true,
+            // enableZoom: true,
+            // showZoomer: true,
+          ),
+        ],
+      );
+
+      if (croppedFile != null) {
+        return File(croppedFile.path);
+      }
+      return null;
+    } catch (e) {
+      print('Error cropping image: $e');
+      // Don't block the flow if cropping fails, use original image
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error during image cropping. Using original image.'),
+          backgroundColor: Colors.orange,
         ),
       );
-    },
-  );
-}
+      return imageFile; // Return original image on error
+    }
+  }
+
+  Future<void> _showImageSourceDialog() async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Profile Picture',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Text(
+                //   'Select and crop your profile picture',
+                //   style: TextStyle(
+                //     fontSize: 14,
+                //     color: Colors.grey.shade600,
+                //   ),
+                //   textAlign: TextAlign.center,
+                // ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _imageSourceOption(
+                      icon: Icons.camera_alt,
+                      title: 'Camera',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImage(ImageSource.camera);
+                      },
+                    ),
+                    _imageSourceOption(
+                      icon: Icons.photo_library,
+                      title: 'Gallery',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImage(ImageSource.gallery);
+                      },
+                    ),
+                    if (_profileImage != null ||
+                        _currentProfileImageUrl != null)
+                      _imageSourceOption(
+                        icon: Icons.delete,
+                        title: 'Remove',
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() {
+                            _profileImage = null;
+                            _currentProfileImageUrl = null;
+                          });
+                        },
+                        color: Colors.red.shade300,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   Widget _imageSourceOption({
     required IconData icon,
@@ -374,282 +372,285 @@ Future<void> _showImageSourceDialog() async {
     );
   }
 
-Future<String?> _uploadProfileImage() async {
-  if (_profileImage == null) {
-    print('No profile image selected, returning current URL');
-    return _currentProfileImageUrl;
-  }
-
-  setState(() => _isUploadingImage = true);
-  String? downloadUrl;
-
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final extension = path.extension(_profileImage!.path);
-    final cleanExtension = extension.startsWith('.') ? extension.substring(1) : extension;
-
-    final fileName = 'profile_images/${user.uid}_$timestamp.$cleanExtension';
-    final storageRef = FirebaseStorage.instance.ref(fileName);
-
-    print('Uploading to: ${storageRef.fullPath}');
-
-    if (!await _profileImage!.exists()) {
-      throw Exception('Image file not found or not readable');
+  Future<String?> _uploadProfileImage() async {
+    if (_profileImage == null) {
+      print('No profile image selected, returning current URL');
+      return _currentProfileImageUrl;
     }
 
-    final metadata = SettableMetadata(contentType: 'image/$cleanExtension');
-    final uploadTask = storageRef.putFile(_profileImage!, metadata);
+    setState(() => _isUploadingImage = true);
+    String? downloadUrl;
 
-    uploadTask.snapshotEvents.listen(
-      (TaskSnapshot snapshot) {
-        final progress = snapshot.bytesTransferred / snapshot.totalBytes;
-        print('Upload progress: ${(progress * 100).toStringAsFixed(2)}%');
-      },
-      onError: (e) => print('Upload error: $e'),
-    );
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not authenticated');
 
-    final taskSnapshot = await uploadTask;
-    if (taskSnapshot.state == TaskState.success) {
-      downloadUrl = await storageRef.getDownloadURL();
-      print('Upload successful. URL: $downloadUrl');
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final extension = path.extension(_profileImage!.path);
+      final cleanExtension =
+          extension.startsWith('.') ? extension.substring(1) : extension;
+
+      final fileName = 'profile_images/${user.uid}_$timestamp.$cleanExtension';
+      final storageRef = FirebaseStorage.instance.ref(fileName);
+
+      print('Uploading to: ${storageRef.fullPath}');
+
+      if (!await _profileImage!.exists()) {
+        throw Exception('Image file not found or not readable');
+      }
+
+      final metadata = SettableMetadata(contentType: 'image/$cleanExtension');
+      final uploadTask = storageRef.putFile(_profileImage!, metadata);
+
+      uploadTask.snapshotEvents.listen(
+        (TaskSnapshot snapshot) {
+          final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+          print('Upload progress: ${(progress * 100).toStringAsFixed(2)}%');
+        },
+        onError: (e) => print('Upload error: $e'),
+      );
+
+      final taskSnapshot = await uploadTask;
+      if (taskSnapshot.state == TaskState.success) {
+        downloadUrl = await storageRef.getDownloadURL();
+        print('Upload successful. URL: $downloadUrl');
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'profileImageUrl': downloadUrl});
+      } else {
+        throw Exception('Upload failed with state: ${taskSnapshot.state}');
+      }
+    } catch (e) {
+      print('Upload error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image upload failed: $e')),
+      );
+    } finally {
+      setState(() => _isUploadingImage = false);
+    }
+
+    return downloadUrl;
+  }
+
+// Separate function to clean up old images
+  void _scheduleOldImageCleanup(String? oldImageUrl) {
+    if (oldImageUrl == null || oldImageUrl.isEmpty) return;
+
+    // Fire and forget - don't wait or handle errors here
+    Future.delayed(Duration(seconds: 5), () {
+      try {
+        if (oldImageUrl.contains('firebasestorage')) {
+          print('Attempting to clean up old image: $oldImageUrl');
+          FirebaseStorage.instance
+              .refFromURL(oldImageUrl)
+              .delete()
+              .then((_) => print('Old image deleted successfully'))
+              .catchError((e) => print('Old image deletion failed: $e'));
+        }
+      } catch (e) {
+        print('Cleanup error (non-critical): $e');
+      }
+    });
+  }
+
+  Future<String?> _convertImageToBase64() async {
+    if (_profileImage == null) {
+      print('No profile image selected, returning current URL');
+      return _currentProfileImageUrl;
+    }
+
+    setState(() => _isUploadingImage = true);
+    String? base64Image;
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+
+      // Read file as bytes
+      final imageBytes = await _profileImage!.readAsBytes();
+
+      // Convert bytes to base64
+      base64Image =
+          'data:image/${path.extension(_profileImage!.path).replaceAll('.', '')};base64,${base64Encode(imageBytes)}';
+
+      print('Image converted to base64 (length: ${base64Image.length})');
+
+      // Update the profileImageUrl field in Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .update({'profileImageUrl': downloadUrl});
-    } else {
-      throw Exception('Upload failed with state: ${taskSnapshot.state}');
-    }
-  } catch (e) {
-    print('Upload error: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Image upload failed: $e')),
-    );
-  } finally {
-    setState(() => _isUploadingImage = false);
-  }
+          .update({'profileImageUrl': base64Image});
 
-  return downloadUrl;
-}
-// Separate function to clean up old images
-void _scheduleOldImageCleanup(String? oldImageUrl) {
-  if (oldImageUrl == null || oldImageUrl.isEmpty) return;
-  
-  // Fire and forget - don't wait or handle errors here
-  Future.delayed(Duration(seconds: 5), () {
-    try {
-      if (oldImageUrl.contains('firebasestorage')) {
-        print('Attempting to clean up old image: $oldImageUrl');
-        FirebaseStorage.instance.refFromURL(oldImageUrl).delete()
-          .then((_) => print('Old image deleted successfully'))
-          .catchError((e) => print('Old image deletion failed: $e'));
-      }
+      return base64Image;
     } catch (e) {
-      print('Cleanup error (non-critical): $e');
+      print('Base64 conversion error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image conversion failed: $e')),
+      );
+      return null;
+    } finally {
+      setState(() => _isUploadingImage = false);
     }
-  });
-}
-
-Future<String?> _convertImageToBase64() async {
-  if (_profileImage == null) {
-    print('No profile image selected, returning current URL');
-    return _currentProfileImageUrl;
   }
-
-  setState(() => _isUploadingImage = true);
-  String? base64Image;
-
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    // Read file as bytes
-    final imageBytes = await _profileImage!.readAsBytes();
-    
-    // Convert bytes to base64
-    base64Image = 'data:image/${path.extension(_profileImage!.path).replaceAll('.', '')};base64,${base64Encode(imageBytes)}';
-    
-    print('Image converted to base64 (length: ${base64Image.length})');
-    
-    // Update the profileImageUrl field in Firestore
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .update({'profileImageUrl': base64Image});
-    
-    return base64Image;
-  } catch (e) {
-    print('Base64 conversion error: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Image conversion failed: $e')),
-    );
-    return null;
-  } finally {
-    setState(() => _isUploadingImage = false);
-  }
-}
 
   Future<void> _saveUserDetails() async {
-  if (!_formKey.currentState!.validate()) {
-    return;
-  }
-
-  setState(() => _isLoading = true);
-
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      throw Exception('User not authenticated');
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
 
-    // ENHANCED LOGIC: Better handling of image URL
-    String? profileImageUrl = _currentProfileImageUrl;
-    
-    // Only try to upload if there's a new image
-    if (_profileImage != null) {
-      try {
-        final newImageData = await _convertImageToBase64();
-        if (newImageData != null) {
-          // Only update if we got a valid base64 string
-          profileImageUrl = newImageData;
-          print('Using new base64 image data');
-        } else {
-          print('Conversion failed, keeping current image URL/data');
-          // Show warning but continue with profile update
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Could not update profile picture. Other details were saved.'),
+    setState(() => _isLoading = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // ENHANCED LOGIC: Better handling of image URL
+      String? profileImageUrl = _currentProfileImageUrl;
+
+      // Only try to upload if there's a new image
+      if (_profileImage != null) {
+        try {
+          final newImageData = await _convertImageToBase64();
+          if (newImageData != null) {
+            // Only update if we got a valid base64 string
+            profileImageUrl = newImageData;
+            print('Using new base64 image data');
+          } else {
+            print('Conversion failed, keeping current image URL/data');
+            // Show warning but continue with profile update
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(
+                    'Could not update profile picture. Other details were saved.'),
                 backgroundColor: Colors.orange,
-              )
-            );
+              ));
+            }
+          }
+        } catch (e) {
+          print('Image handling error: $e');
+          // Keep current URL and show warning
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(
+                  'Profile picture update failed. Your other details were saved.'),
+              backgroundColor: Colors.orange,
+            ));
           }
         }
+      }
+
+      // Parse age as integer
+      int? age;
+      try {
+        if (_ageController.text.trim().isNotEmpty) {
+          age = int.parse(_ageController.text.trim());
+        }
       } catch (e) {
-        print('Image handling error: $e');
-        // Keep current URL and show warning
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Profile picture update failed. Your other details were saved.'),
-              backgroundColor: Colors.orange,
-            )
-          );
+        age = null;
+      }
+
+      // Update user data in Firestore - SIMPLIFIED WITHOUT TRANSACTION
+      // Update user document
+      // await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      //   'preferredLanguage': _selectedLanguage,
+      //   'gender': _selectedGender,
+      //   'age': age,
+      //   'state': _stateController.text.trim(), // Save state
+      //   'nation': _nationController.text.trim(), // Save nation
+      //   'profileImageUrl': profileImageUrl,
+      //   'detailsCompleted': true,
+      //   'updatedAt': FieldValue.serverTimestamp(),
+      // });
+
+      // // Save to forms collection
+      // final FirebaseHandler firebaseHandler = FirebaseHandler();
+      // await firebaseHandler.getOrCreateFormDoc(
+      //   user.uid,
+      //   user.displayName ?? 'Unknown User',
+      //   user.email ?? 'No email',
+      //   language: _selectedLanguage,
+      //   gender: _selectedGender,
+      //   age: age,
+      //   state: _stateController.text.trim(), // Pass state
+      //   nation: _nationController.text.trim(), // Pass nation
+      //   profileImageUrl: profileImageUrl,
+      // );
+
+// In the _saveUserDetails method, update the Firestore write:
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+        'preferredLanguage': _selectedLanguage,
+        'gender': _selectedGender,
+        'age': age,
+        'state': _selectedState, // Save selected state value
+        'nation': 'INDIA', // Always save as INDIA
+
+        // 'nation': _nationController.text.trim(), // Keep saving nation as text
+        'profileImageUrl': profileImageUrl,
+        'detailsCompleted': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      final FirebaseHandler firebaseHandler = FirebaseHandler();
+// Also update the FirebaseHandler call:
+      await firebaseHandler.getOrCreateFormDoc(
+        user.uid,
+        user.displayName ?? 'Unknown User',
+        user.email ?? 'No email',
+        language: _selectedLanguage,
+        gender: _selectedGender,
+        age: age,
+        state: _selectedState, // Pass selected state value
+        nation: 'INDIA', // Always pass INDIA
+
+        // nation: _nationController.text.trim(), // Keep passing nation as text
+        profileImageUrl: profileImageUrl,
+      );
+
+      // Show success message
+      if (mounted) {
+        Common.showMessage(
+          context,
+          'Profile updated successfully!',
+          isError: false,
+        );
+
+        if (widget.isEditMode) {
+          Navigator.pop(context); // Just go back if editing
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
         }
       }
-    }
-
-    // Parse age as integer
-    int? age;
-    try {
-      if (_ageController.text.trim().isNotEmpty) {
-        age = int.parse(_ageController.text.trim());
-      }
     } catch (e) {
-      age = null;
-    }
-
-    // Update user data in Firestore - SIMPLIFIED WITHOUT TRANSACTION
-    // Update user document
-    // await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-    //   'preferredLanguage': _selectedLanguage,
-    //   'gender': _selectedGender,
-    //   'age': age,
-    //   'state': _stateController.text.trim(), // Save state
-    //   'nation': _nationController.text.trim(), // Save nation
-    //   'profileImageUrl': profileImageUrl,
-    //   'detailsCompleted': true,
-    //   'updatedAt': FieldValue.serverTimestamp(),
-    // });
-    
-    // // Save to forms collection
-    // final FirebaseHandler firebaseHandler = FirebaseHandler();
-    // await firebaseHandler.getOrCreateFormDoc(
-    //   user.uid,
-    //   user.displayName ?? 'Unknown User',
-    //   user.email ?? 'No email',
-    //   language: _selectedLanguage,
-    //   gender: _selectedGender,
-    //   age: age,
-    //   state: _stateController.text.trim(), // Pass state
-    //   nation: _nationController.text.trim(), // Pass nation
-    //   profileImageUrl: profileImageUrl,
-    // );
-    
-// In the _saveUserDetails method, update the Firestore write:
-await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-  'preferredLanguage': _selectedLanguage,
-  'gender': _selectedGender,
-  'age': age,
-  'state': _selectedState, // Save selected state value
-    'nation': 'INDIA', // Always save as INDIA
-
-
-  // 'nation': _nationController.text.trim(), // Keep saving nation as text
-  'profileImageUrl': profileImageUrl,
-  'detailsCompleted': true,
-  'updatedAt': FieldValue.serverTimestamp(),
-});
-final FirebaseHandler firebaseHandler = FirebaseHandler();
-// Also update the FirebaseHandler call:
-await firebaseHandler.getOrCreateFormDoc(
-  user.uid,
-  user.displayName ?? 'Unknown User',
-  user.email ?? 'No email',
-  language: _selectedLanguage,
-  gender: _selectedGender,
-  age: age,
-  state: _selectedState, // Pass selected state value
-    nation: 'INDIA', // Always pass INDIA
-
-
-  // nation: _nationController.text.trim(), // Keep passing nation as text
-  profileImageUrl: profileImageUrl,
-);
-
-    // Show success message
-    if (mounted) {
-      Common.showMessage(
-        context,
-        'Profile updated successfully!',
-        isError: false,
-      );
-      
-      if (widget.isEditMode) {
-        Navigator.pop(context); // Just go back if editing
-      } else {
-        Navigator.pushReplacementNamed(context, '/home');
-      }    }
-  } catch (e) {
-    if (mounted) {
-      Common.showMessage(
-        context, 
-        'Error saving user details: ${e.toString()}',
-        isError: true
-      );
-    }
-  } finally {
-    if (mounted) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        Common.showMessage(
+            context, 'Error saving user details: ${e.toString()}',
+            isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-    backgroundColor: Colors.white, // Change this from Colors.grey.shade50 to white
+      backgroundColor:
+          Colors.white, // Change this from Colors.grey.shade50 to white
 
       appBar: AppBar(
-        title: Text(
-          widget.isEditMode ? 'Edit Profile' : 'Complete Your Profile', 
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w600,
-          )
-        ),
+        title:
+            Text(widget.isEditMode ? 'Edit Profile' : 'Complete Your Profile',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                )),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -660,7 +661,7 @@ await firebaseHandler.getOrCreateFormDoc(
             onPressed: () {
               Common.showMessage(
                 context,
-                widget.isEditMode 
+                widget.isEditMode
                     ? 'Update your profile details to personalize your experience.'
                     : 'Complete your profile to enable FormBot to assist you better with accurate and personalized form-filling support.',
                 isError: false,
@@ -678,7 +679,8 @@ await firebaseHandler.getOrCreateFormDoc(
           : SafeArea(
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 12.0),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -696,7 +698,8 @@ await firebaseHandler.getOrCreateFormDoc(
                                   decoration: BoxDecoration(
                                     color: Colors.grey.shade200,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 4),
+                                    border: Border.all(
+                                        color: Colors.white, width: 4),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.grey.withOpacity(0.3),
@@ -712,14 +715,21 @@ await firebaseHandler.getOrCreateFormDoc(
                                           )
                                         : _currentProfileImageUrl != null
                                             ? DecorationImage(
-                                                image: _currentProfileImageUrl!.startsWith('data:image') 
-                                                    ? MemoryImage(base64Decode(_currentProfileImageUrl!.split(',')[1]))
-                                                    : NetworkImage(_currentProfileImageUrl!) as ImageProvider,
+                                                image: _currentProfileImageUrl!
+                                                        .startsWith(
+                                                            'data:image')
+                                                    ? MemoryImage(base64Decode(
+                                                        _currentProfileImageUrl!
+                                                            .split(',')[1]))
+                                                    : NetworkImage(
+                                                            _currentProfileImageUrl!)
+                                                        as ImageProvider,
                                                 fit: BoxFit.cover,
                                               )
                                             : null,
                                   ),
-                                  child: (_profileImage == null && _currentProfileImageUrl == null)
+                                  child: (_profileImage == null &&
+                                          _currentProfileImageUrl == null)
                                       ? const Icon(
                                           Icons.person_outline,
                                           size: 60,
@@ -738,7 +748,8 @@ await firebaseHandler.getOrCreateFormDoc(
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF00BFA5),
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2),
+                                      border: Border.all(
+                                          color: Colors.white, width: 2),
                                       boxShadow: [
                                         BoxShadow(
                                           color: Colors.grey.withOpacity(0.3),
@@ -753,7 +764,9 @@ await firebaseHandler.getOrCreateFormDoc(
                                             height: 16,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                      Colors.white),
                                             ),
                                           )
                                         : const Icon(
@@ -781,10 +794,10 @@ await firebaseHandler.getOrCreateFormDoc(
                         //   ),
                         // ),
                         const SizedBox(height: 24),
-                        
+
                         // _buildSectionTitle('Personal Information'),
                         // const SizedBox(height: 16),
-                        
+
                         // Language field
                         _buildFieldLabel('Preferred Language'),
                         const SizedBox(height: 8),
@@ -799,7 +812,7 @@ await firebaseHandler.getOrCreateFormDoc(
                           },
                         ),
                         const SizedBox(height: 20),
-                        
+
                         // Gender field
                         _buildFieldLabel('Gender'),
                         const SizedBox(height: 8),
@@ -814,7 +827,7 @@ await firebaseHandler.getOrCreateFormDoc(
                           },
                         ),
                         const SizedBox(height: 20),
-                        
+
                         // Age field
                         _buildFieldLabel('Age'),
                         const SizedBox(height: 8),
@@ -838,7 +851,7 @@ await firebaseHandler.getOrCreateFormDoc(
                           },
                         ),
                         const SizedBox(height: 20),
-                        
+
                         // State field
                         // _buildFieldLabel('State of Residence'),
                         // const SizedBox(height: 8),
@@ -851,20 +864,23 @@ await firebaseHandler.getOrCreateFormDoc(
                         // ),
                         // const SizedBox(height: 20),
                         _buildFieldLabel('State of Residence'),
-const SizedBox(height: 8),
-_buildDropdownField(
-  icon: Icons.location_city,
-  value: _selectedState.isEmpty ? _indianStates[0] : 
-         _indianStates.contains(_selectedState) ? _selectedState : _indianStates[0],
-  items: _indianStates,
-  onChanged: (value) {
-    setState(() {
-      _selectedState = value!;
-    });
-  },
-),
-const SizedBox(height: 20),
-                        
+                        const SizedBox(height: 8),
+                        _buildDropdownField(
+                          icon: Icons.location_city,
+                          value: _selectedState.isEmpty
+                              ? _indianStates[0]
+                              : _indianStates.contains(_selectedState)
+                                  ? _selectedState
+                                  : _indianStates[0],
+                          items: _indianStates,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedState = value!;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 20),
+
                         // // Nation field
                         // _buildFieldLabel('Country'),
                         // const SizedBox(height: 8),
@@ -877,53 +893,55 @@ const SizedBox(height: 20),
                         // ),
                         // const SizedBox(height: 40),
                         // Nation field - replace the current TextField with non-editable display
-_buildFieldLabel('Country'),
-const SizedBox(height: 8),
-Container(
-  decoration: BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(12),
-    border: Border.all(color: Colors.grey.shade300),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.grey.withOpacity(0.1),
-        spreadRadius: 1,
-        blurRadius: 4,
-        offset: const Offset(0, 2),
-      ),
-    ],
-  ),
-  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-  child: Row(
-    children: [
-      Icon(Icons.public, color: Colors.grey.shade600),
-      const SizedBox(width: 16),
-      const Text(
-        'INDIA',
-        style: TextStyle(
-          fontSize: 15,
-          color: Colors.black87,
-        ),
-      ),
-    ],
-  ),
-),
-const SizedBox(height: 40),
-                        
+                        _buildFieldLabel('Country'),
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                spreadRadius: 1,
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 16),
+                          child: Row(
+                            children: [
+                              Icon(Icons.public, color: Colors.grey.shade600),
+                              const SizedBox(width: 16),
+                              const Text(
+                                'INDIA',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+
                         // Update Profile button
-                      // Update Profile button
-_buildActionButton(
-  text: widget.isEditMode ? 'Save Changes' : 'Update Profile',
-  isLoading: _isLoading,
-  onPressed: _saveUserDetails,
-),
-const SizedBox(height: 16),
+                        // Update Profile button
+                        _buildActionButton(
+                          text: widget.isEditMode
+                              ? 'Save Changes'
+                              : 'Update Profile',
+                          isLoading: _isLoading,
+                          onPressed: _saveUserDetails,
+                        ),
+                        const SizedBox(height: 16),
 
 // Cancel button - only show when in edit mode
-if (widget.isEditMode) 
-  _buildCancelButton(),
+                        if (widget.isEditMode) _buildCancelButton(),
 
-const SizedBox(height: 24),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -989,7 +1007,8 @@ const SizedBox(height: 24),
         decoration: InputDecoration(
           border: InputBorder.none,
           prefixIcon: Icon(icon, color: Colors.grey.shade600),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         value: value,
         isExpanded: true,
@@ -1038,7 +1057,8 @@ const SizedBox(height: 24),
         decoration: InputDecoration(
           border: InputBorder.none,
           prefixIcon: Icon(icon, color: Colors.grey.shade600),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           hintText: hintText,
           hintStyle: TextStyle(color: Colors.grey.shade400),
         ),

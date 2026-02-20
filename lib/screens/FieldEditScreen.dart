@@ -938,6 +938,8 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
       _isFieldLocked = false;
   // Add loading state
   bool _isLoadingData = true;
+  // Track current instruction message to avoid duplicates
+  String? _currentInstructionMessage;
 
   @override
   void initState() {
@@ -957,6 +959,64 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     if (uid != null) {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       setState(() => _userName = doc['userName'] ?? 'You');
+    }
+  }
+
+  // Method to check and add instruction messages as bot messages
+  void _checkAndUpdateInstructionMessage() {
+    // Don't add instruction messages while loading data from Firestore
+    if (_isLoadingData) return;
+    
+    String? instructionText;
+    bool shouldAddToChat = true; // Flag to determine if message should be added to chat
+    
+    // Only show initial greeting when no field is selected and chat is empty
+    if (_selectedFieldName == null && chatMessages.isEmpty) {
+      instructionText = 'How can I help you today? Tap to select a field to get started.';
+    } else if (_selectedFieldName == null && chatMessages.isNotEmpty) {
+      // If user has already interacted and goes back
+      instructionText = 'Tap to select a field';
+    } else if (_ocrText == null) {
+      // Scanning state - don't add to chat
+      instructionText = 'Scanning $_selectedFieldName...';
+      shouldAddToChat = false;
+    } else if (_isThinking) {
+      // Thinking state - don't add to chat
+      instructionText = 'Analyzing content...';
+      shouldAddToChat = false;
+    } else if (_pendingAsrResponse == 'Silence detected') {
+      instructionText = 'Silence detected, Please Retry';
+    } else if (_ocrText != null && _inputEnabled) {
+      // After OCR extraction, DON'T add instruction message
+      // The OCR result "Selected Field Is:..." is already shown
+      shouldAddToChat = false;
+      instructionText = null; // Clear instruction
+    } else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
+      instructionText = 'Tap to select another field';
+      shouldAddToChat = false; // Don't add this to chat - it's just a UI hint to tap the image
+    } else {
+      shouldAddToChat = false;
+      instructionText = null;
+    }
+
+    // Only add message if instruction has changed and should be added to chat
+    if (instructionText != null && instructionText != _currentInstructionMessage && shouldAddToChat) {
+      _currentInstructionMessage = instructionText;
+      
+      // Add instruction message as bot message
+      setState(() {
+        chatMessages.add({
+          'sender': 'assistant',
+          'message': instructionText,
+          'isInstruction': true, // Flag to potentially style these differently if needed
+        });
+        _needsScroll = true;
+      });
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    } else if (!shouldAddToChat) {
+      // Still update the current instruction for temporary states, just don't add to chat
+      _currentInstructionMessage = instructionText;
     }
   }
 
@@ -1042,62 +1102,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
           isLongPressing: _isLongPressing, // Pass the isLongPressing parameter
         );
 
-  // Future<void> _processAudioAndSendToLLM() async {
-  //   if (_ocrText?.isEmpty ?? true) {
-  //     setState(() {
-  //       chatMessages.add({
-  //         'sender': 'assistant',
-  //         'message': 'Please select a field to extract text first.',
-  //       });
-  //       _needsScroll = true;
-  //     });
-  //     return;
-  //   }
-
-  //   setState(() {
-  //     _inputEnabled = false;
-  //   });
-
-  //   final zipFile = File(await zipRecordedAudio());
-  //   if (!await zipFile.exists()) {
-  //     setState(() {
-  //       _inputEnabled = true;
-  //     });
-  //     return;
-  //   }
-
-  //   final asrResponse = await _apiRepository.sendAudioToApi(zipFile);
-  //   if (asrResponse == null) {
-  //     setState(() {
-  //       _inputEnabled = true;
-  //     });
-  //     return;
-  //   }
-    
-
-  //   final asrData = jsonDecode(asrResponse);
-  //   final transcribedText = asrData['Result'] ?? 'No transcription available';
-
-  //   setState(() {
-  //     // Store ASR response temporarily
-  //     _pendingAsrResponse = transcribedText;
-      
-  //     chatMessages.add({
-  //       'sender': 'user',
-  //       'message': 'Audio message • $transcribedText',
-  //       'audioPath': recordedFilePath,
-  //       'asrResponse': transcribedText,
-  //       'isAudioMessage': true,
-  //     });
-        
-  //       _needsScroll = true;
-  //     _inputEnabled = true;
-  //   });
-
-  //   _scrollToBottom();
-  //   await _sendToLLMApi(asrResponse, isAudioQuery: true);
-  // }
-
+  
   Future<void> _processAudioAndSendToLLM() async {
   if (_ocrText?.isEmpty ?? true) {
     setState(() {
@@ -1154,19 +1159,7 @@ if (asrResponse == null) {
 }
 
 
-  // final asrResponse = await _apiRepository.sendAudioToApi(zipFile);
-  // if (asrResponse == null) {
-  //   setState(() {
-  //     _inputEnabled = true;
-  //     _isThinking = false;
-  //   });
-  //   return;
-  // }
-
-//   final Map<String, dynamic> asrData = jsonDecode(asrResponse);
-// final String transcribedText = asrData['results'] != null && asrData['results'].isNotEmpty
-//     ? asrData['results'][0]['ASR_output']?.toString() ?? 'No transcription available'
-//     : 'No transcription available';  //ASR response from API
+  
 final Map<String, dynamic> asrData = jsonDecode(asrResponse);
 print("ASR data $asrData");
 String transcribedText = 'No transcription available';
@@ -1174,8 +1167,11 @@ String transcribedText = 'No transcription available';
 // Check if response is successful
 if (asrData['code']?.toString().trim() == 'OK') {
   print("inside the looooooooooooooooop");
+  // transcribedText = asrData['results'] != null && asrData['results'].isNotEmpty
+  //     ? asrData['results'][0]['ASR_output']?.toString() ?? 'No transcription available'
+  //     : 'No transcription available';
   transcribedText = asrData['results'] != null && asrData['results'].isNotEmpty
-      ? asrData['results'][0]['ASR_output']?.toString() ?? 'No transcription available'
+      ? asrData['results'].toString() ?? 'No transcription available'
       : 'No transcription available';
 } 
 // Check if there's an error
@@ -2099,22 +2095,21 @@ if (messageData['contentType'] == 'audio' && messageData['base64Audio'] != null)
   }
 }
 void _scrollToBottom() {
+  // Use double post-frame callback to ensure the list has been rendered
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (_dragController.isAttached) {
-      _dragController.animateTo(
-        0.6,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Don't animate DraggableScrollableSheet - keep it at current position
+      // This prevents the sheet from moving down when sending messages
 
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
+      if (_scrollController.hasClients) {
+        // Scroll to the bottom to show the latest messages
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   });
 }
 
@@ -2140,12 +2135,13 @@ void _scrollToBottom() {
     setState(() {
           _pendingAsrResponse = null;  // Reset ASR response when a new field is selected
 
-      _inputEnabled = true;
+      _inputEnabled = false; // Disable input while processing OCR
       _selectedFieldName = box['class'];
       if (selectedBox != null) previouslySelectedBoxes.add(selectedBox!);
       selectedBox = box;
       _showBottomSheet = true;
       _isFieldLocked = true;
+      _isThinking = true; // Show thinking indicator immediately
       _scrollToBottom();
     });
     _sendDataToApi(box);
@@ -2180,7 +2176,7 @@ Future<File> _cropImage(String imagePath, Map<String, dynamic> box) async {
   Future<void> _sendDataToApi(Map<String, dynamic> box) async {
     setState(() {
       _needsScroll = true;
-      _isThinking = true;
+      // _isThinking is already set to true in _onBoundingBoxTap
     });
     final croppedImageFile = await _cropImage(imagePath!, box);
     final ocrResponse = await _apiRepository.sendOCRRequest(
@@ -2231,182 +2227,23 @@ Future<File> _cropImage(String imagePath, Map<String, dynamic> box) async {
       curve: Curves.easeOut,
     );
   }
-Widget _buildInstructionBanner() {
-  String instructionText;
-  bool showCompletionBanner = false;
-  IconData? leadingIcon;
 
-//   if (_selectedFieldName == null) {
-//     instructionText = 'Tap to select a field';
-//     //leadingIcon = Icons.touch_app;
-//   } else if (_ocrText == null) {
-//     instructionText = 'Scanning $_selectedFieldName...';
-//     //leadingIcon = Icons.scanner;
-//   } else if (_ocrText != null && _inputEnabled && chatMessages.isEmpty) {
-//     instructionText = 'Tap to ask or type a question';
-//     //leadingIcon = Icons.question_answer;
-//   } else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
-//     instructionText = 'Tap to select another field';
-//     showCompletionBanner = true;
-//     //leadingIcon = Icons.arrow_back;
-//   }  else if (_pendingAsrResponse == 'Silence detected') {
-//   instructionText = 'Silence detected';
-
-// } else if (_isThinking) {
-//     instructionText = 'Analyzing content...';
-//     //leadingIcon = Icons.psychology;
-//   }
-//  else {
-//     instructionText = 'Ask about selected field';
-//     //leadingIcon = Icons.chat;
-//   }
-if (_selectedFieldName == null) {
-  instructionText = 'Tap to select a field';
-  //leadingIcon = Icons.touch_app;
-} else if (_ocrText == null) {
-  instructionText = 'Scanning $_selectedFieldName...';
-  //leadingIcon = Icons.scanner;
-} else if (_isThinking) {
-  instructionText = 'Analyzing content...';
-  //leadingIcon = Icons.psychology;
-} else if (_pendingAsrResponse == 'Silence detected') {
-  instructionText = 'Silence detected,Please Retry';
-} else if (_ocrText != null && _inputEnabled && chatMessages.isEmpty) {
-  instructionText = 'Tap to ask or type a question';
-  //leadingIcon = Icons.question_answer;
-} else if (!_isFieldLocked && !_isThinking && chatMessages.isNotEmpty) {
-  instructionText = 'Tap to select another field';
-  showCompletionBanner = true;
-  //leadingIcon = Icons.arrow_back;
-} else {
-  instructionText = 'Ask about selected field';
-  //leadingIcon = Icons.chat;
-}
-  return TweenAnimationBuilder<double>(
-    tween: Tween(begin: 0.95, end: 1.0),
-    duration: const Duration(milliseconds: 200),
-    builder: (context, value, child) {
-      return Transform.scale(
-        scale: value,
-        child: child,
-      );
-    },
-    child: GestureDetector(
-      onTap: showCompletionBanner
-          ? () {
-              _minimizeDraggableSheet();
-            }
-          : null,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: _isThinking
-                  ? Colors.amber.shade200
-                  : showCompletionBanner
-                      ? Colors.teal.shade200
-                      : Colors.blue.shade100,
-              width: 1.5,
-            ),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (leadingIcon != null)
-              TweenAnimationBuilder(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 400),
-                builder: (context, value, child) {
-                  return Opacity(
-                    opacity: value,
-                    child: Transform.scale(
-                      scale: value,
-                      child: child,
-                    ),
-                  );
-                },
-                child: Icon(
-                  leadingIcon,
-                  color: _isThinking
-                      ? Colors.amber.shade700
-                      : showCompletionBanner
-                          ? Colors.teal.shade700
-                          : Colors.black,
-                  size: 24,
-                ),
-              ),
-            if (leadingIcon != null) const SizedBox(width: 12),
-            Flexible(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: Text(
-                  instructionText,
-                  key: ValueKey(instructionText),
-                  style: TextStyle(
-                    color: _isThinking
-                        ? Colors.amber.shade800
-                        : showCompletionBanner
-                            ? Colors.teal.shade800
-                            : Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.2,
-                    height: 1.4,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-            if (_isThinking)
-              Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Colors.amber.shade700,
-                  ),
-                ),
-              ),
-            // if (showCompletionBanner)
-            //   Padding(
-            //     padding: const EdgeInsets.only(left: 12),
-            //     child: Icon(
-            //       Icons.check_circle,
-            //       color: Colors.teal.shade700,
-            //       size: 24,
-            //     ),
-            //   ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
+  // _buildInstructionBanner() method removed - instructions now appear as bot messages in chat
 
     @override
-    Widget build(BuildContext context) => Scaffold(
+    Widget build(BuildContext context) {
+      // Check and update instruction messages on every rebuild
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _checkAndUpdateInstructionMessage();
+        }
+      });
+      
+      return Scaffold(
           appBar: AppBar(
             iconTheme: const IconThemeData(color: Colors.white),
             backgroundColor: Colors.teal,
             elevation: 0,
-            actions: [
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/form_selection');
-                },
-                icon: const Icon(Icons.camera_alt, color: Colors.white),
-                label: const Text(
-                  'Upload Image',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
             title: const Text(
               '',
               style: TextStyle(
@@ -2463,6 +2300,7 @@ if (_selectedFieldName == null) {
                       ),
                     ),
                   if (boundingBoxes != null)
+
                     BoundingBoxOverlay(
                       imagePath: imagePath!,
                       boundingBoxes: boundingBoxes!,
@@ -2576,10 +2414,7 @@ onFeedback: (int index, bool isHelpful, String? category, String? feedbackText) 
                 ),
               ),
               
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: _buildInstructionBanner(),
-              ),
+              // Instruction banner removed - instructions now appear as bot messages
               
               ChatInput(
                 messageController: _messageController,
@@ -2625,4 +2460,5 @@ onFeedback: (int index, bool isHelpful, String? category, String? feedbackText) 
             ],
           ),
         );
-}
+      }
+    }

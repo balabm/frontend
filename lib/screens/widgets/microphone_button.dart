@@ -194,6 +194,8 @@
 // }
 import 'package:flutter/material.dart';
 
+const Color kPrimaryColor = Color(0xFF009688); // Teal - matching app theme
+
 class MicrophoneButton extends StatefulWidget {
   final bool isLongPressing;
   final Function(LongPressStartDetails)? onLongPressStart;
@@ -392,37 +394,32 @@ Positioned(
                 return Stack(
                   alignment: Alignment.center,
                   children: [
+                    // Pulse effect when long pressing
                     AnimatedOpacity(
                       opacity: widget.isLongPressing ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 300),
                       child: Transform.scale(
                         scale: _pulseAnimation.value,
                         child: Container(
-                          width: 50,
-                          height: 50,
-                          padding: const EdgeInsets.only(right: 20),
-
+                          width: 56,
+                          height: 56,
                           decoration: BoxDecoration(
-                            color: const Color.fromRGBO(0, 150, 136, 1.0)
-                                .withOpacity(0.2),
+                            color: kPrimaryColor.withOpacity(0.3), // Teal pulse
                             shape: BoxShape.circle,
                           ),
                         ),
                       ),
                     ),
+                    // Main microphone button
                     Container(
-                      width: 50,
-                      height: 50,
-                      padding: const EdgeInsets.only(right: 20),
-
-                      margin: const EdgeInsets.only(left: 8),
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: !widget.enabled
                             ? Colors.grey.withOpacity(0.5)
                             : (widget.isLongPressing
-                                ? const Color.fromRGBO(0, 150, 136, 1.0)
-                                    .withOpacity(0.7)
-                                : const Color.fromRGBO(0, 150, 136, 1.0)),
+                                ? const Color(0xFF00796B) // Darker teal when pressed
+                                : kPrimaryColor), // Teal matching app theme
                         shape: BoxShape.circle,
                       ),
                       child: AnimatedBuilder(
@@ -434,15 +431,12 @@ Positioned(
                               scale: widget.isLongPressing
                                   ? _scaleAnimation.value
                                   : 1.0,
-                              child: IconButton(
-                                icon: Icon(
-                                  Icons.mic,
-                                  color: widget.enabled
-                                      ? Colors.white
-                                      : Colors.white54,
-                                ),
-                                onPressed:
-                                    null, // Disable tap, we're using long press
+                              child: Icon(
+                                Icons.mic_none_rounded, // Modern outline microphone icon
+                                color: widget.enabled
+                                    ? Colors.white
+                                    : Colors.white54,
+                                size: 24,
                               ),
                             ),
                           );

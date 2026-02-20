@@ -291,16 +291,16 @@ class _UserInputScreenState extends State<UserInputScreen> with SingleTickerProv
   Future<void> setPrefs() async {
     final _prefs = await SharedPreferences.getInstance();
     if (!_prefs.containsKey('bounding_box_url')) {
-      _prefs.setString('bounding_box_url', 'http://10.64.26.89:8002/cv/form-detection-with-box/');
+      _prefs.setString('bounding_box_url', 'http://15.206.206.190:8001/cv/form-detection-with-box/');
     }
     if (!_prefs.containsKey('ocr_text_url')) {
-      _prefs.setString('ocr_text_url', 'http://10.64.26.89:8001/cv/ocr');
+      _prefs.setString('ocr_text_url', 'http://15.206.206.190:8002/cv/ocr');
     }
     if (!_prefs.containsKey('asr_url')) {
-      _prefs.setString('asr_url', 'http://10.64.26.83:8002/upload-audio-zip/');
+      _prefs.setString('asr_url', 'http://15.206.206.190:8003/upload-audio-zip/');
     }
     if (!_prefs.containsKey('llm_url')) {
-      _prefs.setString('llm_url', 'http://10.64.26.89:8036/get_llm_response_schemes');
+      _prefs.setString('llm_url', 'http://15.206.206.190:8036/get_llm_response_schemes');
     }
   }
 
@@ -365,6 +365,7 @@ class _UserInputScreenState extends State<UserInputScreen> with SingleTickerProv
                             SizedBox(height: 24),
                             Text(
                               'Welcome to FormBot',
+                              textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,

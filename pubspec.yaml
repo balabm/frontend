@@ -64,6 +64,8 @@ dependencies:
   intl: ^0.17.0
   dropdown_search: ^5.0.3
   flutter_doc_scanner: ^0.0.15
+  flutter_image_compress: ^2.1.0
+
 
   
   #pdf_render: ^1.2.0 

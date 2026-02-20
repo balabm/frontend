@@ -1021,10 +1021,10 @@ Future<void> _updateLastActivity() async {
 
   Future<void> _loadApiUrls() async {
     final prefs = await SharedPreferences.getInstance();
-    final boundingBoxUrl = prefs.getString('bounding_box_url') ?? 'http://10.64.26.89:8002/cv/form-detection-with-box/';
-    final ocrTextUrl = prefs.getString('ocr_text_url') ?? 'http://10.64.26.89:8001/cv/ocr';
-    final asrUrl = prefs.getString('asr_url') ?? 'http://10.64.26.83:8002/upload-audio-zip/';
-    final llmUrl = prefs.getString('llm_url') ?? 'http://10.64.26.89:8036/get_llm_response_schemes';
+    final boundingBoxUrl = prefs.getString('bounding_box_url') ?? 'http://15.206.206.190:8001/cv/form-detection-with-box/';
+    final ocrTextUrl = prefs.getString('ocr_text_url') ?? 'http://15.206.206.190:8002/cv/ocr';
+    final asrUrl = prefs.getString('asr_url') ?? 'http://15.206.206.190:8003/upload-audio-zip/';
+    final llmUrl = prefs.getString('llm_url') ?? 'http://15.206.206.190:8004/get_llm_response_schemes';
     // Use the URLs as neededR
   }
 

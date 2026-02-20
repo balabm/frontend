@@ -4,6 +4,7 @@ import 'package:formbot/providers/firebaseprovider.dart';
 import 'package:formbot/screens/settings_screen.dart';
 import 'package:formbot/screens/widgets/camerascreen.dart';
 import 'package:formbot/screens/widgets/common.dart';
+import 'package:formbot/services/ec2_ip_service.dart'; // Import EC2IpService
 import 'package:provider/provider.dart'; // Import this to use MultiProvider
 import 'screens/user_input_screen.dart'; // Ensure this import is correct
 import 'screens/home_screen.dart';
@@ -115,6 +116,29 @@ class _AuthWrapperState extends State<AuthWrapper> {
     super.initState();
     // Cache the Future in initState
     _authCheckFuture = Provider.of<AuthProvider>(context, listen: false).checkUserSignedIn();
+    
+    // Auto-fetch EC2 IP URLs on app startup
+    _autoFetchEC2Urls();
+  }
+
+  Future<void> _autoFetchEC2Urls() async {
+    try {
+      print('🚀 Auto-fetching EC2 IP URLs on app startup...');
+      final urls = await EC2IpService.fetchAndUpdateUrls();
+      
+      if (urls != null) {
+        print('✅ EC2 URLs auto-fetched successfully!');
+        print('   Bounding Box: ${urls['bounding_box_url']}');
+        print('   OCR: ${urls['ocr_text_url']}');
+        print('   ASR: ${urls['asr_url']}');
+        print('   LLM: ${urls['llm_url']}');
+      } else {
+        print('⚠️ Auto-fetch failed - using existing URLs from settings');
+      }
+    } catch (e) {
+      print('⚠️ Auto-fetch error (will use existing URLs): $e');
+      // Silently fail - app will use existing URLs from SharedPreferences
+    }
   }
 
   @override

@@ -752,7 +752,7 @@ Widget build(BuildContext context) {
  
   final timeString = _formatTimestamp(widget.timestamp);
   return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
     child: Column(
       crossAxisAlignment:
           widget.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -760,16 +760,31 @@ Widget build(BuildContext context) {
         Row(
           mainAxisAlignment:
               widget.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!widget.isUser) ...[
               Container(
-                padding: EdgeInsets.only(right: 10),
+                margin: EdgeInsets.only(right: 8, top: 4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Color(0xFF00796B).withOpacity(0.2),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xFF00796B).withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   child: CircleAvatar(
                     backgroundImage: AssetImage('assets/5.png'),
-                    radius: 16,
+                    radius: 18,
+                    backgroundColor: Colors.white,
                   ),
                 ),
               )
@@ -781,26 +796,43 @@ Widget build(BuildContext context) {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
+                      gradient: widget.isUser
+                          ? LinearGradient(
+                              colors: [
+                                Color(0xFF00897B),
+                                Color(0xFF00796B),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
                       color: widget.isUser
-                          ? Color.fromRGBO(0, 150, 136, 1.0)
-                          : Colors.grey[200],
+                          ? null
+                          : Colors.white,
                       borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                        bottomLeft:
-                            widget.isUser ? Radius.circular(20) : Radius.zero,
-                        bottomRight:
-                            widget.isUser ? Radius.zero : Radius.circular(20),
+                        topLeft: Radius.circular(widget.isUser ? 20 : 4),
+                        topRight: Radius.circular(widget.isUser ? 4 : 20),
+                        bottomLeft: Radius.circular(20),
+                        bottomRight: Radius.circular(20),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 3,
-                          offset: Offset(0, 1),
+                          color: widget.isUser 
+                              ? Color(0xFF00796B).withOpacity(0.3)
+                              : Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                          spreadRadius: 0,
                         ),
                       ],
+                      border: widget.isUser
+                          ? null
+                          : Border.all(
+                              color: Colors.grey.withOpacity(0.1),
+                              width: 1,
+                            ),
                     ),
                     child: Column(
                       crossAxisAlignment: widget.isUser
@@ -818,15 +850,17 @@ Widget build(BuildContext context) {
                                     audioPath: widget.audioPath!),
                               ),
                               if (widget.asrResponse != null) ...[
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 6),
                                 Container(
                                   constraints:
-                                      BoxConstraints(maxWidth: 150),
+                                      BoxConstraints(maxWidth: 200),
                                   child: Text(
                                     widget.asrResponse!,
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 13,
+                                      fontSize: 14,
+                                      height: 1.4,
+                                      letterSpacing: 0.2,
                                     ),
                                   ),
                                 ),
@@ -840,23 +874,34 @@ Widget build(BuildContext context) {
                                   ClipboardData(text: widget.message));
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text("Text copied to clipboard"),
+                                  content: Row(
+                                    children: [
+                                      Icon(Icons.check_circle, color: Colors.white, size: 20),
+                                      SizedBox(width: 8),
+                                      Text("Copied to clipboard"),
+                                    ],
+                                  ),
+                                  backgroundColor: Color(0xFF00796B),
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  duration: Duration(seconds: 1),
+                                  duration: Duration(seconds: 2),
+                                  margin: EdgeInsets.all(16),
                                 ),
                               );
                             },
                             child: SelectableText(
                               widget.message,
-                              cursorColor: Colors.teal,
+                              cursorColor: Color(0xFF00796B),
                               style: TextStyle(
                                 color: widget.isUser
                                     ? Colors.white
-                                    : Colors.black87,
-                                fontSize: 14,
+                                    : Color(0xFF2C3E50),
+                                fontSize: 15,
+                                height: 1.5,
+                                letterSpacing: 0.2,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ),
@@ -868,15 +913,17 @@ Widget build(BuildContext context) {
                   // Timestamp and feedback section
                   if (!widget.isUser && !widget.isThinking) ...[
                     Padding(
-                      padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
+                      padding: const EdgeInsets.only(top: 6.0, left: 4.0, bottom: 4.0),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             timeString,
                             style: TextStyle(
-                              color: Color.fromRGBO(117, 117, 117, 1),
-                              fontSize: 10,
+                              color: Color(0xFF9E9E9E),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.3,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -1079,109 +1126,149 @@ Widget build(BuildContext context) {
 
 // Replace it with this updated condition:
 if (widget.isLLMResponse || widget.existingFeedback != null) ...[
-  Row(
-    children: [
-      // Thumbs up button
-      Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            if (widget.existingFeedback == 'thumbs_up') {
-              // Already liked, do nothing or maybe allow to undo
-              return;
-            }
-            setState(() {
-              _feedback = true; 
-              _showingFeedbackOption = false;
-            });
-            // Call the onFeedback callback to pass data to parent
-            if (widget.onFeedback != null) {
-              widget.onFeedback!(true, "Helpful", null);
-            }
-            // Show feedback confirmation
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("Thanks for your feedback!"),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+  Container(
+    decoration: BoxDecoration(
+      color: Colors.grey.withOpacity(0.05),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Thumbs up button
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () {
+              if (widget.existingFeedback == 'thumbs_up') {
+                // Already liked, do nothing or maybe allow to undo
+                return;
+              }
+              setState(() {
+                _feedback = true; 
+                _showingFeedbackOption = false;
+              });
+              // Call the onFeedback callback to pass data to parent
+              if (widget.onFeedback != null) {
+                widget.onFeedback!(true, "Helpful", null);
+              }
+              // Show feedback confirmation
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white, size: 20),
+                      SizedBox(width: 8),
+                      Text("Thanks for your feedback!"),
+                    ],
+                  ),
+                  backgroundColor: Color(0xFF00796B),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  duration: Duration(seconds: 2),
+                  margin: EdgeInsets.all(16),
                 ),
-                duration: Duration(seconds: 1),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                color: _feedback == true 
+                    ? Color(0xFF00796B).withOpacity(0.1)
+                    : Colors.transparent,
+                shape: BoxShape.circle,
               ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(6.0),
-            child: Icon(
-              _feedback == true ? Icons.thumb_up : Icons.thumb_up_outlined,
-              size: 18,
-              color: _feedback == true ? Colors.teal : Colors.grey[600],
+              child: Icon(
+                _feedback == true ? Icons.thumb_up : Icons.thumb_up_outlined,
+                size: 16,
+                color: _feedback == true ? Color(0xFF00796B) : Color(0xFF757575),
+              ),
             ),
           ),
         ),
-      ),
-      
-      const SizedBox(width: 10),
-      
-      // Thumbs down button with inline "let us know why" option
-      Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () {
-                if (widget.existingFeedback == 'thumbs_down') {
-                  // Already disliked, show feedback dialog again
-                  _showFeedbackDialog(context);
-                  return;
-                }
-                setState(() {
-                  _feedback = false;
-                  _showingFeedbackOption = true;
-                });
-                
-                // Register the thumbs down feedback
-                if (widget.onFeedback != null) {
-                  widget.onFeedback!(false, "", "");
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(6.0),
-                child: Icon(
-                  _feedback == false ? Icons.thumb_down : Icons.thumb_down_outlined,
-                  size: 18,
-                  color: _feedback == false ? const Color.fromARGB(255, 214, 173, 13) : Colors.grey[600],
+        
+        const SizedBox(width: 4),
+        
+        // Thumbs down button with inline "let us know why" option
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  if (widget.existingFeedback == 'thumbs_down') {
+                    // Already disliked, show feedback dialog again
+                    _showFeedbackDialog(context);
+                    return;
+                  }
+                  setState(() {
+                    _feedback = false;
+                    _showingFeedbackOption = true;
+                  });
+                  
+                  // Register the thumbs down feedback
+                  if (widget.onFeedback != null) {
+                    widget.onFeedback!(false, "", "");
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8.0),
+                  decoration: BoxDecoration(
+                    color: _feedback == false 
+                        ? Color(0xFFFFA726).withOpacity(0.1)
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _feedback == false ? Icons.thumb_down : Icons.thumb_down_outlined,
+                    size: 16,
+                    color: _feedback == false ? Color(0xFFFFA726) : Color(0xFF757575),
+                  ),
                 ),
               ),
             ),
-          ),
-          
-          // "Let us know why" option appears next to thumbs down when clicked
-          if (_feedback == false) ...[
-            TextButton(
-              onPressed: () {
-                _showFeedbackDialog(context);
-              },
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                minimumSize: Size(0, 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Text(
-                "Let us know why?",
-                style: TextStyle(
-                  color: Colors.teal,
-                  fontSize: 12,
+            
+            // "Let us know why" option appears next to thumbs down when clicked
+            if (_feedback == false) ...[
+              SizedBox(width: 4),
+              Container(
+                decoration: BoxDecoration(
+                  color: Color(0xFF00796B).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TextButton(
+                  onPressed: () {
+                    _showFeedbackDialog(context);
+                  },
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    minimumSize: Size(0, 0),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    "Why?",
+                    style: TextStyle(
+                      color: Color(0xFF00796B),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
-        ],
-      ),
-    ],
+        ),
+      ],
+    ),
   ),
 ],
                     
@@ -1191,12 +1278,14 @@ if (widget.isLLMResponse || widget.existingFeedback != null) ...[
                   ] else ...[
                     // Just timestamp for user messages
                     Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
+                      padding: const EdgeInsets.only(top: 6.0, right: 4.0),
                       child: Text(
                         timeString,
                         style: TextStyle(
-                          color: Color.fromRGBO(117, 117, 117, 1),
-                          fontSize: 10,
+                          color: Color(0xFF9E9E9E),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ),
@@ -1250,6 +1339,7 @@ void _showFeedbackDialog(BuildContext context) {
   
   showDialog(
     context: context,
+    barrierDismissible: false,
     builder: (BuildContext context) {
       return StatefulBuilder(
         builder: (context, setState) {
@@ -1268,179 +1358,343 @@ void _showFeedbackDialog(BuildContext context) {
             });
           }
           
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            title: Text(
-              "Feedback",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 20,
+                    offset: Offset(0, 10),
+                  ),
+                ],
               ),
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            content: Container(
-              width: double.maxFinite,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Category Dropdown
+                  // Header
                   Container(
+                    padding: EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedCategory,
-                        hint: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                          child: Text("Select category"),
-                        ),
-                        isExpanded: true,
-                        icon: Icon(Icons.arrow_drop_down),
-                        borderRadius: BorderRadius.circular(8),
-                        items: _feedbackCategories.map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                              child: Text(value),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          setState(() {
-                            _selectedCategory = newValue;
-                            // Clear feedback field if changing from Other to something else
-                            if (_isOtherCategory && newValue != 'Other') {
-                              _feedbackController.text = '';
-                            }
-                            _updateSubmitStatus();
-                          });
-                        },
-                        dropdownColor: Colors.white,
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF00897B), Color(0xFF00796B)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.feedback_outlined,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Help us improve",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                "Tell us what went wrong",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.9),
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   
-                  // Custom Category Field - only visible if Custom is selected
-                  if (_isCustomCategory) ...[
-                    SizedBox(height: 12),
-                    TextField(
-                      controller: _customCategoryController,
-                      decoration: InputDecoration(
-                        hintText: "Specify issue",
-                        fillColor: Colors.white,
-                        filled: true,
-                        contentPadding: EdgeInsets.all(12),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                  // Content
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Category Dropdown
+                        Text(
+                          "Select issue category",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2C3E50),
+                            letterSpacing: 0.2,
+                          ),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.grey.withOpacity(0.2),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedCategory,
+                              hint: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Text(
+                                  "Choose a category",
+                                  style: TextStyle(
+                                    color: Color(0xFF9E9E9E),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              isExpanded: true,
+                              icon: Padding(
+                                padding: const EdgeInsets.only(right: 12.0),
+                                child: Icon(Icons.arrow_drop_down, color: Color(0xFF00796B)),
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              items: _feedbackCategories.map((String value) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                    child: Text(
+                                      value,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF2C3E50),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (newValue) {
+                                setState(() {
+                                  _selectedCategory = newValue;
+                                  // Clear feedback field if changing from Other to something else
+                                  if (_isOtherCategory && newValue != 'Other') {
+                                    _feedbackController.text = '';
+                                  }
+                                  _updateSubmitStatus();
+                                });
+                              },
+                              dropdownColor: Colors.white,
+                            ),
+                          ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.teal),
+                        
+                        // Custom Category Field - only visible if Custom is selected
+                        if (_isCustomCategory) ...[
+                          SizedBox(height: 16),
+                          TextField(
+                            controller: _customCategoryController,
+                            decoration: InputDecoration(
+                              hintText: "Specify your issue",
+                              hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 14),
+                              fillColor: Colors.grey.withOpacity(0.05),
+                              filled: true,
+                              contentPadding: EdgeInsets.all(16),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey.withOpacity(0.2), width: 1.5),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey.withOpacity(0.2), width: 1.5),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Color(0xFF00796B), width: 2),
+                              ),
+                            ),
+                            style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50)),
+                            onChanged: (text) {
+                              _updateSubmitStatus();
+                            },
+                          ),
+                        ],
+                        
+                        SizedBox(height: 16),
+                        
+                        // Comments Field
+                        Text(
+                          _isOtherCategory ? "Additional details (required)" : "Additional comments (optional)",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2C3E50),
+                            letterSpacing: 0.2,
+                          ),
                         ),
-                      ),
-                      onChanged: (text) {
-                        _updateSubmitStatus();
-                      },
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: _feedbackController,
+                          decoration: InputDecoration(
+                            hintText: _isOtherCategory 
+                                ? "Please tell us more..." 
+                                : "Any additional feedback? (optional)",
+                            hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 14),
+                            fillColor: Colors.grey.withOpacity(0.05),
+                            filled: true,
+                            contentPadding: EdgeInsets.all(16),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: _isOtherCategory && _feedbackController.text.isEmpty 
+                                    ? Colors.red.withOpacity(0.5)
+                                    : Colors.grey.withOpacity(0.2),
+                                width: 1.5,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: _isOtherCategory && _feedbackController.text.isEmpty 
+                                    ? Colors.red.withOpacity(0.5)
+                                    : Colors.grey.withOpacity(0.2),
+                                width: 1.5,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Color(0xFF00796B), width: 2),
+                            ),
+                          ),
+                          style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50)),
+                          maxLines: 4,
+                          onChanged: (text) {
+                            _updateSubmitStatus();
+                          },
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                   
-                  SizedBox(height: 16),
-                  
-                  // Comments Field - label changes based on if it's required
-                  TextField(
-                    controller: _feedbackController,
-                    decoration: InputDecoration(
-                      hintText: _isOtherCategory ? "Please specify the issue (required)" : "Additional comments (optional)",
-                      fillColor: Colors.white,
-                      filled: true,
-                      contentPadding: EdgeInsets.all(12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: _isOtherCategory && _feedbackController.text.isEmpty ? Colors.red[300]! : Colors.grey[300]!),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: _isOtherCategory && _feedbackController.text.isEmpty ? Colors.red[300]! : Colors.grey[300]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.teal),
-                      ),
+                  // Actions
+                  Container(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.5),
+                              ),
+                            ),
+                            child: Text(
+                              "Cancel",
+                              style: TextStyle(
+                                color: Color(0xFF757575),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isSubmitEnabled ? () {
+                              // Double-check validation before submission
+                              if (_isOtherCategory && _feedbackController.text.trim().isEmpty) {
+                                return;
+                              }
+                              
+                              if (_isCustomCategory && _customCategoryController.text.trim().isEmpty) {
+                                return;
+                              }
+                              
+                              final String finalCategory = _isCustomCategory
+                                  ? _customCategoryController.text
+                                  : _selectedCategory ?? "";
+                              
+                              if (widget.onFeedback != null) {
+                                widget.onFeedback!(false, finalCategory, _feedbackController.text);
+                              }
+                              _feedbackController.clear();
+                              
+                              Navigator.of(context).pop();
+                              
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      Icon(Icons.check_circle, color: Colors.white, size: 20),
+                                      SizedBox(width: 8),
+                                      Text("Feedback submitted successfully!"),
+                                    ],
+                                  ),
+                                  backgroundColor: Color(0xFF00796B),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  duration: Duration(seconds: 2),
+                                  margin: EdgeInsets.all(16),
+                                ),
+                              );
+                            } : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFF00796B),
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: Colors.grey[300],
+                              disabledForegroundColor: Colors.grey[500],
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              "Submit",
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    maxLines: 3,
-                    onChanged: (text) {
-                      _updateSubmitStatus();
-                    },
                   ),
                 ],
               ),
             ),
-            actions: [
-              TextButton(
-                child: Text(
-                  "Cancel",
-                  style: TextStyle(color: Colors.grey[700]),
-                ),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              ElevatedButton(
-                child: Text("Submit"),
-                onPressed: _isSubmitEnabled ? () {
-                  // Double-check validation before submission
-                  if (_isOtherCategory && _feedbackController.text.trim().isEmpty) {
-                    return; // Prevent submission
-                  }
-                  
-                  if (_isCustomCategory && _customCategoryController.text.trim().isEmpty) {
-                    return; // Prevent submission
-                  }
-                  
-                  final String finalCategory = _isCustomCategory
-                      ? _customCategoryController.text
-                      : _selectedCategory ?? "";
-                  
-                  if (widget.onFeedback != null) {
-                    widget.onFeedback!(false, finalCategory, _feedbackController.text);
-                  }
-                  // Clear the feedback controller
-                  _feedbackController.clear();
-                  
-                  // Close dialog
-                  Navigator.of(context).pop();
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Feedback submitted"),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                } : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey[300],
-                  disabledForegroundColor: Colors.grey[500],
-                ),
-              ),
-            ],
           );
         }
       );
