@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:formbot/screens/widgets/common.dart';
 
-const Color kPrimaryColor = Color(0xFF009688); // Teal
-const Color kPrimaryLightColor = Color(0xFFE0F2F1); // Teal 50
-const Color kPrimaryDarkColor = Color(0xFF00796B); // Teal 700
-const Color kBackgroundColor = Color(0xFFF5F5F5); // Grey 100
-const Color kShadowColor = Color(0x1A000000); // Black with 10% opacity
+const Color _kPrimaryColor = Color(0xFF009688);
 
 class ChatInput extends StatefulWidget {
   final TextEditingController messageController;
@@ -16,14 +12,10 @@ class ChatInput extends StatefulWidget {
   final Widget? microphoneButton;
   final Function() onSendPressed;
   final double slidingOffset;
-    //final FocusNode? focusNode; // Add this line
-  final FocusNode focusNode; // Declare focusNode here
-
-
-  
+  final FocusNode focusNode;
 
   const ChatInput({
-    Key? key,
+    super.key,
     required this.messageController,
     required this.inputEnabled,
     required this.isRecording,
@@ -32,9 +24,8 @@ class ChatInput extends StatefulWidget {
     this.microphoneButton,
     required this.onSendPressed,
     required this.slidingOffset,
-    required this.focusNode, // And require it here
-    
-  }) : super(key: key);
+    required this.focusNode,
+  });
 
   @override
   State<ChatInput> createState() => _ChatInputState();
@@ -44,14 +35,11 @@ class _ChatInputState extends State<ChatInput> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(
-            color: Colors.grey[200]!,
-            width: 1,
-          ),
+          top: BorderSide(color: Colors.grey.shade200, width: 1),
         ),
       ),
       child: SafeArea(
@@ -59,29 +47,42 @@ class _ChatInputState extends State<ChatInput> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Text Input Field
-            widget.isRecording
-                ? Expanded(child: widget.recordingIndicator)
-                : Expanded(
-                    child: Container(
+            // Camera button
+            IconButton(
+              icon: Icon(Icons.camera_alt, color: _kPrimaryColor, size: 26),
+              onPressed: () => Navigator.pushNamed(context, '/camera'),
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 8),
+
+            // Input field
+            Expanded(
+              child: widget.isRecording
+                  ? widget.recordingIndicator
+                  : Container(
                       constraints: const BoxConstraints(
-                        minHeight: 40,
+                        minHeight: 44,
                         maxHeight: 120,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white, // White background
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: Colors.grey[300]!,
-                          width: 1,
-                        ),
+                        border: Border.all(color: Colors.grey.shade300),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: TextField(
                         controller: widget.messageController,
                         focusNode: widget.focusNode,
                         minLines: 1,
                         maxLines: 5,
-                        cursorColor: kPrimaryColor,
+                        cursorColor: _kPrimaryColor,
                         textInputAction: TextInputAction.newline,
                         style: const TextStyle(
                           fontSize: 16,
@@ -91,13 +92,13 @@ class _ChatInputState extends State<ChatInput> {
                         decoration: InputDecoration(
                           hintText: 'Type a message',
                           hintStyle: TextStyle(
-                            color: Colors.grey[400],
+                            color: Colors.grey.shade500,
                             fontSize: 16,
                           ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
-                            vertical: 10,
+                            vertical: 12,
                           ),
                           isDense: true,
                         ),
@@ -105,7 +106,6 @@ class _ChatInputState extends State<ChatInput> {
                         scrollPhysics: const BouncingScrollPhysics(),
                         onTap: () {
                           if (!widget.dragController.isAttached) return;
-
                           if (widget.dragController.size < 1) {
                             widget.dragController.animateTo(
                               1.0,
@@ -113,7 +113,6 @@ class _ChatInputState extends State<ChatInput> {
                               curve: Curves.easeOut,
                             );
                           }
-
                           if (!widget.inputEnabled) {
                             Common.showErrorMessage(context,
                                 "Please wait for the previous message to finish processing.");
@@ -121,25 +120,11 @@ class _ChatInputState extends State<ChatInput> {
                         },
                       ),
                     ),
-                  ),
-            
-            const SizedBox(width: 8),
-            
-            // Camera Icon
-            IconButton(
-              icon: Icon(
-                Icons.camera_alt,
-                color: kPrimaryColor,
-                size: 26,
-              ),
-              onPressed: () {
-                Navigator.pushNamed(context, '/camera');
-              },
-              padding: const EdgeInsets.all(8),
-              constraints: const BoxConstraints(),
             ),
-            
-            // Send Button / Microphone
+
+            const SizedBox(width: 8),
+
+            // Send / Mic button
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: widget.messageController,
               builder: (context, value, child) {
@@ -149,10 +134,16 @@ class _ChatInputState extends State<ChatInput> {
                   child: value.text.isEmpty
                       ? widget.microphoneButton ?? const SizedBox.shrink()
                       : Container(
-                          margin: const EdgeInsets.only(left: 4),
-                          decoration: BoxDecoration(
-                            color: kPrimaryColor,
+                          decoration: const BoxDecoration(
+                            color: _kPrimaryColor,
                             shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 8,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
                           ),
                           child: IconButton(
                             icon: const Icon(
@@ -161,10 +152,10 @@ class _ChatInputState extends State<ChatInput> {
                               size: 20,
                             ),
                             onPressed: widget.onSendPressed,
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(12),
                             constraints: const BoxConstraints(
-                              minWidth: 44,
-                              minHeight: 44,
+                              minWidth: 48,
+                              minHeight: 48,
                             ),
                           ),
                         ),

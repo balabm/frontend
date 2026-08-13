@@ -185,40 +185,56 @@ class _RecordingIndicatorState extends State<RecordingIndicator>
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            // Animated microphone icon with smooth fade in/out
-            FadeTransition(
-              opacity: _opacityAnimation,
-              child: const Icon(
-                Icons.mic,
-                color: Colors.red,
-                size: 27,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              widget.formatDuration(widget.recordingDuration),
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(width: 16),
-            if (widget.isLongPressing) // Changed condition to use isLongPressing
-              AnimatedOpacity(
-                opacity: widget.isLongPressing ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 600), // Smoother transition for the text
-                child: Text(
-                  "< Slide to cancel",
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Animated microphone icon with smooth fade in/out
+              FadeTransition(
+                opacity: _opacityAnimation,
+                child: const Icon(
+                  Icons.mic,
+                  color: Colors.red,
+                  size: 24,
                 ),
               ),
-          ],
+              const SizedBox(width: 8),
+              Text(
+                widget.formatDuration(widget.recordingDuration),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (widget.isLongPressing)
+                AnimatedOpacity(
+                  opacity: widget.isLongPressing ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 600),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.chevron_left,
+                        color: Colors.red[700],
+                        size: 20,
+                      ),
+                      Text(
+                        "Slide to cancel",
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -572,89 +572,105 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: MediaQuery.of(context).size.width * 0.6,
-      height: MediaQuery.of(context).size.height * 0.1,
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Align(
-            alignment: Alignment.center,
-            child: GestureDetector(
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 220),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE0F2F1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF009688).withOpacity(0.12)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Play / Pause button
+            GestureDetector(
               onTap: _togglePlayback,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
-                child: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Color.fromRGBO(0, 150, 136, 1.0)
-,
-                  child: Icon(
-                    _isPlaying ? Icons.pause : Icons.play_arrow,
-                    color: Colors.white,
-                    size: 16,
-                  ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF009688),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 18,
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                SizedBox(
-                  height: 50,
-                  child: Slider(
-                    value: _isDragging ? _dragValue : _playbackProgress,
-                    onChanged: (value) {
-                      setState(() {
-                        _isDragging = true;
-                        _dragValue = value;
-                      });
-                    },
-                    onChangeEnd: (value) {
-                      setState(() {
-                        _isDragging = false;
-                        _playbackProgress = value;
-                        final duration = (_audioDuration.inMilliseconds * value).round();
-                        _audioPlayer?.seekToPlayer(Duration(milliseconds: duration));
-                      });
-                    },
-                    activeColor: Color.fromRGBO(0, 150, 136, 1.0)
-,
-                    inactiveColor: Color.fromRGBO(0, 150, 136, 1.0)
-.withOpacity(0.3),
+            const SizedBox(width: 10),
+
+            // Slider and duration
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: 16,
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 3,
+                        thumbShape:
+                            const RoundSliderThumbShape(enabledThumbRadius: 5),
+                        overlayShape:
+                            const RoundSliderOverlayShape(overlayRadius: 10),
+                        activeTrackColor: const Color(0xFF009688),
+                        inactiveTrackColor:
+                            const Color(0xFF009688).withOpacity(0.2),
+                        thumbColor: const Color(0xFF009688),
+                      ),
+                      child: Slider(
+                        value: _isDragging ? _dragValue : _playbackProgress,
+                        onChanged: (value) {
+                          setState(() {
+                            _isDragging = true;
+                            _dragValue = value;
+                          });
+                        },
+                        onChangeEnd: (value) {
+                          setState(() {
+                            _isDragging = false;
+                            _playbackProgress = value;
+                            final duration =
+                                (_audioDuration.inMilliseconds * value).round();
+                            _audioPlayer
+                                ?.seekToPlayer(Duration(milliseconds: duration));
+                          });
+                        },
+                      ),
+                    ),
                   ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _formatDuration(_currentPosition),
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontSize: 12,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _formatDuration(_currentPosition),
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    Text(
-                      _formatDuration(_audioDuration),
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontSize: 12,
+                      Text(
+                        _formatDuration(_audioDuration),
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

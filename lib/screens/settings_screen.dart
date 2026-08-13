@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import '../services/ec2_ip_service.dart';
+import '../providers/firebaseprovider.dart';
+import '../providers/authprovider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -17,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _llmUrlController;
   bool _isSaving = false;
   bool _isFetchingIp = false;
+  bool _isMigrating = false;
   String? _lastFetchedIp;
   DateTime? _lastFetchTime;
 
@@ -154,6 +158,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } finally {
       if (mounted) setState(() => _isFetchingIp = false);
+    }
+  }
+
+  Future<void> _migrateMessages() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final uid = authProvider.user?.uid;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You must be logged in to migrate data.')),
+      );
+      return;
+    }
+
+    setState(() => _isMigrating = true);
+    try {
+      final firebaseProvider = Provider.of<FirebaseProvider>(context, listen: false);
+      final result = await firebaseProvider.migrateInteractionLogsToSubcollection(uid);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '✅ Migrated ${result['migratedMessages']} messages across ${result['migratedForms']} forms.'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Migration failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isMigrating = false);
     }
   }
 
@@ -371,6 +410,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           'Save Settings',
                           style: TextStyle(color: Colors.white),
                         ),
+                ),
+                const SizedBox(height: 20),
+                const Divider(thickness: 2),
+                const SizedBox(height: 10),
+                const Text(
+                  'One-time Data Migration:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Copies old chat messages into the new messages subcollection. '
+                  'Safe to run multiple times. Original data is not deleted.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: _isMigrating ? null : _migrateMessages,
+                  icon: _isMigrating
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.sync),
+                  label: Text(_isMigrating ? 'Migrating...' : 'Migrate Messages'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
                 ),
               ],
             ),

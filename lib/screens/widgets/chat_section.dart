@@ -33,32 +33,31 @@ final Function(int, bool, String?, String?) onFeedback; // index, isHelpful, cat
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Color(0xFF00796B).withOpacity(0.1),
+                color: const Color(0xFFE0F2F1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.chat_bubble_outline,
                 size: 48,
-                color: Color(0xFF00796B),
+                color: Color(0xFF009688),
               ),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 20),
             Text(
               'No messages yet',
               style: TextStyle(
-                color: Color(0xFF757575),
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.3,
+                color: Colors.grey.shade700,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
               ),
             ),
             SizedBox(height: 8),
             Text(
               'Start a conversation',
               style: TextStyle(
-                color: Color(0xFF9E9E9E),
+                color: Colors.grey.shade500,
                 fontSize: 14,
               ),
             ),
@@ -69,7 +68,7 @@ final Function(int, bool, String?, String?) onFeedback; // index, isHelpful, cat
 
     return ListView.builder(
       controller: scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 90),
       itemCount: chatMessages.length + (isThinking ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == chatMessages.length) {

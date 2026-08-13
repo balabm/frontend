@@ -1123,6 +1123,7 @@ class _FieldEditScreenState extends State<FieldEditScreen> with AudioHandler {
     _inputEnabled = false;
     _isThinking = true;  // ✅ Show "Processing audio..." in the instruction banner
   });
+  _scrollToBottom(); // Show thinking indicator above input
 
   final zipFile = File(await zipRecordedAudio());
   if (!await zipFile.exists()) {
@@ -1149,14 +1150,17 @@ if (uid == null) {
 }
  
   // Pass both the zip file and the user ID
-final asrResponse = await _apiRepository.sendAudioToApi(zipFile, uid);
-if (asrResponse == null) {
+final asrResult = await _apiRepository.sendAudioToApi(zipFile, uid);
+if (asrResult == null || asrResult['response'] == null) {
   setState(() {
     _inputEnabled = true;
     _isThinking = false;
   });
   return;
 }
+final asrResponse = asrResult['response'];
+final asrMs = asrResult['durationMs'] ?? 0;
+print('ASR duration: $asrMs ms');
 
 
   
@@ -1206,7 +1210,7 @@ print('Transcription Result: $transcribedText');
       'audioPath': recordedFilePath,
       'asrResponse': transcribedText,
       'isAudioMessage': true,
-      
+      'asrMs': asrMs,
     });
 
     _needsScroll = true;
@@ -1243,13 +1247,17 @@ print('Transcription Result: $transcribedText');
     print('Sending to LLM API with scheme_name: $selectedForm');
       final uid = _authProvider.user?.uid;
 
-    final llmResponse = await _apiRepository.sendToLLMApi(
+    final llmResult = await _apiRepository.sendToLLMApi(
       _ocrText!,
       selectedForm ?? 'Unknown Scheme', // Pass the selected form as scheme_name
       voiceQuery: query,
       uid: uid,
       formId: formId,
     );
+
+    final llmResponse = llmResult?['response'];
+    final llmMs = llmResult?['durationMs'] ?? 0;
+    print('LLM duration: $llmMs ms');
 
     setState(() {
       // Store LLM response temporarily
@@ -1259,12 +1267,12 @@ print('Transcription Result: $transcribedText');
         'messageId': DateTime.now().millisecondsSinceEpoch.toString() + '_' + (1000 + Random().nextInt(9000)).toString(),
 
         'sender': 'assistant',
-        //'message': llmResponse?['response'] ?? '...',
         'isLLMResponse': true, // Mark as LLM response
-        
+
         'message': llmResponse?['response'] ??
             'Failed to get response. Please try again.',
         'feedback': null, // Initialize feedback as null
+        'llmMs': llmMs,
   'timestamp': DateTime.now().toUtc().toIso8601String(), // Ensure consistent UTC format
 
 
@@ -2179,7 +2187,7 @@ Future<File> _cropImage(String imagePath, Map<String, dynamic> box) async {
       // _isThinking is already set to true in _onBoundingBoxTap
     });
     final croppedImageFile = await _cropImage(imagePath!, box);
-    final ocrResponse = await _apiRepository.sendOCRRequest(
+    final ocrResult = await _apiRepository.sendOCRRequest(
       imagePath: croppedImageFile.path,
       box: box,
     );
@@ -2188,10 +2196,13 @@ Future<File> _cropImage(String imagePath, Map<String, dynamic> box) async {
     print('Image Path: ${croppedImageFile.path}');
     print('Box: $box');
 
-    if (ocrResponse != null) {
+    if (ocrResult != null) {
+      final ocrResponse = ocrResult['response'];
+      final ocrMs = ocrResult['durationMs'] ?? 0;
+      print('OCR duration: $ocrMs ms');
       Provider.of<ApiResponseProvider>(context, listen: false)
           .setOcrResponse(jsonEncode(ocrResponse));
-      _ocrText = ocrResponse['extracted_text'];
+      _ocrText = ocrResponse?['extracted_text'];
 
       setState(() {
         chatMessages.add({
@@ -2200,6 +2211,7 @@ Future<File> _cropImage(String imagePath, Map<String, dynamic> box) async {
               //'Field ${box['class']} selected. The detected text is: $_ocrText',
               'Selected Field Is:\n$_ocrText',
                'isBold': true,
+          'ocrMs': ocrMs,
               //'$_ocrText',
         });
         _isThinking = false;

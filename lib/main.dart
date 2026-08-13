@@ -42,15 +42,73 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Form Capture App',
       theme: ThemeData(
-        
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF009688),
+          primary: const Color(0xFF009688),
+          secondary: const Color(0xFF009688),
+          surface: const Color(0xFFFAFAFA),
+          background: const Color(0xFFF5F5F5),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF009688),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: false,
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        cardTheme: CardTheme(
+          elevation: 2,
+          shadowColor: Colors.black.withOpacity(0.08),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          color: Colors.white,
+          margin: EdgeInsets.zero,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF009688), width: 2),
+          ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF009688),
+          foregroundColor: Colors.white,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(16)),
+          ),
+        ),
+        dividerTheme: DividerThemeData(
+          thickness: 1,
+          color: Colors.grey.shade200,
+        ),
+        listTileTheme: const ListTileThemeData(
+          iconColor: Color(0xFF009688),
+        ),
         textSelectionTheme: TextSelectionThemeData(
-    cursorColor: Colors.teal, // Set cursor color to teal
-    selectionColor: Colors.teal.withOpacity(0.3), // Highlight selection color
-    selectionHandleColor: Colors.teal, // Selection handle (drag handles) color
-  ),
-        
+          cursorColor: const Color(0xFF009688),
+          selectionColor: const Color(0xFF009688).withOpacity(0.3),
+          selectionHandleColor: const Color(0xFF009688),
+        ),
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: const AuthWrapper(), // Use AuthWrapper as the initial screen
 
